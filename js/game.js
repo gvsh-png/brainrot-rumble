@@ -54,39 +54,39 @@ const BOSSES = [
   { spr:'trippi',    name:'TRIPPI TROPPI',            hp:560, r:56, pattern:'spiral' },
 ];
 
-// ---- card pool: passives level to a cap; abilities level x2 then EVOLVE on the 3rd pick ----
+// ---- card pool: passives level to a cap; abilities take 4 levels, then EVOLVE on the 5th pick ----
 const UPGRADES = [
-  // passives (Lv 1-5)
-  { id:'dmg',    name:'Sigma Grindset',  icon:'coin',     cap:5, steps:[{desc:'+25% damage.',          f:()=>P.dmg*=1.25}] },
-  { id:'rate',   name:'Hyper Rizz',      icon:'gem',      cap:5, steps:[{desc:'+18% fire rate.',       f:()=>P.fireRate*=0.82}] },
-  { id:'speed',  name:'Nike Tech Fleece',icon:'heart',    cap:5, steps:[{desc:'+12% move speed.',      f:()=>P.speed*=1.12}] },
-  { id:'hp',     name:'Grimace Shake',   icon:'heart',    cap:5, steps:[{desc:'+25 max HP, full heal.',f:()=>{P.maxHp+=25;P.hp=P.maxHp;}}] },
-  { id:'magnet', name:'Gyatt Magnet',    icon:'gem',      cap:5, steps:[{desc:'+40% pickup range.',    f:()=>P.magnet*=1.4}] },
-  { id:'crit',   name:'Aimbot (Legal)',  icon:'coin',     cap:5, steps:[{desc:'+10% crit chance.',     f:()=>P.crit=Math.min(0.8,P.crit+0.10)}] },
-  { id:'dashcd', name:'Zoomies',         icon:'tralalero',cap:5, steps:[{desc:'dash cooldown -20%.',   f:()=>P.dashMax*=0.8}] },
+  // ⚔️ passives (Lv 1-5)
+  { id:'dmg',    name:'Brute Force',     icon:'coin',     cap:5, steps:[{desc:'+25% damage.',          f:()=>P.dmg*=1.25}] },
+  { id:'rate',   name:'Adrenaline Rush', icon:'gem',      cap:5, steps:[{desc:'+18% attack speed.',    f:()=>P.fireRate*=0.82}] },
+  { id:'speed',  name:'Fleet Footed',    icon:'heart',    cap:5, steps:[{desc:'+12% movement speed.',  f:()=>P.speed*=1.12}] },
+  { id:'hp',     name:'Vitality Essence',icon:'heart',    cap:5, steps:[{desc:'+25 max HP, full heal.',f:()=>{P.maxHp+=25;P.hp=P.maxHp;}}] },
+  { id:'magnet', name:'Magnetic Pulse',  icon:'gem',      cap:5, steps:[{desc:'+40% item pickup radius.',f:()=>P.magnet*=1.4}] },
+  { id:'crit',   name:'Critical Strike', icon:'coin',     cap:5, steps:[{desc:'+10% crit chance (3x dmg).',f:()=>P.crit=Math.min(0.8,P.crit+0.10)}] },
+  { id:'dashcd', name:'Quick Reflexes',  icon:'tralalero',cap:5, steps:[{desc:'dash cooldown -20%.',   f:()=>P.dashMax*=0.8}] },
 
-  // abilities (Lv1, Lv2, then EVOLVE)
-  { id:'multi', name:'Fanum Tax', icon:'gembig',
-    steps:[{desc:'+1 projectile.',f:()=>P.shots+=1},{desc:'+1 more projectile.',f:()=>P.shots+=1}],
-    evo:{name:'Full Fanum Tax', icon:'gembig', desc:'EVOLVE — fire shots in a full ring around you.', f:()=>{P.shots+=2;P.radial=true;}} },
-  { id:'pierce', name:'Ohio Drill', icon:'crocodilo',
-    steps:[{desc:'bullets pierce +1 enemy.',f:()=>P.pierce+=1},{desc:'bullets pierce +1 more.',f:()=>P.pierce+=1}],
-    evo:{name:'Drill to Ohio', icon:'crocodilo', desc:'EVOLVE — pierce everything + faster, bigger shots.', f:()=>{P.pierce=999;P.railgun=true;}} },
-  { id:'range', name:'Sigma Range', icon:'gem',
-    steps:[{desc:'+25% shot range.',f:()=>P.range*=1.25},{desc:'+25% more range.',f:()=>P.range*=1.25}],
-    evo:{name:'Touch-Grass Sniper', icon:'coin', desc:'EVOLVE — huge range and +50% damage.', f:()=>{P.range*=1.6;P.dmg*=1.5;}} },
-  { id:'orbit', name:'Emotional Support Orb', icon:'gembig', rare:true,
-    steps:[{desc:'+1 orbiting orb.',f:()=>P.orbs+=1},{desc:'+1 more orb.',f:()=>P.orbs+=1}],
-    evo:{name:'Sigma Squad', icon:'gembig', desc:'EVOLVE — extra orb that also deletes enemy bullets.', f:()=>{P.orbs+=1;P.orbShield=true;}} },
-  { id:'nova', name:'Skibidi Blast', icon:'gembig', rare:true,
-    steps:[{desc:'every 5s, a blast hits nearby enemies.',f:()=>{P.nova=true;}},{desc:'blast is faster and stronger.',f:()=>{P.novaCdBase=Math.max(3.5,P.novaCdBase-1.5);P.novaPow*=1.6;}}],
-    evo:{name:'Skibidi Nuke', icon:'gembig', desc:'EVOLVE — huge frequent blast that wipes nearby bullets.', f:()=>{P.nova=true;P.novaEvo=true;P.novaCdBase=3;P.novaPow*=1.6;}} },
-  { id:'vamp', name:'Edging the Grind', icon:'heart', rare:true,
-    steps:[{desc:'heal 1 HP per kill.',f:()=>P.vamp+=1},{desc:'heal +1 more per kill.',f:()=>P.vamp+=1}],
-    evo:{name:'Vampiric Rizz', icon:'heart', desc:'EVOLVE — heal a big chunk per kill.', f:()=>{P.vamp+=3;}} },
-  { id:'slow', name:'Cold as Ohio', icon:'gem', rare:true,
-    steps:[{desc:'enemy bullets 15% slower.',f:()=>P.bslow*=0.85},{desc:'enemy bullets 15% slower again.',f:()=>P.bslow*=0.85}],
-    evo:{name:'Absolute Ohio', icon:'gem', desc:'EVOLVE — enemies you hit freeze solid.', f:()=>{P.bslow*=0.7;P.freeze=true;}} },
+  // 🔮 abilities — 4 levels, then EVOLVE
+  { id:'multi', name:'Splinter Shot', icon:'gembig',
+    steps:[{desc:'+1 projectile.',f:()=>P.shots+=1},{desc:'+1 projectile.',f:()=>P.shots+=1},{desc:'+1 projectile.',f:()=>P.shots+=1},{desc:'+1 projectile.',f:()=>P.shots+=1}],
+    evo:{name:'Omni-Barrage', icon:'gembig', desc:'EVOLVE — fires a full 360° ring of projectiles.', f:()=>{P.shots+=2;P.radial=true;}} },
+  { id:'pierce', name:'Piercing Rounds', icon:'crocodilo',
+    steps:[{desc:'pierce +1 enemy.',f:()=>P.pierce+=1},{desc:'pierce +1 enemy.',f:()=>P.pierce+=1},{desc:'pierce +1 enemy.',f:()=>P.pierce+=1},{desc:'pierce +1 enemy.',f:()=>P.pierce+=1}],
+    evo:{name:'Hyper-Velocity Core', icon:'crocodilo', desc:'EVOLVE — infinite pierce, faster & larger cyan shots.', f:()=>{P.pierce=999;P.railgun=true;}} },
+  { id:'range', name:'Focal Lens', icon:'gem',
+    steps:[{desc:'+20% attack range.',f:()=>P.range*=1.2},{desc:'+20% attack range.',f:()=>P.range*=1.2},{desc:'+20% attack range.',f:()=>P.range*=1.2},{desc:'+20% attack range.',f:()=>P.range*=1.2}],
+    evo:{name:'Farsight Sniper', icon:'coin', desc:'EVOLVE — maximum range and +50% damage.', f:()=>{P.range*=1.8;P.dmg*=1.5;}} },
+  { id:'orbit', name:'Orbiting Barrier', icon:'gembig', rare:true,
+    steps:[{desc:'+1 orbiting projectile.',f:()=>P.orbs+=1},{desc:'+1 orbiting projectile.',f:()=>P.orbs+=1},{desc:'+1 orbiting projectile.',f:()=>P.orbs+=1},{desc:'+1 orbiting projectile.',f:()=>P.orbs+=1}],
+    evo:{name:'Guardian Shield', icon:'gembig', desc:'EVOLVE — extra orb that destroys incoming bullets.', f:()=>{P.orbs+=1;P.orbShield=true;}} },
+  { id:'nova', name:'Pulse Wave', icon:'gembig', rare:true,
+    steps:[{desc:'every 5s, a shockwave hits nearby enemies.',f:()=>{P.nova=true;}},{desc:'shockwave: faster + stronger.',f:()=>{P.novaCdBase=Math.max(3.5,P.novaCdBase-0.6);P.novaPow*=1.35;}},{desc:'shockwave: faster + stronger.',f:()=>{P.novaCdBase=Math.max(3.2,P.novaCdBase-0.6);P.novaPow*=1.35;}},{desc:'shockwave: faster + stronger.',f:()=>{P.novaCdBase=Math.max(3.0,P.novaCdBase-0.6);P.novaPow*=1.35;}}],
+    evo:{name:'Nova Cataclysm', icon:'gembig', desc:'EVOLVE — massive fast shockwave that clears nearby bullets.', f:()=>{P.nova=true;P.novaEvo=true;P.novaCdBase=3;P.novaPow*=1.5;}} },
+  { id:'vamp', name:'Soul Harvest', icon:'heart', rare:true,
+    steps:[{desc:'heal +1 HP per kill.',f:()=>P.vamp+=1},{desc:'heal +1 HP per kill.',f:()=>P.vamp+=1},{desc:'heal +1 HP per kill.',f:()=>P.vamp+=1},{desc:'heal +1 HP per kill.',f:()=>P.vamp+=1}],
+    evo:{name:'Vampiric Feast', icon:'heart', desc:'EVOLVE — restore a massive chunk of HP per kill.', f:()=>{P.vamp+=4;}} },
+  { id:'slow', name:'Stasis Field', icon:'gem', rare:true,
+    steps:[{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88},{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88},{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88},{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88}],
+    evo:{name:'Glacial Freeze', icon:'gem', desc:'EVOLVE — enemies you hit freeze solid.', f:()=>{P.bslow*=0.7;P.freeze=true;}} },
 ];
 // returns the next card "move" for an upgrade, or null if exhausted
 function nextMove(u){
@@ -227,7 +227,7 @@ function openLevelUp(){
   // weighted draw of 3 distinct (evolve weighted highest, rares lower)
   const opts = []; const bag = cands.slice();
   while(opts.length<3 && bag.length){
-    const w = bag.map(x => x.m.evolve ? 4 : (x.m.rare ? 1 : 2));
+    const w = bag.map(x => x.m.evolve ? 6 : (x.m.rare ? 1 : 2));   // evolve is rare to UNLOCK (4 levels) but easy to draw once ready
     let total=0; for(const v of w) total+=v;
     let r = Math.random()*total, idx=0;
     while(idx<w.length-1 && (r-=w[idx])>0) idx++;
