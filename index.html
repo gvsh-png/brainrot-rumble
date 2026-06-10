@@ -8,7 +8,8 @@
 <meta name="theme-color" content="#8fd24f">
 <title>BRAINROT SURVIVORS — Italian Brainrot Bullet Hell</title>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; touch-action:none; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none; -webkit-user-drag:none; touch-action:none; }
+  img { -webkit-user-drag:none; user-drag:none; pointer-events:none; }
   html,body { width:100%; height:100%; overflow:hidden; background:#6fae3d; font-family:'Baloo 2','Segoe UI',system-ui,sans-serif; }
   #game { position:fixed; inset:0; width:100%; height:100%; display:block; }
 
@@ -97,7 +98,14 @@
   }
   #dashbtn:active { transform:translateY(3px); box-shadow:0 2px 0 #b88c1e; }
   #dashbtn.cool { opacity:0.45; }
-  @media (hover:hover) and (pointer:fine){ #dashbtn{ opacity:.5; } }
+  /* Zoom controls */
+  #zoomctl { position:fixed; right:max(14px,env(safe-area-inset-right)); top:50%; transform:translateY(-50%); z-index:6; display:flex; flex-direction:column; gap:10px; }
+  #zoomctl button {
+    width:46px; height:46px; border-radius:12px; border:3px solid #3a2d22;
+    background:#fbf3df; color:#3a2d22; font-weight:900; font-size:24px; line-height:1;
+    box-shadow:0 4px 0 rgba(58,45,34,0.35); cursor:pointer;
+  }
+  #zoomctl button:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(58,45,34,0.35); }
 </style>
 </head>
 <body>
@@ -115,6 +123,10 @@
 <div id="combotag"></div>
 <div id="bosswarn" class="hidden">⚠ BOSS ⚠</div>
 <div id="dashbtn" class="hidden">DASH</div>
+<div id="zoomctl" class="hidden">
+  <button id="zoomin" type="button">+</button>
+  <button id="zoomout" type="button">&minus;</button>
+</div>
 
 <div id="menu" class="overlay">
   <div class="panel">
@@ -171,6 +183,16 @@ const TAU = Math.PI*2;
 const WORLD = { w:2600, h:2600 };
 const WALL = 46;                 // fence thickness
 const camera = { x:0, y:0 };
+// camera zoom: <1 = zoomed out (see more), >1 = zoomed in
+let zoom = 1;
+const ZMIN = 0.55, ZMAX = 2.2;   // max zoom-out / max zoom-in bounds
+function setZoom(z){ zoom = clamp(z, ZMIN, ZMAX); }
+function zoomBy(d){ setZoom(+(zoom + d).toFixed(3)); }
+function computeCamera(){
+  const vw = W/zoom, vh = H/zoom;
+  camera.x = WORLD.w<=vw ? (WORLD.w-vw)/2 : clamp(P.x - vw/2, 0, WORLD.w-vw);
+  camera.y = WORLD.h<=vh ? (WORLD.h-vh)/2 : clamp(P.y - vh/2, 0, WORLD.h-vh);
+}
 
 // ============ AUDIO (tiny synth, no assets) ============
 let AC = null;
@@ -199,6 +221,10 @@ const sfx = {
 };
 
 // ============ INPUT: drag joystick + dash ============
+const IS_TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints>0);
+// block image dragging / right-click "save image" / copy-image
+window.addEventListener('contextmenu', e=>e.preventDefault());
+window.addEventListener('dragstart', e=>e.preventDefault());
 const joy = { active:false, id:-1, ox:0, oy:0, dx:0, dy:0 };
 function joyStart(x,y){ joy.active=true; joy.ox=x; joy.oy=y; joy.dx=0; joy.dy=0; }
 function joyMove(x,y){
@@ -213,9 +239,12 @@ cv.addEventListener('touchstart', e=>{ e.preventDefault(); const t=e.changedTouc
 cv.addEventListener('touchmove',  e=>{ e.preventDefault(); const t=e.changedTouches[0]; joyMove(t.clientX,t.clientY); }, {passive:false});
 cv.addEventListener('touchend',   e=>{ e.preventDefault(); joyEnd(); }, {passive:false});
 cv.addEventListener('touchcancel',e=>{ joyEnd(); }, {passive:false});
-cv.addEventListener('mousedown', e=>joyStart(e.clientX,e.clientY));
-cv.addEventListener('mousemove', e=>joyMove(e.clientX,e.clientY));
-window.addEventListener('mouseup', joyEnd);
+// mouse-drag movement is a touch-style control: only on touch devices (e.g. touch laptops), never on plain PC
+if(IS_TOUCH){
+  cv.addEventListener('mousedown', e=>joyStart(e.clientX,e.clientY));
+  cv.addEventListener('mousemove', e=>joyMove(e.clientX,e.clientY));
+  window.addEventListener('mouseup', joyEnd);
+}
 const keys={};
 window.addEventListener('keydown',e=>{ keys[e.key.toLowerCase()]=true; if(e.key===' '||e.key==='Shift') tryDash(); });
 window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
@@ -440,7 +469,8 @@ function startGame(){
   $('menu').classList.add('hidden');
   $('gameover').classList.add('hidden');
   $('hud').classList.remove('hidden');
-  $('dashbtn').classList.remove('hidden');
+  $('zoomctl').classList.remove('hidden');
+  if(IS_TOUCH) $('dashbtn').classList.remove('hidden');   // mobile-only on-screen dash
   startWave();
 }
 
@@ -528,7 +558,7 @@ function openLevelUp(){
     const d=document.createElement('button');
     d.className='card'+(u.rare?' rare':'');
     const ic = SP[u.icon] ? SP[u.icon].toDataURL() : '';
-    d.innerHTML = `<img class="cicon" src="${ic}"><div class="cbody"><div class="cname">${u.name}${u.rare?' ★':''}</div><div class="cdesc">${u.desc}</div></div>`;
+    d.innerHTML = `<img class="cicon" draggable="false" src="${ic}"><div class="cbody"><div class="cname">${u.name}${u.rare?' ★':''}</div><div class="cdesc">${u.desc}</div></div>`;
     d.onclick = ()=>{
       u.f(); P.taken[u.id]=true;
       $('levelup').classList.add('hidden');
@@ -553,6 +583,7 @@ function gameOver(){
   $('fbest').textContent = best;
   $('hud').classList.add('hidden');
   $('dashbtn').classList.add('hidden');
+  $('zoomctl').classList.add('hidden');
   setTimeout(()=>$('gameover').classList.remove('hidden'), 600);
 }
 
@@ -606,9 +637,8 @@ function update(dt){
   if(P.inv>0) P.inv-=dt;
   if(P.dashCd>0){ P.dashCd-=dt; $('dashbtn').classList.toggle('cool', P.dashCd>0); }
 
-  // camera follows, clamped to world
-  camera.x = clamp(P.x - W/2, 0, Math.max(0, WORLD.w - W));
-  camera.y = clamp(P.y - H/2, 0, Math.max(0, WORLD.h - H));
+  // camera follows, clamped to world (zoom-aware)
+  computeCamera();
 
   // --- auto-fire at nearest enemy ---
   P.fireCd -= dt;
@@ -852,13 +882,15 @@ function render(){
   cx.save();
   let sx=0, sy=0;
   if(shake>0){ sx=rand(-shake,shake); sy=rand(-shake,shake); cx.translate(sx,sy); }
+  cx.scale(zoom, zoom);
   cx.translate(-camera.x, -camera.y);
 
-  const vx0=camera.x-sx, vy0=camera.y-sy, vx1=vx0+W, vy1=vy0+H;
+  const vw=W/zoom, vh=H/zoom;
+  const vx0=camera.x, vy0=camera.y, vx1=vx0+vw, vy1=vy0+vh;
 
   // --- ground: outside-world void ---
   cx.fillStyle='#5b7d33';
-  cx.fillRect(vx0-40, vy0-40, W+80, H+80);
+  cx.fillRect(vx0-40, vy0-40, vw+80, vh+80);
 
   // --- grass field (checkerboard tiles, only visible region) ---
   const gx0=Math.max(0,Math.floor(vx0/TILE)*TILE), gx1=Math.min(WORLD.w,vx1);
@@ -1010,7 +1042,7 @@ function drawMinimap(){
   cx.fillStyle='#e54d4d';
   for(const e of enemies){ cx.fillRect(mx+e.x*sxk-1, my+e.y*syk-1, e.isBoss?4:2, e.isBoss?4:2); }
   cx.fillStyle='#fff'; cx.fillRect(mx+P.x*sxk-2, my+P.y*syk-2, 4,4);
-  cx.strokeStyle='#fff'; cx.lineWidth=2; cx.strokeRect(mx+camera.x*sxk, my+camera.y*syk, W*sxk, H*syk);
+  cx.strokeStyle='#fff'; cx.lineWidth=2; cx.strokeRect(mx+camera.x*sxk, my+camera.y*syk, (W/zoom)*sxk, (H/zoom)*syk);
   cx.globalAlpha=1;
 }
 
@@ -1027,15 +1059,13 @@ function loop(t){
 
 // menu: gentle drifting enemies around the player anchor for vibes
 function menuUpdate(dt){
-  camera.x = clamp(P.x - W/2, 0, Math.max(0,WORLD.w-W));
-  camera.y = clamp(P.y - H/2, 0, Math.max(0,WORLD.h-H));
+  computeCamera();
   for(const e of enemies){ e.t=(e.t||0)+dt; e.x+=Math.cos(e.t*0.6)*0.5; e.y+=Math.sin(e.t*0.5)*0.5; if(e.hitT>0)e.hitT-=dt; if(e.sq>0)e.sq-=dt*4; }
 }
 
 // init menu state
 resetPlayer(); state=ST.MENU;
-camera.x = clamp(P.x - W/2, 0, Math.max(0,WORLD.w-W));
-camera.y = clamp(P.y - H/2, 0, Math.max(0,WORLD.h-H));
+computeCamera();
 setInterval(()=>{
   if(state===ST.MENU && enemies.length<6){ spawnEnemy(); const e=enemies[enemies.length-1]; e.sp=0; }
 }, 700);
@@ -1045,6 +1075,15 @@ requestAnimationFrame(loop);
 $('startbtn').addEventListener('click', startGame);
 $('retrybtn').addEventListener('click', startGame);
 document.addEventListener('dblclick', e=>e.preventDefault());
+
+// ---- zoom controls: buttons + scroll wheel ----
+$('zoomin').addEventListener('click', ()=>zoomBy(0.2));
+$('zoomout').addEventListener('click', ()=>zoomBy(-0.2));
+window.addEventListener('wheel', e=>{
+  if(state===ST.MENU) return;
+  e.preventDefault();
+  zoomBy(e.deltaY<0 ? 0.12 : -0.12);
+}, {passive:false});
 </script>
 </body>
 </html>
