@@ -6,6 +6,7 @@ const P = {}; // player
 let bullets=[], ebullets=[], enemies=[], gems=[], parts=[], texts=[], zones=[];
 let wave=1, score=0, kills=0, spawnTimer=0, waveEnemiesLeft=0, betweenWaves=false, boss=null;
 let combo=0, comboT=0;
+let gold = +(localStorage.getItem('br_gold')||0);   // persistent currency (saved)
 // boss arena: the field locks to a small bounded square a few seconds before the boss arrives
 let arena=null, bossPending=0;
 const ARENA_SIZE=1000, ARENA_LEAD=4, ARENA_ZOOM=1.3;
@@ -194,6 +195,14 @@ function burst(x,y,color,n=10,spd=160){
     const a=rand(0,TAU), s=rand(spd*0.3,spd);
     parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:rand(0.25,0.6),max:0.6,color,r:rand(2,5)});
   }
+}
+// satisfying impact: quick expanding ring + round sparks + white flash core
+function hitSpark(x,y,color,crit){
+  parts.push({x,y,vx:0,vy:0,life:0.22,max:0.22,color,r:crit?12:8,ring:true,gr:crit?340:240,lw:crit?5:4});
+  const n=crit?8:5;
+  for(let i=0;i<n;i++){ const a=rand(0,TAU), s=rand(70,crit?300:180);
+    parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:rand(0.18,0.42),max:0.42,color,r:rand(2.5,crit?6:4)}); }
+  parts.push({x,y,vx:0,vy:0,life:0.12,max:0.12,color:'#ffffff',r:crit?11:7});
 }
 function floatText(x,y,str,color='#fff',size=14){
   texts.push({x,y,str,color,size,life:0.9,max:0.9,vy:-55});
@@ -414,7 +423,7 @@ function update(dt){
         const isCrit = Math.random()<P.crit;
         const dmg = P.dmg * (isCrit?3:1);
         b.hit.add(e);
-        burst(b.x,b.y,isCrit?'#ffd23a':'#ff9f3a',4,90);
+        hitSpark(b.x,b.y,isCrit?'#ffe14d':'#ff9f3a',isCrit);
         damageEnemy(e,dmg,b.x,b.y,isCrit);
         if(b.pierce>0){ b.pierce--; } else { bullets.splice(i,1); }
         break;
@@ -542,7 +551,7 @@ function update(dt){
     if(d < (P.r+12)*(P.r+12)){
       gems.splice(i,1);
       if(g.heart){ P.hp=Math.min(P.maxHp,P.hp+25); floatText(P.x,P.y-24,'+25','#e8556a',16); burst(P.x,P.y,'#ff97a6',8,120); sfx.coin(); }
-      else if(g.coin){ const v=Math.round(20*comboMult()); score+=v; $('scoretag').textContent='★ '+score; floatText(g.x,g.y,'+'+v,'#f5c542',13); sfx.coin(); }
+      else if(g.coin){ const v=Math.round(20*comboMult()); score+=v; gold+=v; localStorage.setItem('br_gold',gold); $('scoretag').textContent='★ '+score; floatText(g.x,g.y,'+'+v,'#f5c542',13); sfx.coin(); }
       else { gainXp(g.v); sfx.gem(Math.min(combo,8)); }
     }
   }
@@ -561,8 +570,8 @@ function update(dt){
   // --- particles & texts ---
   for(let i=parts.length-1;i>=0;i--){
     const p=parts[i];
-    if(p.ring){ p.r+=600*dt; p.life-=dt; if(p.life<=0) parts.splice(i,1); continue; }
-    p.x+=p.vx*dt; p.y+=p.vy*dt; p.vx*=0.92; p.vy*=0.92; p.life-=dt;
+    if(p.ring){ p.r+=(p.gr||600)*dt; p.life-=dt; if(p.life<=0) parts.splice(i,1); continue; }
+    p.x+=p.vx*dt; p.y+=p.vy*dt; p.vx*=0.9; p.vy*=0.9; p.life-=dt;
     if(p.life<=0) parts.splice(i,1);
   }
   for(let i=texts.length-1;i>=0;i--){
@@ -789,9 +798,10 @@ function render(){
 
   // --- particles ---
   for(const p of parts){
-    if(p.ring){ cx.globalAlpha=Math.max(0,p.life/p.max)*0.5; cx.strokeStyle=p.color; cx.lineWidth=6; cx.beginPath(); cx.arc(p.x,p.y,p.r,0,TAU); cx.stroke(); continue; }
-    cx.globalAlpha = p.life/p.max; cx.fillStyle = p.color;
-    cx.fillRect(p.x-p.r/2, p.y-p.r/2, p.r, p.r);
+    const a = Math.max(0, p.life/p.max);
+    if(p.ring){ cx.globalAlpha=a*0.6; cx.strokeStyle=p.color; cx.lineWidth=(p.lw||5)*a+1; cx.beginPath(); cx.arc(p.x,p.y,p.r,0,TAU); cx.stroke(); continue; }
+    cx.globalAlpha = a; cx.fillStyle = p.color;            // round sparks that shrink as they fade
+    cx.beginPath(); cx.arc(p.x, p.y, p.r*(0.45+0.55*a), 0, TAU); cx.fill();
   }
   cx.globalAlpha=1;
 
@@ -916,6 +926,11 @@ function menuUpdate(dt){
 // ============ INIT ============
 resetPlayer(); state=ST.MENU;
 computeCamera();
+// populate the main menu (character + saved gold + best)
+$('charimg').src = SP['player'].toDataURL();
+$('goldicon').src = SP['coin'].toDataURL();
+$('goldtxt').textContent = gold;
+$('besttxt').textContent = +(localStorage.getItem('brainrot_best')||0);
 setInterval(()=>{
   if(state===ST.MENU && enemies.length<6){ spawnEnemy(); const e=enemies[enemies.length-1]; e.sp=0; }
 }, 700);
