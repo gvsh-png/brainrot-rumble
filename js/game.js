@@ -3,7 +3,7 @@
 let shake = 0, hitFlash = 0, hitstop = 0, tPrev = 0, elapsed = 0;
 
 const P = {}; // player
-let bullets=[], ebullets=[], enemies=[], gems=[], parts=[], texts=[];
+let bullets=[], ebullets=[], enemies=[], gems=[], parts=[], texts=[], zones=[];
 let wave=1, score=0, kills=0, spawnTimer=0, waveEnemiesLeft=0, betweenWaves=false, boss=null;
 let combo=0, comboT=0;
 
@@ -12,7 +12,7 @@ const FOES = [
   // Tier I — fodder
   { spr:'pigeon',   name:'Spijuniro',     hp:3,  sp:80, r:15, xp:1, score:10 },
   { spr:'chimp',    name:'Chimpanzini',   hp:3,  sp:86, r:16, xp:1, score:12 },
-  { spr:'penguin',  name:'Penguino',      hp:4,  sp:60, r:16, xp:1, score:12 },
+  { spr:'penguin',  name:'Penguino',      hp:4,  sp:56, r:16, xp:1, score:12, dash:true },
   { spr:'flamingo', name:'Flamingulli',   hp:3,  sp:82, r:16, xp:1, score:12 },
   { spr:'duck',     name:'Quacodillo',    hp:3,  sp:72, r:15, xp:1, score:14, death:{type:'ring',n:4} },
   // Tier II — infantry
@@ -30,13 +30,13 @@ const FOES = [
   { spr:'espresso',  name:'Espressona Signora', hp:9, sp:58, r:17, xp:3, score:32, shoot:{type:'ring',n:5,cd:2.2,spd:130,col:'#5b3a22'} },
   { spr:'orangutan', name:'Orangutini',    hp:10, sp:54, r:20, xp:4, score:34, shoot:{type:'aim',n:1,cd:2.4,spd:140,col:'#e0b400'} },
   // Tier IV — heavies
-  { spr:'rhino',     name:'Rhino Toasterino', hp:18, sp:42, r:23, xp:4, score:45, shoot:{type:'aim',n:2,cd:3.0,spd:140,col:'#caa12f'} },
-  { spr:'camel',     name:'Frigo Camelo',  hp:20, sp:38, r:24, xp:5, score:50, shoot:{type:'aim',n:5,cd:3.4,spd:120,col:'#9fd0ff'} },
-  { spr:'hippo',     name:'Il Cacto Hipopotamo', hp:22, sp:34, r:25, xp:5, score:55, shoot:{type:'ring',n:8,cd:3.4,spd:120,col:'#6b9233'} },
-  { spr:'turtle',    name:'Torrtuginni',   hp:26, sp:30, r:24, xp:5, score:55 },
+  { spr:'rhino',     name:'Rhino Toasterino', hp:18, sp:42, r:23, xp:4, score:45, shoot:{type:'aim',n:2,cd:3.0,spd:140,col:'#caa12f'}, aoe:{r:42,dps:14,life:1.3,tele:0.7,col:'#e8a93a',cd:3.6} },
+  { spr:'camel',     name:'Frigo Camelo',  hp:20, sp:38, r:24, xp:5, score:50, aoe:{r:52,dps:9,life:1.6,tele:0.6,slow:true,col:'#9fd0ff',cd:3.4} },
+  { spr:'hippo',     name:'Il Cacto Hipopotamo', hp:22, sp:34, r:25, xp:5, score:55, shoot:{type:'ring',n:8,cd:3.6,spd:120,col:'#6b9233'}, aoe:{r:46,dps:15,life:1.1,tele:0.6,col:'#6b9233',cd:4.0} },
+  { spr:'turtle',    name:'Torrtuginni',   hp:26, sp:30, r:24, xp:5, score:55, shell:true },
   // Tier V — elites
   { spr:'panda',     name:'Pandaccini',    hp:14, sp:58, r:20, xp:4, score:40 },
-  { spr:'tiger',     name:'Tigrrullini',   hp:14, sp:76, r:20, xp:4, score:44, shoot:{type:'aim',n:5,cd:3.0,spd:155,col:'#e54d4d'} },
+  { spr:'tiger',     name:'Tigrrullini',   hp:14, sp:76, r:20, xp:4, score:44, dash:true, shoot:{type:'aim',n:5,cd:3.4,spd:155,col:'#e54d4d'} },
   { spr:'capy',      name:'Capybarelli',   hp:16, sp:46, r:21, xp:5, score:48 },
 ];
 const BOSSES = [
@@ -100,7 +100,7 @@ function resetPlayer(){
     x:WORLD.w/2, y:WORLD.h/2, r:18, hp:100, maxHp:100, speed:200,
     dmg:1, fireRate:0.32, fireCd:0, shots:1, pierce:0, range:330,
     magnet:90, crit:0.05, orbs:0, orbA:0, nova:false, novaCd:5, novaCdBase:5, novaPow:1,
-    vamp:0, bslow:1, lv:1, xp:0, xpNext:5, inv:0, up:{},
+    vamp:0, bslow:1, lv:1, xp:0, xpNext:5, inv:0, up:{}, slowT:0,
     face:0, walk:0, dashCd:0, dashMax:2.2, dashT:0, dvx:0, dvy:0,
     radial:false, railgun:false, orbShield:false, novaEvo:false, freeze:false
   });
@@ -109,7 +109,7 @@ function resetPlayer(){
 function startGame(){
   initAudio();
   resetPlayer();
-  bullets=[]; ebullets=[]; enemies=[]; gems=[]; parts=[]; texts=[];
+  bullets=[]; ebullets=[]; enemies=[]; gems=[]; parts=[]; texts=[]; zones=[];
   wave=1; score=0; kills=0; elapsed=0; boss=null; combo=0; comboT=0;
   state=ST.PLAY;
   $('menu').classList.add('hidden');
@@ -163,7 +163,10 @@ function spawnEnemy(){
     spr:def.spr, name:def.name, x:p.x, y:p.y, r:def.r,
     hp:def.hp*hpMult, maxHp:def.hp*hpMult,
     sp:def.sp*(1+wave*0.02), xp:def.xp, score:def.score, shoot:def.shoot, death:def.death,
-    t:rand(0,TAU), wob:rand(2,4), shootCd:rand(1.5,4), isBoss:false, hitT:0, sq:0, face:1
+    aoe:def.aoe, aoeCd:rand(1.5,3),
+    dash:def.dash, dst:'idle', dcd:rand(2,4), da:0, dwin:0, ddur:0,
+    shell:def.shell, shellCd:rand(3,5), iv:0,
+    t:rand(0,TAU), wob:rand(2,4), shootCd:rand(1.5,4), frz:0, isBoss:false, hitT:0, sq:0, face:1
   });
 }
 
@@ -179,6 +182,10 @@ function floatText(x,y,str,color='#fff',size=14){
 }
 function bigText(str,color){
   texts.push({x:P.x,y:P.y-90,str,color,size:34,life:1.6,max:1.6,vy:-12,big:true});
+}
+// telegraphed ground hazard: warns (tele), then deals DoT for (life)
+function addZone(x,y,r,o){
+  zones.push({ x,y,r, t:0, tele:o.tele||0.6, life:o.life||1.4, dps:o.dps||10, slow:!!o.slow, col:o.col||'#e8a93a' });
 }
 
 // ============ LEVEL UP ============
@@ -300,11 +307,13 @@ function update(dt){
     P.x += P.dvx*640*dt; P.y += P.dvy*640*dt;
     if(Math.random()<0.6) parts.push({x:P.x,y:P.y,vx:0,vy:0,life:0.25,max:0.25,color:'#bfe3ff',r:6});
   } else {
-    P.x += mx*P.speed*dt; P.y += my*P.speed*dt;
+    const spd = P.speed * (P.slowT>0 ? 0.5 : 1);   // chilled by cold zones
+    P.x += mx*spd*dt; P.y += my*spd*dt;
   }
   P.x = clamp(P.x, WALL+P.r, WORLD.w-WALL-P.r);
   P.y = clamp(P.y, WALL+P.r, WORLD.h-WALL-P.r);
   if(P.inv>0) P.inv-=dt;
+  if(P.slowT>0) P.slowT-=dt;
   if(P.dashCd>0){ P.dashCd-=dt; $('dashbtn').classList.toggle('cool', P.dashCd>0); }
 
   // camera follows, clamped to world (zoom-aware)
@@ -343,6 +352,7 @@ function update(dt){
       const a = P.orbA + i*(TAU/P.orbs);
       const ox = P.x + Math.cos(a)*58, oy = P.y + Math.sin(a)*58;
       for(const e of enemies){
+        if(e.iv>0) continue;
         if(dist2(ox,oy,e.x,e.y) < (e.r+10)*(e.r+10)){
           e.hp -= 9*dt*P.dmg; e.hitT=Math.max(e.hitT,0.06);
         }
@@ -378,7 +388,7 @@ function update(dt){
     if(b.dist<=0){ burst(b.x,b.y,'#fff6bf',3,55); bullets.splice(i,1); continue; }
     if(b.x<-20||b.x>WORLD.w+20||b.y<-20||b.y>WORLD.h+20){ bullets.splice(i,1); continue; }
     for(const e of enemies){
-      if(b.hit.has(e)) continue;
+      if(b.hit.has(e) || e.iv>0) continue;
       if(dist2(b.x,b.y,e.x,e.y) < (e.r+b.r)*(e.r+b.r)){
         const isCrit = Math.random()<P.crit;
         const dmg = P.dmg * (isCrit?3:1);
@@ -409,24 +419,37 @@ function update(dt){
     if(e.isBoss){
       updateBoss(e,dt);
     } else {
-      const fs = e.frz>0 ? 0.2 : 1;       // Absolute Ohio freeze
-      const a = Math.atan2(P.y-e.y, P.x-e.x) + Math.sin(e.t*e.wob)*0.4;
-      e.x += Math.cos(a)*e.sp*fs*dt;
-      e.y += Math.sin(a)*e.sp*fs*dt;
-      e.face = Math.cos(a)>=0 ? 1 : -1;
+      if(e.iv>0) e.iv-=dt;
+      // turtle: periodically pull into an invulnerable shell and hold still
+      if(e.shell && e.iv<=0){ e.shellCd-=dt; if(e.shellCd<=0){ e.iv=1.6; e.shellCd=4.5; } }
+      // charge-dash state machine (Penguino slide, Tigrrullini pounce, ...)
+      let dashing=false;
+      if(e.dash){
+        if(e.dst==='wind'){ e.dwin-=dt; dashing=true; if(e.dwin<=0){ e.dst='dash'; e.ddur=0.32; } }
+        else if(e.dst==='dash'){ e.ddur-=dt; dashing=true; e.x+=Math.cos(e.da)*460*dt; e.y+=Math.sin(e.da)*460*dt; if(e.ddur<=0){ e.dst='idle'; e.dcd=rand(2.6,4.6); } }
+        else { e.dcd-=dt; if(e.dcd<=0 && e.iv<=0 && dist2(e.x,e.y,P.x,P.y)<380*380){ e.dst='wind'; e.dwin=0.5; e.da=Math.atan2(P.y-e.y,P.x-e.x); dashing=true; } }
+      }
+      if(!dashing && e.iv<=0){
+        const fs = e.frz>0 ? 0.2 : 1;     // Absolute Ohio freeze
+        const a = Math.atan2(P.y-e.y, P.x-e.x) + Math.sin(e.t*e.wob)*0.4;
+        e.x += Math.cos(a)*e.sp*fs*dt;
+        e.y += Math.sin(a)*e.sp*fs*dt;
+        e.face = Math.cos(a)>=0 ? 1 : -1;
+      }
       e.x = clamp(e.x, WALL, WORLD.w-WALL); e.y = clamp(e.y, WALL, WORLD.h-WALL);
-      if(wave>=3 && e.shoot){
-        e.shootCd -= dt;
-        if(e.shootCd<=0){
-          e.shootCd = e.shoot.cd || rand(2.5,4.5);
-          const spd = e.shoot.spd||140, col = e.shoot.col||'#e23b3b';
-          if(e.shoot.type==='ring'){
-            const n=e.shoot.n||8, off=rand(0,TAU);
-            for(let k=0;k<n;k++) fireEB(e.x,e.y, off+k*TAU/n, spd, col);
-          } else { // aimed fan
-            const n=e.shoot.n||1, aim=Math.atan2(P.y-e.y,P.x-e.x);
-            for(let k=0;k<n;k++) fireEB(e.x,e.y, aim+(k-(n-1)/2)*0.18, spd, col);
+      if(wave>=3 && e.iv<=0){
+        if(e.shoot){
+          e.shootCd -= dt;
+          if(e.shootCd<=0){
+            e.shootCd = e.shoot.cd || rand(2.5,4.5);
+            const spd = e.shoot.spd||140, col = e.shoot.col||'#e23b3b';
+            if(e.shoot.type==='ring'){ const n=e.shoot.n||8, off=rand(0,TAU); for(let k=0;k<n;k++) fireEB(e.x,e.y, off+k*TAU/n, spd, col); }
+            else { const n=e.shoot.n||1, aim=Math.atan2(P.y-e.y,P.x-e.x); for(let k=0;k<n;k++) fireEB(e.x,e.y, aim+(k-(n-1)/2)*0.18, spd, col); }
           }
+        }
+        if(e.aoe){
+          e.aoeCd -= dt;
+          if(e.aoeCd<=0){ e.aoeCd = e.aoe.cd||3.5; addZone(P.x+rand(-24,24), P.y+rand(-24,24), e.aoe.r, e.aoe); }
         }
       }
     }
@@ -495,6 +518,17 @@ function update(dt){
     }
   }
 
+  // --- ground hazard zones ---
+  for(let i=zones.length-1;i>=0;i--){
+    const z=zones[i]; z.t+=dt;
+    if(z.t>=z.tele && z.t<z.tele+z.life && P.dashT<=0 && P.inv<=0 && dist2(z.x,z.y,P.x,P.y)<z.r*z.r){
+      P.hp -= z.dps*dt; hitFlash=Math.max(hitFlash,0.3);
+      if(z.slow) P.slowT=Math.max(P.slowT,0.4);
+      if(P.hp<=0){ gameOver(); }
+    }
+    if(z.t>z.tele+z.life) zones.splice(i,1);
+  }
+
   // --- particles & texts ---
   for(let i=parts.length-1;i>=0;i--){
     const p=parts[i];
@@ -516,6 +550,7 @@ function update(dt){
 }
 
 function damageEnemy(e,dmg,fx,fy,crit){
+  if(e.iv>0) return;                 // shelled / invulnerable
   e.hp -= dmg; e.hitT=0.12; e.sq=1;
   if(P.freeze && !e.isBoss) e.frz=1.2;
   sfx.hit();
@@ -614,6 +649,9 @@ function render(){
   // --- fence border (wooden wall) ---
   drawBorder(vx0,vy0,vx1,vy1);
 
+  // --- ground hazard zones (telegraph + active) ---
+  renderZones();
+
   // --- gems / pickups ---
   for(const gm of gems){
     if(gm.x<vx0-40||gm.x>vx1+40||gm.y<vy0-40||gm.y>vy1+40) continue;
@@ -649,9 +687,15 @@ function render(){
     // shadow
     cx.fillStyle='rgba(40,60,25,0.28)';
     cx.beginPath(); cx.ellipse(e.x, e.y+e.r*0.85, e.r*0.8, e.r*0.32, 0,0,TAU); cx.fill();
+    if(e.dst==='wind'){   // charge-dash wind-up telegraph line
+      cx.globalAlpha=0.45; cx.strokeStyle='#ff5a5a'; cx.lineWidth=4; cx.setLineDash([10,8]);
+      cx.beginPath(); cx.moveTo(e.x,e.y); cx.lineTo(e.x+Math.cos(e.da)*150, e.y+Math.sin(e.da)*150); cx.stroke();
+      cx.setLineDash([]); cx.globalAlpha=1;
+    }
     const wob = e.isBoss ? Math.sin(e.t*2)*0.06 : Math.sin(e.t*6)*0.12;
     drawSprite(e.spr, e.x, e.y, e.r*2.5, wob, e.sq, e.hitT, e.face===-1);
     if(e.frz>0){ cx.globalAlpha=0.4; cx.fillStyle='#bfe6ff'; cx.beginPath(); cx.arc(e.x,e.y,e.r*1.05,0,TAU); cx.fill(); cx.globalAlpha=1; }
+    if(e.iv>0){ cx.strokeStyle='#d8b46a'; cx.lineWidth=4; cx.globalAlpha=0.85; cx.beginPath(); cx.arc(e.x,e.y,e.r+6,0,TAU); cx.stroke(); cx.globalAlpha=1; }
     if(e.hp<e.maxHp){
       const w=e.r*1.9;
       cx.fillStyle='rgba(0,0,0,0.45)'; cx.fillRect(e.x-w/2,e.y-e.r-12,w,5);
@@ -741,6 +785,23 @@ function drawBorder(vx0,vy0,vx1,vy1){
   if(vx1 > WORLD.w-WALL-10){ for(let y=Math.max(WALL,Math.floor(vy0/postEvery)*postEvery); y<Math.min(WORLD.h-WALL,vy1); y+=postEvery){ post(WORLD.w-WALL+6,y); } cx.beginPath(); cx.moveTo(WORLD.w-WALL+4,Math.max(0,vy0)); cx.lineTo(WORLD.w-WALL+4,Math.min(WORLD.h,vy1)); cx.stroke(); }
 }
 function post(x,y){ cx.fillStyle='#9a6b3d'; cx.fillRect(x-5,y-14,10,28); cx.strokeStyle='#5a3a20'; cx.lineWidth=2.5; cx.strokeRect(x-5,y-14,10,28); }
+
+function renderZones(){
+  for(const z of zones){
+    if(z.t<z.tele){                       // telegraph: pulsing dashed ring + filling
+      const k=z.t/z.tele;
+      cx.globalAlpha=0.5+0.3*Math.sin(z.t*22);
+      cx.strokeStyle=z.col; cx.lineWidth=3; cx.setLineDash([9,8]);
+      cx.beginPath(); cx.arc(z.x,z.y,z.r,0,TAU); cx.stroke(); cx.setLineDash([]);
+      cx.globalAlpha=0.14; cx.fillStyle=z.col; cx.beginPath(); cx.arc(z.x,z.y,z.r*k,0,TAU); cx.fill();
+    } else {                              // active: fades over its life
+      const k=Math.max(0,1-(z.t-z.tele)/z.life);
+      cx.globalAlpha=0.32*k+0.08; cx.fillStyle=z.col; cx.beginPath(); cx.arc(z.x,z.y,z.r,0,TAU); cx.fill();
+      cx.globalAlpha=0.6*k; cx.strokeStyle=z.col; cx.lineWidth=3; cx.beginPath(); cx.arc(z.x,z.y,z.r,0,TAU); cx.stroke();
+    }
+  }
+  cx.globalAlpha=1;
+}
 
 function drawMinimap(){
   // mobile keeps the compact map; PC scales it up and stays responsive to window size
