@@ -68,6 +68,14 @@ const WORLDS = [
     theme:{ void:'#5b7d33', tile1:'#86c64a', tile2:'#7cbd43', tuft:'rgba(60,110,40,0.35)',
             wall:null, post:null, bg:'#6fae3d', tint:null, music:'game' },
     foes:FOES_GRASS, bosses:BOSSES_GRASS },
+  { id:'dirt', name:'DIRT DEPTHS', waveTarget:30, endless:false,
+    theme:{ void:'#5a3d28', tile1:'#7a5333', tile2:'#6f4a2c', tuft:'rgba(40,26,14,0.35)',
+            wall:'#4a3320', post:'#7a5a38', postDark:'#3a2616', bg:'#6b4a30', tint:'#8a5a2c', music:'game' },
+    foes:FOES_GRASS, bosses:BOSSES_GRASS },
+  { id:'under', name:'THE UNDERGROUND', waveTarget:0, endless:true,
+    theme:{ void:'#1c1622', tile1:'#33293f', tile2:'#2c2336', tuft:'rgba(120,90,160,0.25)',
+            wall:'#241a30', post:'#4a3a60', postDark:'#160f1e', bg:'#241a30', tint:'#6a4f8a', music:'boss2' },
+    foes:FOES_GRASS, bosses:BOSSES_GRASS },
 ];
 let worldIdx = 0;
 function curWorld(){ return WORLDS[worldIdx]; }
