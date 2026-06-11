@@ -31,27 +31,27 @@ const FOES = [
   { spr:'flamingo', name:'Flamingulli',   hp:3,  sp:82, r:16, xp:1, score:12 },
   { spr:'duck',     name:'Quacodillo',    hp:3,  sp:72, r:15, xp:1, score:14, death:{type:'ring',n:4} },
   // Tier II — infantry
-  { spr:'cappuccino',name:'Cappuccino Assassino', hp:5, sp:90, r:15, xp:2, score:18, shoot:{type:'aim',n:1,cd:2.6,spd:175,col:'#d8e0ea'} },
-  { spr:'ballerina', name:'Ballerina Cappuccina', hp:5, sp:64, r:16, xp:2, score:18, shoot:{type:'ring',n:6,cd:3.2,spd:120,col:'#c98a4f'} },
-  { spr:'candypig',  name:'Svinino',       hp:6,  sp:70, r:16, xp:2, score:18, shoot:{type:'aim',n:1,cd:2.8,spd:130,col:'#f06fa8'} },
-  { spr:'beaver',    name:'Castori Gangsteri', hp:7, sp:62, r:17, xp:2, score:22, shoot:{type:'aim',n:3,cd:2.4,spd:175,col:'#caa12f'} },
-  { spr:'lirili',    name:'Lirili Larila', hp:13, sp:40, r:22, xp:3, score:30, shoot:{type:'aim',n:3,cd:3.0,spd:130,col:'#6b9233'} },
-  { spr:'patapim',   name:'Brr Brr Patapim', hp:12, sp:44, r:21, xp:3, score:28, shoot:{type:'aim',n:2,cd:3.2,spd:120,col:'#9c6b3f'} },
+  { spr:'cappuccino',name:'Cappuccino Assassino', hp:5, sp:90, r:15, xp:2, score:18, range:300, shoot:{type:'aim',n:1,cd:2.6,spd:175,col:'#d8e0ea'} },
+  { spr:'ballerina', name:'Ballerina Cappuccina', hp:5, sp:64, r:16, xp:2, score:18, range:260, shoot:{type:'ring',n:6,cd:3.2,spd:120,col:'#c98a4f',move:true} },
+  { spr:'candypig',  name:'Svinino',       hp:6,  sp:70, r:16, xp:2, score:18, range:300, shoot:{type:'aim',n:1,cd:2.8,spd:130,col:'#f06fa8'} },
+  { spr:'beaver',    name:'Castori Gangsteri', hp:7, sp:62, r:17, xp:2, score:22, range:340, shoot:{type:'aim',n:3,cd:2.4,spd:175,col:'#caa12f'} },
+  { spr:'lirili',    name:'Lirili Larila', hp:13, sp:40, r:22, xp:3, score:30, range:320, shoot:{type:'aim',n:3,cd:3.0,spd:130,col:'#6b9233'} },
+  { spr:'patapim',   name:'Brr Brr Patapim', hp:12, sp:44, r:21, xp:3, score:28, range:300, shoot:{type:'aim',n:2,cd:3.2,spd:120,col:'#9c6b3f'} },
   // Tier III — casters
-  { spr:'pinecroc',  name:'Crocodillo Ananasinno', hp:8, sp:66, r:19, xp:3, score:28, shoot:{type:'aim',n:3,cd:2.8,spd:150,col:'#e0b400'} },
-  { spr:'goose',     name:'Bombombini',    hp:8,  sp:74, r:18, xp:3, score:30, shoot:{type:'aim',n:3,cd:2.6,spd:150,col:'#e58a3a'} },
-  { spr:'octopus',   name:'Blueberrinni',  hp:9,  sp:50, r:19, xp:3, score:30, shoot:{type:'ring',n:8,cd:3.0,spd:120,col:'#5b6cf0'} },
-  { spr:'jelly',     name:'Graipussi Medussi', hp:8, sp:46, r:19, xp:3, score:30, shoot:{type:'ring',n:6,cd:2.8,spd:95,col:'#d36fb0'} },
-  { spr:'espresso',  name:'Espressona Signora', hp:9, sp:58, r:17, xp:3, score:32, shoot:{type:'ring',n:5,cd:2.2,spd:130,col:'#a16a3c'} },
-  { spr:'orangutan', name:'Orangutini',    hp:10, sp:54, r:20, xp:4, score:34, shoot:{type:'aim',n:1,cd:2.4,spd:140,col:'#e07a2a'} },
+  { spr:'pinecroc',  name:'Crocodillo Ananasinno', hp:8, sp:66, r:19, xp:3, score:28, range:320, shoot:{type:'aim',n:3,cd:2.8,spd:150,col:'#e0b400'} },
+  { spr:'goose',     name:'Bombombini',    hp:8,  sp:74, r:18, xp:3, score:30, range:320, shoot:{type:'aim',n:3,cd:2.6,spd:150,col:'#e58a3a'} },
+  { spr:'octopus',   name:'Blueberrinni',  hp:9,  sp:50, r:19, xp:3, score:30, range:300, shoot:{type:'ring',n:8,cd:3.0,spd:120,col:'#5b6cf0'} },
+  { spr:'jelly',     name:'Graipussi Medussi', hp:8, sp:46, r:19, xp:3, score:30, range:280, shoot:{type:'ring',n:6,cd:2.8,spd:95,col:'#d36fb0'} },
+  { spr:'espresso',  name:'Espressona Signora', hp:9, sp:58, r:17, xp:3, score:32, range:300, shoot:{type:'ring',n:5,cd:2.2,spd:130,col:'#a16a3c'} },
+  { spr:'orangutan', name:'Orangutini',    hp:10, sp:54, r:20, xp:4, score:34, range:320, shoot:{type:'aim',n:1,cd:2.4,spd:140,col:'#e07a2a'} },
   // Tier IV — heavies
-  { spr:'rhino',     name:'Rhino Toasterino', hp:18, sp:42, r:23, xp:4, score:45, shoot:{type:'aim',n:2,cd:3.0,spd:140,col:'#e8b96a'}, aoe:{r:42,dps:14,life:1.3,tele:0.7,col:'#e8a93a',cd:3.6} },
+  { spr:'rhino',     name:'Rhino Toasterino', hp:18, sp:42, r:23, xp:4, score:45, range:340, shoot:{type:'aim',n:2,cd:3.0,spd:140,col:'#e8b96a'}, aoe:{r:42,dps:14,life:1.3,tele:0.7,col:'#e8a93a',cd:3.6} },
   { spr:'camel',     name:'Frigo Camelo',  hp:20, sp:38, r:24, xp:5, score:50, aoe:{r:52,dps:9,life:1.6,tele:0.6,slow:true,col:'#9fd0ff',cd:3.4} },
-  { spr:'hippo',     name:'Il Cacto Hipopotamo', hp:22, sp:34, r:25, xp:5, score:55, shoot:{type:'ring',n:8,cd:3.6,spd:120,col:'#6b9233'}, aoe:{r:46,dps:15,life:1.1,tele:0.6,col:'#6b9233',cd:4.0} },
+  { spr:'hippo',     name:'Il Cacto Hipopotamo', hp:22, sp:34, r:25, xp:5, score:55, range:320, shoot:{type:'ring',n:8,cd:3.6,spd:120,col:'#6b9233'}, aoe:{r:46,dps:15,life:1.1,tele:0.6,col:'#6b9233',cd:4.0} },
   { spr:'turtle',    name:'Torrtuginni',   hp:26, sp:30, r:24, xp:5, score:55, shell:true },
   // Tier V — elites
   { spr:'panda',     name:'Pandaccini',    hp:14, sp:58, r:20, xp:4, score:40, aoe:{r:42,dps:4,life:1.6,tele:0.5,slow:true,col:'#f7d24a',cd:3.0} },
-  { spr:'tiger',     name:'Tigrrullini',   hp:14, sp:76, r:20, xp:4, score:44, dash:true, shoot:{type:'aim',n:5,cd:3.4,spd:155,col:'#e54d4d'} },
+  { spr:'tiger',     name:'Tigrrullini',   hp:14, sp:76, r:20, xp:4, score:44, dash:true, range:360, shoot:{type:'aim',n:5,cd:3.4,spd:155,col:'#e54d4d',move:true} },
   { spr:'capy',      name:'Capybarelli',   hp:16, sp:46, r:21, xp:5, score:48, support:true },
 ];
 const BOSSES = [
@@ -250,7 +250,7 @@ function spawnEnemy(){
   enemies.push({
     spr:def.spr, name:def.name, x:p.x, y:p.y, r:def.r,
     hp:def.hp*HP_MULT*hpMult, maxHp:def.hp*HP_MULT*hpMult,
-    sp:def.sp*(1+wave*0.02), xp:def.xp, score:def.score, shoot:def.shoot, death:def.death,
+    sp:def.sp*(1+wave*0.02), xp:def.xp, score:def.score, range:def.range, shoot:def.shoot, death:def.death,
     aoe:def.aoe, aoeCd:rand(1.5,3),
     dash:def.dash, dst:'idle', dcd:rand(2,4), da:0, dwin:0, ddur:0,
     shell:def.shell, shellCd:rand(3,5), iv:0,
@@ -619,15 +619,24 @@ function update(dt){
       }
       if(!dashing && e.iv<=0){
         const fs = e.frz>0 ? 0.2 : 1;     // Absolute Ohio freeze
-        const a = Math.atan2(P.y-e.y, P.x-e.x) + Math.sin(e.t*e.wob)*0.4;
-        e.x += Math.cos(a)*e.sp*fs*dt;
-        e.y += Math.sin(a)*e.sp*fs*dt;
-        e.face = Math.cos(a)>=0 ? 1 : -1;
+        const toP = Math.atan2(P.y-e.y, P.x-e.x);
+        const d2  = dist2(e.x,e.y,P.x,P.y);
+        const rng = e.range||0;           // 0 = melee: always chase
+        let a = toP + Math.sin(e.t*e.wob)*0.4;
+        let move = true;
+        if(rng>0){
+          if(d2 > rng*rng){ /* out of range: approach (move already true) */ }
+          else if(d2 < (rng*0.55)*(rng*0.55)){ move=true; a = toP+Math.PI + Math.sin(e.t*e.wob)*0.4; } // too close: back off
+          else if(e.shoot && e.shoot.move){ a = toP + Math.PI/2; } // in range + mobile: strafe
+          else { move=false; }                                  // in range + stationary: hold
+        }
+        if(move){ e.x += Math.cos(a)*e.sp*fs*dt; e.y += Math.sin(a)*e.sp*fs*dt; }
+        e.face = Math.cos(toP)>=0 ? 1 : -1;
       }
       e.x = clamp(e.x, WALL, WORLD.w-WALL); e.y = clamp(e.y, WALL, WORLD.h-WALL);
       if(arena){ e.x=clamp(e.x, arena.x+e.r, arena.x+arena.w-e.r); e.y=clamp(e.y, arena.y+e.r, arena.y+arena.h-e.r); }
       if(wave>=3 && e.iv<=0){
-        if(e.shoot){
+        if(e.shoot && (!e.range || dist2(e.x,e.y,P.x,P.y) <= e.range*e.range)){
           e.shootCd -= dt;
           if(e.shootCd<=0){
             e.shootCd = e.shoot.cd || rand(2.5,4.5);
