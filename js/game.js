@@ -55,60 +55,91 @@ const BOSSES = [
   { spr:'trippi',    name:'TRIPPI TROPPI',            hp:560, r:56, pattern:'spiral' },
 ];
 
+// ---- rarity tiers: lower weight = rarer in the level-up draw (appearance-only) ----
+const RARITY = {
+  common:    { w:100, label:'COMMON' },
+  uncommon:  { w:52,  label:'UNCOMMON' },
+  rare:      { w:24,  label:'RARE' },
+  epic:      { w:9,   label:'EPIC' },
+  legendary: { w:3,   label:'LEGENDARY' },
+};
 // ---- card pool: passives level to a cap; abilities take 4 levels, then EVOLVE on the 5th pick ----
+// rarity: tier (appearance + draw odds). req:[ids] = synergy card, hidden until those cards are owned.
 const UPGRADES = [
-  // ⚔️ passives (Lv 1-5)
-  { id:'dmg',    name:'Brute Force',     icon:'coin',     cap:5, steps:[{desc:'+25% damage.',          f:()=>P.dmg*=1.25}] },
-  { id:'rate',   name:'Adrenaline Rush', icon:'gem',      cap:5, steps:[{desc:'+18% attack speed.',    f:()=>P.fireRate*=0.82}] },
-  { id:'speed',  name:'Fleet Footed',    icon:'heart',    cap:5, steps:[{desc:'+12% movement speed.',  f:()=>P.speed*=1.12}] },
-  { id:'hp',     name:'Vitality Essence',icon:'heart',    cap:5, steps:[{desc:'+25 max HP, full heal.',f:()=>{P.maxHp+=25;P.hp=P.maxHp;}}] },
-  { id:'magnet', name:'Magnetic Pulse',  icon:'gem',      cap:5, steps:[{desc:'+40% item pickup radius.',f:()=>P.magnet*=1.4}] },
-  { id:'crit',   name:'Critical Strike', icon:'coin',     cap:5, steps:[{desc:'+10% crit chance (3x dmg).',f:()=>P.crit=Math.min(0.8,P.crit+0.10)}] },
-  { id:'dashcd', name:'Quick Reflexes',  icon:'tralalero',cap:5, steps:[{desc:'dash cooldown -20%.',   f:()=>P.dashMax*=0.8}] },
-  { id:'critdmg',name:'Killer Instinct', icon:'coin',     cap:5, steps:[{desc:'+0.5x critical damage.',f:()=>P.critMul+=0.5}] },
-  { id:'glass',  name:'Glass Cannon',    icon:'cappuccino',cap:3,steps:[{desc:'+35% damage, but -15 max HP.',f:()=>{P.dmg*=1.35;P.maxHp=Math.max(20,P.maxHp-15);P.hp=Math.min(P.hp,P.maxHp);}}] },
-  { id:'frenzy', name:'Killing Frenzy',  icon:'tiger',    cap:5, steps:[{desc:'kills build stacks: +3% damage & fire rate each.',f:()=>{P.frenzyGain+=1;P.frenzyMax+=3;}}] },
+  // ⚔️ passives
+  { id:'dmg',    name:'Brute Force',     icon:'coin',     rarity:'common', cap:5, steps:[{desc:'+25% damage.',          f:()=>P.dmg*=1.25}] },
+  { id:'rate',   name:'Adrenaline Rush', icon:'gem',      rarity:'common', cap:5, steps:[{desc:'+18% attack speed.',    f:()=>P.fireRate*=0.82}] },
+  { id:'speed',  name:'Fleet Footed',    icon:'heart',    rarity:'common', cap:5, steps:[{desc:'+12% movement speed.',  f:()=>P.speed*=1.12}] },
+  { id:'hp',     name:'Vitality Essence',icon:'heart',    rarity:'common', cap:5, steps:[{desc:'+25 max HP, full heal.',f:()=>{P.maxHp+=25;P.hp=P.maxHp;}}] },
+  { id:'magnet', name:'Magnetic Pulse',  icon:'gem',      rarity:'common', cap:5, steps:[{desc:'+40% item pickup radius.',f:()=>P.magnet*=1.4}] },
+  { id:'armor',  name:'Iron Skin',       icon:'turtle',   rarity:'common', cap:5, steps:[{desc:'-7% damage taken.',     f:()=>P.armor*=0.93}] },
+  { id:'regen',  name:'Regeneration',    icon:'heart',    rarity:'common', cap:5, steps:[{desc:'recover +1 HP / second.',f:()=>P.regen+=1}] },
+  { id:'heavy',  name:'Heavy Rounds',    icon:'coin',     rarity:'common', cap:5, steps:[{desc:'+15% bullet size & +8% projectile speed.',f:()=>{P.bulletR*=1.15;P.bulletSpd*=1.08;}}] },
+  { id:'thick',  name:'Thick Skin',      icon:'heart',    rarity:'common', cap:5, steps:[{desc:'+15 max HP.',           f:()=>P.maxHp+=15}] },
+  { id:'crit',   name:'Critical Strike', icon:'coin',     rarity:'uncommon',cap:5,steps:[{desc:'+10% crit chance (3x dmg).',f:()=>P.crit=Math.min(0.8,P.crit+0.10)}] },
+  { id:'dashcd', name:'Quick Reflexes',  icon:'tralalero',rarity:'uncommon',cap:5,steps:[{desc:'dash cooldown -20%.',   f:()=>P.dashMax*=0.8}] },
+  { id:'critdmg',name:'Killer Instinct', icon:'coin',     rarity:'uncommon',cap:5,steps:[{desc:'+0.5x critical damage.',f:()=>P.critMul+=0.5}] },
+  { id:'gold',   name:'Treasure Hunter', icon:'coin',     rarity:'uncommon',cap:5,steps:[{desc:'+20% gold & +12% XP.',  f:()=>{P.goldMul*=1.2;P.xpMul*=1.12;}}] },
+  { id:'steady', name:'Steady Hands',    icon:'gem',      rarity:'uncommon',cap:5,steps:[{desc:'-15% bullet spread & +6% damage.',f:()=>{P.spread*=0.85;P.dmg*=1.06;}}] },
+  { id:'frenzy', name:'Killing Frenzy',  icon:'tiger',    rarity:'rare',   cap:5, steps:[{desc:'kills build stacks: +3% damage & fire rate each.',f:()=>{P.frenzyGain+=1;P.frenzyMax+=3;}}] },
+  { id:'glass',  name:'Glass Cannon',    icon:'cappuccino',rarity:'epic',  cap:3, steps:[{desc:'+35% damage, but -15 max HP.',f:()=>{P.dmg*=1.35;if(!P.glassSafe){P.maxHp=Math.max(20,P.maxHp-15);P.hp=Math.min(P.hp,P.maxHp);}}}] },
 
   // 🔮 abilities — 4 levels, then EVOLVE
-  { id:'multi', name:'Splinter Shot', icon:'gembig',
+  { id:'multi', name:'Splinter Shot', icon:'gembig', rarity:'rare',
     steps:[{desc:'+1 projectile.',f:()=>P.shots+=1},{desc:'+1 projectile.',f:()=>P.shots+=1},{desc:'+1 projectile.',f:()=>P.shots+=1},{desc:'+1 projectile.',f:()=>P.shots+=1}],
     evo:{name:'Omni-Barrage', icon:'gembig', desc:'EVOLVE — fires a full 360° ring of projectiles.', f:()=>{P.shots+=2;P.radial=true;}} },
-  { id:'pierce', name:'Piercing Rounds', icon:'crocodilo',
+  { id:'pierce', name:'Piercing Rounds', icon:'crocodilo', rarity:'rare',
     steps:[{desc:'pierce +1 enemy.',f:()=>P.pierce+=1},{desc:'pierce +1 enemy.',f:()=>P.pierce+=1},{desc:'pierce +1 enemy.',f:()=>P.pierce+=1},{desc:'pierce +1 enemy.',f:()=>P.pierce+=1}],
     evo:{name:'Hyper-Velocity Core', icon:'crocodilo', desc:'EVOLVE — infinite pierce, faster & larger cyan shots.', f:()=>{P.pierce=999;P.railgun=true;}} },
-  { id:'range', name:'Focal Lens', icon:'gem',
+  { id:'range', name:'Focal Lens', icon:'gem', rarity:'uncommon',
     steps:[{desc:'+20% attack range.',f:()=>P.range*=1.2},{desc:'+20% attack range.',f:()=>P.range*=1.2},{desc:'+20% attack range.',f:()=>P.range*=1.2},{desc:'+20% attack range.',f:()=>P.range*=1.2}],
     evo:{name:'Farsight Sniper', icon:'coin', desc:'EVOLVE — maximum range and +50% damage.', f:()=>{P.range*=1.8;P.dmg*=1.5;}} },
-  { id:'orbit', name:'Orbiting Barrier', icon:'gembig', rare:true,
+  { id:'orbit', name:'Orbiting Barrier', icon:'gembig', rarity:'epic',
     steps:[{desc:'+1 orbiting projectile.',f:()=>P.orbs+=1},{desc:'+1 orbiting projectile.',f:()=>P.orbs+=1},{desc:'+1 orbiting projectile.',f:()=>P.orbs+=1},{desc:'+1 orbiting projectile.',f:()=>P.orbs+=1}],
     evo:{name:'Guardian Shield', icon:'gembig', desc:'EVOLVE — extra orb that destroys incoming bullets.', f:()=>{P.orbs+=1;P.orbShield=true;}} },
-  { id:'nova', name:'Pulse Wave', icon:'gembig', rare:true,
+  { id:'nova', name:'Pulse Wave', icon:'gembig', rarity:'epic',
     steps:[{desc:'every 5s, a shockwave hits nearby enemies.',f:()=>{P.nova=true;}},{desc:'shockwave: faster + stronger.',f:()=>{P.novaCdBase=Math.max(3.5,P.novaCdBase-0.6);P.novaPow*=1.35;}},{desc:'shockwave: faster + stronger.',f:()=>{P.novaCdBase=Math.max(3.2,P.novaCdBase-0.6);P.novaPow*=1.35;}},{desc:'shockwave: faster + stronger.',f:()=>{P.novaCdBase=Math.max(3.0,P.novaCdBase-0.6);P.novaPow*=1.35;}}],
     evo:{name:'Nova Cataclysm', icon:'gembig', desc:'EVOLVE — massive fast shockwave that clears nearby bullets.', f:()=>{P.nova=true;P.novaEvo=true;P.novaCdBase=3;P.novaPow*=1.5;}} },
-  { id:'vamp', name:'Soul Harvest', icon:'heart', rare:true,
+  { id:'vamp', name:'Soul Harvest', icon:'heart', rarity:'epic',
     steps:[{desc:'heal +1 HP per kill.',f:()=>P.vamp+=1},{desc:'heal +1 HP per kill.',f:()=>P.vamp+=1},{desc:'heal +1 HP per kill.',f:()=>P.vamp+=1},{desc:'heal +1 HP per kill.',f:()=>P.vamp+=1}],
     evo:{name:'Vampiric Feast', icon:'heart', desc:'EVOLVE — restore a massive chunk of HP per kill.', f:()=>{P.vamp+=4;}} },
-  { id:'slow', name:'Stasis Field', icon:'gem', rare:true,
+  { id:'slow', name:'Stasis Field', icon:'gem', rarity:'rare',
     steps:[{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88},{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88},{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88},{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88}],
     evo:{name:'Glacial Freeze', icon:'gem', desc:'EVOLVE — enemies you hit freeze solid.', f:()=>{P.bslow*=0.7;P.freeze=true;}} },
-  { id:'aegis', name:'Aegis Bubble', icon:'gembig', rare:true,
+  { id:'aegis', name:'Aegis Bubble', icon:'gembig', rarity:'epic',
     steps:[{desc:'gain a shield that blocks a hit, recharging over time.',f:()=>{P.shieldMax+=1;P.shield=P.shieldMax;}},
            {desc:'shield recharges faster.',f:()=>{P.shieldCdBase=Math.max(5,P.shieldCdBase-2);}},
            {desc:'+1 shield charge.',f:()=>{P.shieldMax+=1;P.shield=P.shieldMax;}},
            {desc:'shield recharges faster.',f:()=>{P.shieldCdBase=Math.max(3.5,P.shieldCdBase-1.5);}}],
     evo:{name:'Aegis Fortress', icon:'gembig', desc:'EVOLVE — blocking erupts in a shockwave; +permanent damage reduction.', f:()=>{P.shieldMax+=1;P.shield=P.shieldMax;P.aegisEvo=true;P.shieldDR=0.85;}} },
-  { id:'blackhole', name:'Black Hole', icon:'octopus', rare:true,
+  { id:'blackhole', name:'Black Hole', icon:'octopus', rarity:'legendary',
     steps:[{desc:'periodically spawn a black hole that pulls & grinds enemies.',f:()=>{P.bhole=true;}},
            {desc:'black hole strikes more often & hits harder.',f:()=>{P.bholeCdBase=Math.max(4,P.bholeCdBase-1.5);P.bholeDmg+=8;}},
            {desc:'black hole grows larger & stronger.',f:()=>{P.bholeR+=40;P.bholeDmg+=8;}},
            {desc:'black hole strikes more often & lingers.',f:()=>{P.bholeCdBase=Math.max(3,P.bholeCdBase-1.5);P.bholeLife+=0.6;}}],
     evo:{name:'Singularity', icon:'octopus', desc:'EVOLVE — bigger, longer, and devours enemy bullets.', f:()=>{P.bhole=true;P.bholeEvo=true;P.bholeR+=50;P.bholeDmg+=14;P.bholeLife+=0.8;}} },
-  { id:'phoenix', name:'Phoenix Heart', icon:'flamingo', rare:true,
+  { id:'phoenix', name:'Phoenix Heart', icon:'flamingo', rarity:'legendary',
     steps:[{desc:'revive once on death in an explosive rebirth (recharges slowly).',f:()=>{P.phoenixMax+=1;P.phoenix=P.phoenixMax;}},
            {desc:'revive heals more & recharges faster.',f:()=>{P.phoenixHeal+=0.2;P.phoenixCdBase=Math.max(30,P.phoenixCdBase-10);}},
            {desc:'gain a burning aura that scorches nearby foes.',f:()=>{P.burnAura+=8;}},
            {desc:'revive recharges faster.',f:()=>{P.phoenixCdBase=Math.max(20,P.phoenixCdBase-10);}}],
     evo:{name:'Eternal Phoenix', icon:'flamingo', desc:'EVOLVE — full-HP rebirth, a huge nuke, and a permanent burn aura.', f:()=>{P.phoenixMax+=1;P.phoenix=P.phoenixMax;P.phoenixEvo=true;P.phoenixHeal=1;P.burnAura+=14;P.phoenixCdBase=Math.max(15,P.phoenixCdBase-8);}} },
+
+  // ✨ SYNERGY cards — hidden until you own the prerequisite cards (req)
+  { id:'frostfire', name:'Frostfire Core', icon:'gem', rarity:'epic', cap:1, req:['slow','nova'],
+    steps:[{desc:'SYNERGY — Nova does +120% to frozen foes, who shatter into shards on death.',f:()=>P.frostfire=true}] },
+  { id:'eventhz', name:'Event Horizon', icon:'octopus', rarity:'legendary', cap:1, req:['blackhole','nova'],
+    steps:[{desc:'SYNERGY — black holes detonate in a Nova blast when they collapse.',f:()=>P.holeNova=true}] },
+  { id:'bloodcrit', name:'Blood Crit', icon:'heart', rarity:'epic', cap:1, req:['vamp','crit'],
+    steps:[{desc:'SYNERGY — critical hits also heal you for +2 HP.',f:()=>P.critHeal+=2}] },
+  { id:'glassphx', name:'Glass Phoenix', icon:'flamingo', rarity:'legendary', cap:1, req:['glass','phoenix'],
+    steps:[{desc:'SYNERGY — Glass Cannon stops costing max HP, and revivals restore full HP.',f:()=>{P.glassSafe=true;P.phoenixHeal=1;}}] },
+  { id:'orbstorm', name:'Orbital Storm', icon:'gembig', rarity:'epic', cap:1, req:['orbit','multi'],
+    steps:[{desc:'SYNERGY — your orbiting barriers periodically fire shots outward.',f:()=>P.orbShoot=true}] },
+  { id:'overdrive', name:'Overdrive', icon:'tiger', rarity:'epic', cap:1, req:['rate','frenzy'],
+    steps:[{desc:'SYNERGY — +50% Frenzy stack cap, and each stack adds crit chance.',f:()=>{P.overdrive=true;P.frenzyMax=Math.round(P.frenzyMax*1.5);}}] },
+  { id:'aegisnova', name:'Aegis Nova', icon:'gembig', rarity:'epic', cap:1, req:['aegis','nova'],
+    steps:[{desc:'SYNERGY — blocking a hit also unleashes your Nova.',f:()=>P.aegisNova=true}] },
 ];
 // returns the next card "move" for an upgrade, or null if exhausted
 function nextMove(u){
@@ -134,7 +165,9 @@ function resetPlayer(){
     critMul:3, frenzy:0, frenzyGain:0, frenzyMax:0,
     shield:0, shieldMax:0, shieldCd:0, shieldCdBase:8, shieldDR:1, aegisEvo:false,
     bhole:false, bholeCd:0, bholeCdBase:7, bholeR:120, bholeDmg:18, bholeLife:2, bholeEvo:false,
-    phoenix:0, phoenixMax:0, phoenixCd:0, phoenixCdBase:45, phoenixHeal:0.5, phoenixEvo:false, burnAura:0
+    phoenix:0, phoenixMax:0, phoenixCd:0, phoenixCdBase:45, phoenixHeal:0.5, phoenixEvo:false, burnAura:0,
+    armor:1, regen:0, bulletR:1, bulletSpd:1, goldMul:1, xpMul:1, spread:1,
+    frostfire:false, holeNova:false, critHeal:0, glassSafe:false, orbShoot:false, orbShootCd:0, overdrive:false, aegisNova:false
   });
 }
 
@@ -239,6 +272,14 @@ function muzzleFlash(x,y,color){
   for(let i=0;i<5;i++){ const a=rand(0,TAU), s=rand(40,120);
     parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:rand(0.12,0.28),max:0.28,color,r:rand(1.5,3)}); }
 }
+// shared shockwave used by Nova synergies (Aegis Nova, Event Horizon)
+function novaBlast(x,y,R,dmg){
+  burst(x,y,'#9fd0ff',24,400); shake=Math.max(shake,8);
+  parts.push({x,y,vx:0,vy:0,life:0.4,max:0.4,color:'#cfeaff',r:R,ring:true,gr:480});
+  for(const e of enemies){ if(dist2(x,y,e.x,e.y) < R*R) damageEnemy(e,dmg,x,y,false); }
+  ebullets = ebullets.filter(b => dist2(x,y,b.x,b.y) > R*R);
+  sfx.boss();
+}
 function floatText(x,y,str,color='#fff',size=14){
   texts.push({x,y,str,color,size,life:0.9,max:0.9,vy:-55});
 }
@@ -252,7 +293,7 @@ function addZone(x,y,r,o){
 
 // ============ LEVEL UP ============
 function gainXp(n){
-  P.xp += n;
+  P.xp += n*(P.xpMul||1);
   while(P.xp >= P.xpNext){
     P.xp -= P.xpNext;
     P.lv++;
@@ -265,13 +306,16 @@ function gainXp(n){
 function openLevelUp(){
   state = ST.LEVELUP;
   sfx.level();
-  // candidates = every card with a remaining move
+  // candidates = every card with a remaining move whose synergy gate (req) is satisfied
   const cands = [];
-  for(const u of UPGRADES){ const m = nextMove(u); if(m) cands.push({u,m}); }
-  // weighted draw of 3 distinct (evolve weighted highest, rares lower)
+  for(const u of UPGRADES){
+    if(u.req && !u.req.every(id => (P.up[id]||0) > 0)) continue;   // synergy card still locked
+    const m = nextMove(u); if(m) cands.push({u,m});
+  }
+  // weighted draw of 3 distinct by rarity (rarer = lower weight); evolve-ready cards stay prioritised
   const opts = []; const bag = cands.slice();
   while(opts.length<3 && bag.length){
-    const w = bag.map(x => x.m.evolve ? 6 : (x.m.rare ? 1 : 2));   // evolve is rare to UNLOCK (4 levels) but easy to draw once ready
+    const w = bag.map(x => (RARITY[x.u.rarity||'common']||RARITY.common).w * (x.m.evolve ? 8 : 1));
     let total=0; for(const v of w) total+=v;
     let r = Math.random()*total, idx=0;
     while(idx<w.length-1 && (r-=w[idx])>0) idx++;
@@ -280,8 +324,10 @@ function openLevelUp(){
   const wrap = $('cards'); wrap.innerHTML='';
   opts.forEach(({u,m})=>{
     const d=document.createElement('button');
-    d.className = 'card' + (m.evolve ? ' rare evolve' : (m.rare ? ' rare' : ''));
+    const tier = u.rarity||'common';
+    d.className = 'card r-'+tier + (m.evolve ? ' evolve' : '') + (u.req ? ' synergy' : '');
     const ic = SP[m.icon] ? SP[m.icon].toDataURL() : '';
+    const rtag = u.req ? '<span class="rtag syn">SYNERGY</span>' : '<span class="rtag r-'+tier+'">'+(RARITY[tier]||RARITY.common).label+'</span>';
     const badge = m.evolve ? '<span class="evobadge">EVOLVE!</span>' : '<span class="lvtag">'+m.label+'</span>';
     // evolution progress (Survivor.io-style pips + "N more to evolve")
     const owned = P.up[u.id]||0;
@@ -296,7 +342,7 @@ function openLevelUp(){
       for(let i=0;i<cap;i++) pips += `<span class="pip ${i<owned?'on':(i===owned?'next':'')}"></span>`;
       ptxt = 'Lv '+(owned+1)+' / '+cap;
     }
-    d.innerHTML = `<img class="cicon" draggable="false" src="${ic}"><div class="cbody"><div class="cname">${m.name}${badge}</div><div class="cdesc">${m.desc}</div><div class="cprog">${pips}<span class="ptxt ${pevo}">${ptxt}</span></div></div>`;
+    d.innerHTML = `<img class="cicon" draggable="false" src="${ic}"><div class="cbody">${rtag}<div class="cname">${m.name}${badge}</div><div class="cdesc">${m.desc}</div><div class="cprog">${pips}<span class="ptxt ${pevo}">${ptxt}</span></div></div>`;
     d.onclick = ()=>{
       m.evolve ? sfx.evolve() : sfx.pick();
       m.apply(); P.up[u.id] = (P.up[u.id]||0)+1;
@@ -393,10 +439,10 @@ function update(dt){
     for(const e of enemies){ const d=dist2(P.x,P.y,e.x,e.y); if(d<bd){bd=d;best=e;} }
     if(best && bd <= P.range*P.range){   // only shoot what's in range
       P.fireCd = P.fireRate / (1 + (P.frenzy||0)*0.03);   // Killing Frenzy speeds up fire
-      const spd = P.railgun ? 760 : 560;
-      const br  = P.railgun ? 9 : 6;
+      const spd = (P.railgun ? 760 : 560) * (P.bulletSpd||1);
+      const br  = (P.railgun ? 9 : 6) * (P.bulletR||1);
       // always fire the aimed volley at the nearest enemy
-      const base = Math.atan2(best.y-P.y, best.x-P.x), spread = 0.16;
+      const base = Math.atan2(best.y-P.y, best.x-P.x), spread = 0.16*(P.spread||1);
       for(let i=0;i<P.shots;i++){
         const a = base + (i-(P.shots-1)/2)*spread;
         bullets.push({x:P.x,y:P.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:br,pierce:P.pierce,hit:new Set(),dist:P.range});
@@ -430,6 +476,14 @@ function update(dt){
         }
       }
     }
+    if(P.orbShoot){                       // Orbital Storm: orbs fire shots outward
+      P.orbShootCd -= dt;
+      if(P.orbShootCd<=0){ P.orbShootCd=1.2;
+        for(let i=0;i<P.orbs;i++){ const a=P.orbA+i*(TAU/P.orbs), ox=P.x+Math.cos(a)*58, oy=P.y+Math.sin(a)*58;
+          bullets.push({x:ox,y:oy,vx:Math.cos(a)*560,vy:Math.sin(a)*560,r:6,pierce:P.pierce,hit:new Set(),dist:P.range}); }
+        sfx.shoot();
+      }
+    }
   }
 
   // --- nova ---
@@ -442,7 +496,7 @@ function update(dt){
       for(let k=0;k<3;k++) parts.push({x:P.x,y:P.y,vx:0,vy:0,life:0.4,max:0.4,color:'#cfeaff',r:R,ring:true});
       for(const e of enemies){
         if(dist2(P.x,P.y,e.x,e.y) < R*R){
-          const fb = (P.freeze && e.frz>0) ? 1.6 : 1;   // Frostfire: nova shatters frozen foes
+          const fb = (P.freeze && e.frz>0) ? (P.frostfire?2.2:1.6) : 1;   // Frostfire Core amps the shatter
           damageEnemy(e,(P.novaEvo?40:28)*P.dmg*P.novaPow*fb,P.x,P.y,false);
         }
       }
@@ -452,6 +506,9 @@ function update(dt){
 
   // --- Killing Frenzy stacks decay when you stop killing ---
   if(P.frenzy>0) P.frenzy = Math.max(0, P.frenzy - dt*2);
+
+  // --- Regeneration ---
+  if(P.regen>0 && P.hp<P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.regen*dt);
 
   // --- Aegis Bubble recharge ---
   if(P.shieldMax>0 && P.shield<P.shieldMax){
@@ -498,7 +555,7 @@ function update(dt){
       }
     }
     if(h.evo){ for(let bi=ebullets.length-1;bi>=0;bi--){ if(dist2(h.x,h.y,ebullets[bi].x,ebullets[bi].y)<h.r*h.r) ebullets.splice(bi,1); } }
-    if(h.t>=h.life) holes.splice(i,1);
+    if(h.t>=h.life){ if(P.holeNova) novaBlast(h.x,h.y,h.r*1.1,30*P.dmg); holes.splice(i,1); }
   }
 
   // --- player bullets ---
@@ -511,11 +568,13 @@ function update(dt){
     for(const e of enemies){
       if(b.hit.has(e) || e.iv>0) continue;
       if(dist2(b.x,b.y,e.x,e.y) < (e.r+b.r)*(e.r+b.r)){
-        const isCrit = Math.random()<P.crit;
+        const critC = P.crit + (P.overdrive ? (P.frenzy||0)*0.004 : 0);   // Overdrive: frenzy stacks add crit
+        const isCrit = Math.random()<critC;
         const dmg = P.dmg * (b.dmgMul||1) * (1 + (P.frenzy||0)*0.03) * (isCrit?(P.critMul||3):1);
         b.hit.add(e);
         hitSpark(b.x,b.y,isCrit?'#ffe14d':'#ff9f3a',isCrit);
         damageEnemy(e,dmg,b.x,b.y,isCrit);
+        if(isCrit && P.critHeal>0) P.hp=Math.min(P.maxHp,P.hp+P.critHeal);   // Blood Crit
         if(b.pierce>0){ b.pierce--; } else { bullets.splice(i,1); }
         break;
       }
@@ -596,6 +655,11 @@ function update(dt){
       burst(e.x,e.y,'#ff9f3a',e.isBoss?60:14,e.isBoss?420:200);
       if(P.vamp>0){ P.hp=Math.min(P.maxHp,P.hp+P.vamp); }
       if(P.frenzyGain>0) P.frenzy=Math.min(P.frenzyMax, P.frenzy+P.frenzyGain);
+      if(P.frostfire && e.frz>0){          // Frostfire Core: frozen foes shatter into shards
+        for(let s=0;s<4;s++){ const a=s*(TAU/4)+rand(0,0.6);
+          bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*420,vy:Math.sin(a)*420,r:6,pierce:1,hit:new Set(),dist:300,dmgMul:0.5}); }
+        burst(e.x,e.y,'#bfe6ff',8,180);
+      }
       if(e.isBoss){
         boss=null; arena=null;       // open the field back up
         $('bossbar').classList.add('hidden');
@@ -646,7 +710,7 @@ function update(dt){
     if(d < (P.r+12)*(P.r+12)){
       gems.splice(i,1);
       if(g.heart){ P.hp=Math.min(P.maxHp,P.hp+25); floatText(P.x,P.y-24,'+25','#e8556a',16); burst(P.x,P.y,'#ff97a6',8,120); sfx.coin(); }
-      else if(g.coin){ const v=Math.round(20*comboMult()); score+=v; gold+=v; localStorage.setItem('br_gold',gold); $('scoretag').textContent='★ '+score; floatText(g.x,g.y,'+'+v,'#f5c542',13); sfx.coin(); }
+      else if(g.coin){ const v=Math.round(20*comboMult()*(P.goldMul||1)); score+=v; gold+=v; localStorage.setItem('br_gold',gold); $('scoretag').textContent='★ '+score; floatText(g.x,g.y,'+'+v,'#f5c542',13); sfx.coin(); }
       else { gainXp(g.v); sfx.gem(Math.min(combo,8)); }
     }
   }
@@ -788,9 +852,10 @@ function hurtPlayer(dmg, src){
       for(const e of enemies){ if(dist2(P.x,P.y,e.x,e.y)<R*R) damageEnemy(e,40*P.dmg,P.x,P.y,false); }
       ebullets = ebullets.filter(b=>dist2(P.x,P.y,b.x,b.y)>R*R);
     }
+    if(P.aegisNova) novaBlast(P.x,P.y,P.novaEvo?280:190,(P.novaEvo?40:28)*P.dmg*P.novaPow);   // Aegis Nova synergy
     return;
   }
-  P.hp -= dmg*(P.shieldDR||1); P.inv = 0.8;
+  P.hp -= dmg*(P.shieldDR||1)*(P.armor||1); P.inv = 0.8;
   shake = Math.max(shake,10); hitFlash = 1; hitstop=Math.max(hitstop,0.04);
   sfx.hurt(); burst(P.x,P.y,'#e54d4d',12,200);
   if(navigator.vibrate) navigator.vibrate(60);
