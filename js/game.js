@@ -3,7 +3,7 @@
 let shake = 0, hitFlash = 0, hitstop = 0, tPrev = 0, elapsed = 0;
 
 const P = {}; // player
-let bullets=[], ebullets=[], enemies=[], gems=[], parts=[], texts=[], zones=[];
+let bullets=[], ebullets=[], enemies=[], gems=[], parts=[], texts=[], zones=[], holes=[];
 let wave=1, score=0, kills=0, spawnTimer=0, waveEnemiesLeft=0, betweenWaves=false, boss=null;
 let combo=0, comboT=0;
 let gold = +(localStorage.getItem('br_gold')||0);   // persistent currency (saved)
@@ -65,6 +65,9 @@ const UPGRADES = [
   { id:'magnet', name:'Magnetic Pulse',  icon:'gem',      cap:5, steps:[{desc:'+40% item pickup radius.',f:()=>P.magnet*=1.4}] },
   { id:'crit',   name:'Critical Strike', icon:'coin',     cap:5, steps:[{desc:'+10% crit chance (3x dmg).',f:()=>P.crit=Math.min(0.8,P.crit+0.10)}] },
   { id:'dashcd', name:'Quick Reflexes',  icon:'tralalero',cap:5, steps:[{desc:'dash cooldown -20%.',   f:()=>P.dashMax*=0.8}] },
+  { id:'critdmg',name:'Killer Instinct', icon:'coin',     cap:5, steps:[{desc:'+0.5x critical damage.',f:()=>P.critMul+=0.5}] },
+  { id:'glass',  name:'Glass Cannon',    icon:'cappuccino',cap:3,steps:[{desc:'+35% damage, but -15 max HP.',f:()=>{P.dmg*=1.35;P.maxHp=Math.max(20,P.maxHp-15);P.hp=Math.min(P.hp,P.maxHp);}}] },
+  { id:'frenzy', name:'Killing Frenzy',  icon:'tiger',    cap:5, steps:[{desc:'kills build stacks: +3% damage & fire rate each.',f:()=>{P.frenzyGain+=1;P.frenzyMax+=3;}}] },
 
   // 🔮 abilities — 4 levels, then EVOLVE
   { id:'multi', name:'Splinter Shot', icon:'gembig',
@@ -88,6 +91,24 @@ const UPGRADES = [
   { id:'slow', name:'Stasis Field', icon:'gem', rare:true,
     steps:[{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88},{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88},{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88},{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88}],
     evo:{name:'Glacial Freeze', icon:'gem', desc:'EVOLVE — enemies you hit freeze solid.', f:()=>{P.bslow*=0.7;P.freeze=true;}} },
+  { id:'aegis', name:'Aegis Bubble', icon:'gembig', rare:true,
+    steps:[{desc:'gain a shield that blocks a hit, recharging over time.',f:()=>{P.shieldMax+=1;P.shield=P.shieldMax;}},
+           {desc:'shield recharges faster.',f:()=>{P.shieldCdBase=Math.max(5,P.shieldCdBase-2);}},
+           {desc:'+1 shield charge.',f:()=>{P.shieldMax+=1;P.shield=P.shieldMax;}},
+           {desc:'shield recharges faster.',f:()=>{P.shieldCdBase=Math.max(3.5,P.shieldCdBase-1.5);}}],
+    evo:{name:'Aegis Fortress', icon:'gembig', desc:'EVOLVE — blocking erupts in a shockwave; +permanent damage reduction.', f:()=>{P.shieldMax+=1;P.shield=P.shieldMax;P.aegisEvo=true;P.shieldDR=0.85;}} },
+  { id:'blackhole', name:'Black Hole', icon:'octopus', rare:true,
+    steps:[{desc:'periodically spawn a black hole that pulls & grinds enemies.',f:()=>{P.bhole=true;}},
+           {desc:'black hole strikes more often & hits harder.',f:()=>{P.bholeCdBase=Math.max(4,P.bholeCdBase-1.5);P.bholeDmg+=8;}},
+           {desc:'black hole grows larger & stronger.',f:()=>{P.bholeR+=40;P.bholeDmg+=8;}},
+           {desc:'black hole strikes more often & lingers.',f:()=>{P.bholeCdBase=Math.max(3,P.bholeCdBase-1.5);P.bholeLife+=0.6;}}],
+    evo:{name:'Singularity', icon:'octopus', desc:'EVOLVE — bigger, longer, and devours enemy bullets.', f:()=>{P.bhole=true;P.bholeEvo=true;P.bholeR+=50;P.bholeDmg+=14;P.bholeLife+=0.8;}} },
+  { id:'phoenix', name:'Phoenix Heart', icon:'flamingo', rare:true,
+    steps:[{desc:'revive once on death in an explosive rebirth (recharges slowly).',f:()=>{P.phoenixMax+=1;P.phoenix=P.phoenixMax;}},
+           {desc:'revive heals more & recharges faster.',f:()=>{P.phoenixHeal+=0.2;P.phoenixCdBase=Math.max(30,P.phoenixCdBase-10);}},
+           {desc:'gain a burning aura that scorches nearby foes.',f:()=>{P.burnAura+=8;}},
+           {desc:'revive recharges faster.',f:()=>{P.phoenixCdBase=Math.max(20,P.phoenixCdBase-10);}}],
+    evo:{name:'Eternal Phoenix', icon:'flamingo', desc:'EVOLVE — full-HP rebirth, a huge nuke, and a permanent burn aura.', f:()=>{P.phoenixMax+=1;P.phoenix=P.phoenixMax;P.phoenixEvo=true;P.phoenixHeal=1;P.burnAura+=14;P.phoenixCdBase=Math.max(15,P.phoenixCdBase-8);}} },
 ];
 // returns the next card "move" for an upgrade, or null if exhausted
 function nextMove(u){
@@ -109,7 +130,11 @@ function resetPlayer(){
     magnet:90, crit:0.05, orbs:0, orbA:0, nova:false, novaCd:5, novaCdBase:5, novaPow:1,
     vamp:0, bslow:1, lv:1, xp:0, xpNext:4, inv:0, up:{}, slowT:0,
     face:0, walk:0, dashCd:0, dashMax:2.2, dashT:0, dvx:0, dvy:0,
-    radial:false, railgun:false, orbShield:false, novaEvo:false, freeze:false
+    radial:false, railgun:false, orbShield:false, novaEvo:false, freeze:false,
+    critMul:3, frenzy:0, frenzyGain:0, frenzyMax:0,
+    shield:0, shieldMax:0, shieldCd:0, shieldCdBase:8, shieldDR:1, aegisEvo:false,
+    bhole:false, bholeCd:0, bholeCdBase:7, bholeR:120, bholeDmg:18, bholeLife:2, bholeEvo:false,
+    phoenix:0, phoenixMax:0, phoenixCd:0, phoenixCdBase:45, phoenixHeal:0.5, phoenixEvo:false, burnAura:0
   });
 }
 
@@ -117,7 +142,7 @@ function startGame(){
   initAudio();
   playMusic('game');
   resetPlayer();
-  bullets=[]; ebullets=[]; enemies=[]; gems=[]; parts=[]; texts=[]; zones=[];
+  bullets=[]; ebullets=[]; enemies=[]; gems=[]; parts=[]; texts=[]; zones=[]; holes=[];
   wave=1; score=0; kills=0; elapsed=0; boss=null; combo=0; comboT=0; arena=null; bossPending=0;
   state=ST.PLAY;
   $('menu').classList.add('hidden');
@@ -163,7 +188,8 @@ function spawnBoss(){
     spr:def.spr, name:def.name, pattern:def.pattern,
     x:p.x, y:p.y, r:def.r,
     hp:def.hp*HP_MULT*mult, maxHp:def.hp*HP_MULT*mult,
-    t:0, phase:0, isBoss:true, sp:46, xp:0, score:500, hitT:0, sq:0
+    t:0, phase:0, isBoss:true, sp:46, xp:0, score:500, hitT:0, sq:0,
+    mst:'recover', mt:1.0, mv:null, lastMv:null, vph:1, pull:0, spin:0, dst:'idle', iv:0
   };
   enemies.push(boss);
   sfx.boss();
@@ -366,20 +392,20 @@ function update(dt){
     let best=null, bd=Infinity;
     for(const e of enemies){ const d=dist2(P.x,P.y,e.x,e.y); if(d<bd){bd=d;best=e;} }
     if(best && bd <= P.range*P.range){   // only shoot what's in range
-      P.fireCd = P.fireRate;
+      P.fireCd = P.fireRate / (1 + (P.frenzy||0)*0.03);   // Killing Frenzy speeds up fire
       const spd = P.railgun ? 760 : 560;
       const br  = P.railgun ? 9 : 6;
-      if(P.radial){                       // Full Fanum Tax: ring of shots
-        const n = clamp(P.shots*2, 8, 24);
+      // always fire the aimed volley at the nearest enemy
+      const base = Math.atan2(best.y-P.y, best.x-P.x), spread = 0.16;
+      for(let i=0;i<P.shots;i++){
+        const a = base + (i-(P.shots-1)/2)*spread;
+        bullets.push({x:P.x,y:P.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:br,pierce:P.pierce,hit:new Set(),dist:P.range});
+      }
+      if(P.radial){                       // Omni-Barrage: 360 ring IN ADDITION (reduced dmg so it stays fair vs crowds)
+        const n = clamp(P.shots*2, 8, 20);
         for(let i=0;i<n;i++){
           const a = (i/n)*TAU + elapsed*1.5;
-          bullets.push({x:P.x,y:P.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:br,pierce:P.pierce,hit:new Set(),dist:P.range});
-        }
-      } else {
-        const base = Math.atan2(best.y-P.y, best.x-P.x), spread = 0.16;
-        for(let i=0;i<P.shots;i++){
-          const a = base + (i-(P.shots-1)/2)*spread;
-          bullets.push({x:P.x,y:P.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:br,pierce:P.pierce,hit:new Set(),dist:P.range});
+          bullets.push({x:P.x,y:P.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:br,pierce:P.pierce,hit:new Set(),dist:P.range,dmgMul:0.6});
         }
       }
       sfx.shoot();
@@ -415,10 +441,64 @@ function update(dt){
       burst(P.x,P.y,'#9fd0ff',P.novaEvo?40:26,420); sfx.boss();
       for(let k=0;k<3;k++) parts.push({x:P.x,y:P.y,vx:0,vy:0,life:0.4,max:0.4,color:'#cfeaff',r:R,ring:true});
       for(const e of enemies){
-        if(dist2(P.x,P.y,e.x,e.y) < R*R){ damageEnemy(e,(P.novaEvo?40:28)*P.dmg*P.novaPow,P.x,P.y,false); }
+        if(dist2(P.x,P.y,e.x,e.y) < R*R){
+          const fb = (P.freeze && e.frz>0) ? 1.6 : 1;   // Frostfire: nova shatters frozen foes
+          damageEnemy(e,(P.novaEvo?40:28)*P.dmg*P.novaPow*fb,P.x,P.y,false);
+        }
       }
       ebullets = ebullets.filter(b => dist2(P.x,P.y,b.x,b.y) > R*R);  // Skibidi Nuke clears bullets
     }
+  }
+
+  // --- Killing Frenzy stacks decay when you stop killing ---
+  if(P.frenzy>0) P.frenzy = Math.max(0, P.frenzy - dt*2);
+
+  // --- Aegis Bubble recharge ---
+  if(P.shieldMax>0 && P.shield<P.shieldMax){
+    P.shieldCd -= dt;
+    if(P.shieldCd<=0){ P.shield++; P.shieldCd=P.shieldCdBase; floatText(P.x,P.y-P.r-10,'+shield','#7ecbff',12); }
+  }
+
+  // --- Phoenix recharge ---
+  if(P.phoenixMax>0 && P.phoenix<P.phoenixMax){
+    P.phoenixCd -= dt;
+    if(P.phoenixCd<=0){ P.phoenix++; P.phoenixCd=P.phoenixCdBase; floatText(P.x,P.y-P.r-10,'phoenix ready','#ff7a3a',12); }
+  }
+
+  // --- Phoenix burn aura: enemies near you smoulder ---
+  if(P.burnAura>0){
+    for(const e of enemies){
+      if(e.iv>0) continue;
+      if(dist2(P.x,P.y,e.x,e.y) < 80*80){ e.hp -= P.burnAura*dt; e.hitT=Math.max(e.hitT,0.05);
+        if(Math.random()<0.18) parts.push({x:e.x+rand(-8,8),y:e.y+rand(-8,8),vx:0,vy:-rand(20,50),life:0.4,max:0.4,color:'#ff8a3a',r:rand(2,4)}); }
+    }
+  }
+
+  // --- Black Hole: spawn on cooldown, then pull + grind enemies ---
+  if(P.bhole){
+    P.bholeCd -= dt;
+    if(P.bholeCd<=0){
+      P.bholeCd = P.bholeCdBase;
+      let tx=P.x, ty=P.y, bd=Infinity;
+      for(const e of enemies){ const d=dist2(P.x,P.y,e.x,e.y); if(d<bd){bd=d;tx=e.x;ty=e.y;} }
+      if(bd===Infinity){ tx=P.x+Math.cos(P.face)*180; ty=P.y+Math.sin(P.face)*180; }
+      holes.push({x:tx,y:ty,r:P.bholeR,life:P.bholeLife,t:0,dmg:P.bholeDmg,evo:P.bholeEvo});
+      sfx.boss();
+    }
+  }
+  for(let i=holes.length-1;i>=0;i--){
+    const h=holes[i]; h.t+=dt;
+    for(const e of enemies){
+      if(e.iv>0) continue;
+      const d=Math.sqrt(dist2(h.x,h.y,e.x,e.y))||1;
+      if(d<h.r){
+        const a=Math.atan2(h.y-e.y,h.x-e.x);
+        if(!e.isBoss){ e.x+=Math.cos(a)*Math.min(150,d)*dt*1.4; e.y+=Math.sin(a)*Math.min(150,d)*dt*1.4; }
+        e.hp -= h.dmg*P.dmg*0.12*dt; e.hitT=Math.max(e.hitT,0.05);
+      }
+    }
+    if(h.evo){ for(let bi=ebullets.length-1;bi>=0;bi--){ if(dist2(h.x,h.y,ebullets[bi].x,ebullets[bi].y)<h.r*h.r) ebullets.splice(bi,1); } }
+    if(h.t>=h.life) holes.splice(i,1);
   }
 
   // --- player bullets ---
@@ -432,7 +512,7 @@ function update(dt){
       if(b.hit.has(e) || e.iv>0) continue;
       if(dist2(b.x,b.y,e.x,e.y) < (e.r+b.r)*(e.r+b.r)){
         const isCrit = Math.random()<P.crit;
-        const dmg = P.dmg * (isCrit?3:1);
+        const dmg = P.dmg * (b.dmgMul||1) * (1 + (P.frenzy||0)*0.03) * (isCrit?(P.critMul||3):1);
         b.hit.add(e);
         hitSpark(b.x,b.y,isCrit?'#ffe14d':'#ff9f3a',isCrit);
         damageEnemy(e,dmg,b.x,b.y,isCrit);
@@ -515,6 +595,7 @@ function update(dt){
       shake=Math.max(shake,e.isBoss?16:5); hitstop=Math.max(hitstop,e.isBoss?0.08:0.03);
       burst(e.x,e.y,'#ff9f3a',e.isBoss?60:14,e.isBoss?420:200);
       if(P.vamp>0){ P.hp=Math.min(P.maxHp,P.hp+P.vamp); }
+      if(P.frenzyGain>0) P.frenzy=Math.min(P.frenzyMax, P.frenzy+P.frenzyGain);
       if(e.isBoss){
         boss=null; arena=null;       // open the field back up
         $('bossbar').classList.add('hidden');
@@ -614,27 +695,75 @@ function fireEB(x,y,a,sp,color){
   ebullets.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,r:7,color});
 }
 
+// ---- boss move primitives (finite bursts) ----
+function mRing(e,n,spd,col){ const off=rand(0,TAU); for(let i=0;i<n;i++) fireEB(e.x,e.y,off+i*TAU/n,spd,col); muzzleFlash(e.x,e.y,col); }
+function mAimed(e,n,spread,spd,col){ const aim=Math.atan2(P.y-e.y,P.x-e.x); for(let i=0;i<n;i++) fireEB(e.x,e.y,aim+(i-(n-1)/2)*spread,spd,col); muzzleFlash(e.x,e.y,col); }
+// move pool for the current boss / Vaca phase
+function bossMoves(e){
+  switch(e.spr){
+    case 'tralalero': return ['dash','spiral','aimed3'];
+    case 'crocodilo': return ['carpet','ring16'];
+    case 'sahur':     return ['slam','aimed5','dblslam'];
+    case 'gorillo':   return ['seedsmash','aimed5','ring12'];
+    case 'trippi':    return ['spiral','ring16','aimed5'];
+    case 'vaca':
+      if(e.vph>=3) return ['ring2x','pullspiral','aimed5'];
+      if(e.vph>=2) return ['ring2','spiral','aimed5','pull'];
+      return ['ring16','pull'];
+  }
+  return ['ring16'];
+}
+const MOVE_COL = { dash:'#e54d4d', spiral:'#e54d4d', aimed3:'#e23b3b', aimed5:'#e23b3b',
+  ring16:'#4aa3df', ring12:'#3f7d33', ring2:'#7ec8ff', ring2x:'#d2a0ff', carpet:'#ff2e2e',
+  slam:'#a9763e', dblslam:'#a9763e', seedsmash:'#e0503f', pull:'#d2a0ff', pullspiral:'#d2a0ff' };
+function pickMove(e){ const pool=bossMoves(e); let m; do{ m=pick(pool); }while(pool.length>1 && m===e.lastMv); e.lastMv=m; return m; }
+// run one move; returns how long the boss stays in the "fire" state before recovering
+function execMove(e){
+  switch(e.mv){
+    case 'dash': e.dst='wind'; e.dwin=e.enraged?0.25:0.4; e.da=Math.atan2(P.y-e.y,P.x-e.x); return 0.9;
+    case 'spiral': e.spin=0.7; e.spinCol='#e54d4d'; return 0.75;
+    case 'aimed3': mAimed(e,3,0.20,180,'#e23b3b'); return 0.2;
+    case 'aimed5': mAimed(e,5,0.18,180,'#e23b3b'); return 0.2;
+    case 'ring16': mRing(e,16,150,'#4aa3df'); return 0.2;
+    case 'ring12': mRing(e,12,150,'#3f7d33'); return 0.2;
+    case 'ring2':  mRing(e,16,140,'#4aa3df'); mRing(e,12,90,'#7ec8ff'); return 0.25;
+    case 'ring2x': mRing(e,20,160,'#d2a0ff'); mRing(e,20,110,'#b06ff0'); return 0.25;
+    case 'carpet': for(let k=0;k<3;k++) addZone(P.x+rand(-130,130),P.y+rand(-130,130),46,{tele:0.7,life:1.0,dps:16,col:'#ff2e2e'}); return 0.3;
+    case 'slam':   addZone(P.x,P.y,76,{tele:0.5,life:0.7,dps:20,col:'#a9763e'}); shake=Math.max(shake,8); sfx.hit(); return 0.3;
+    case 'dblslam':addZone(P.x,P.y,72,{tele:0.5,life:0.7,dps:20,col:'#a9763e'}); addZone(P.x+rand(-100,100),P.y+rand(-100,100),60,{tele:0.85,life:0.7,dps:18,col:'#a9763e'}); shake=Math.max(shake,9); sfx.hit(); return 0.45;
+    case 'seedsmash': addZone(P.x,P.y,62,{tele:0.7,life:1.0,dps:18,col:'#3f7d33'}); { const off=rand(0,TAU); for(let k=0;k<12;k++) fireEB(e.x,e.y,off+k*TAU/12,130,'#e0503f'); } muzzleFlash(e.x,e.y,'#e0503f'); return 0.3;
+    case 'pull':   e.pull=1.2; e.pullStr=110; return 1.2;
+    case 'pullspiral': e.pull=1.4; e.pullStr=130; e.spin=1.0; e.spinCol='#d2a0ff'; return 1.0;
+  }
+  return 0.2;
+}
+
 function updateBoss(e,dt){
-  e.atk = (e.atk||0)+dt; e.gim = (e.gim||0)+dt;
+  if(e.iv>0) e.iv-=dt;
   if(!e.enraged && e.hp/e.maxHp < 0.4){ e.enraged=true; bigText('ENRAGED!','#e54d4d'); shake=Math.max(shake,12); }
 
-  // ---- per-boss gimmick (uses the Phase-3 zone/dash systems) ----
+  // La Vaca Saturno climbs HP-gated phases
+  if(e.spr==='vaca'){
+    const frac=e.hp/e.maxHp, ph = frac<0.33?3 : frac<0.66?2 : 1;
+    if(ph>e.vph){ e.vph=ph; bigText('PHASE '+ph+'!','#d2a0ff'); shake=Math.max(shake,12); e.iv=0.6; ebullets=[]; sfx.boss(); }
+  }
+
+  // sustained sub-attacks (run independent of the move state machine)
   let dashing=false;
-  if(e.spr==='tralalero'){                 // speed bruiser: charge-dashes you
-    if(e.dst==='wind'){ dashing=true; e.dwin-=dt; if(e.dwin<=0){ e.dst='dash'; e.ddur=0.4; } }   // pause + red telegraph line, then commit
-    else if(e.dst==='dash'){ dashing=true; e.ddur-=dt; e.x+=Math.cos(e.da)*520*dt; e.y+=Math.sin(e.da)*520*dt; if(e.ddur<=0) e.dst='idle'; }
-    else if(e.gim>(e.enraged?1.3:2.1)){ e.gim=0; e.dst='wind'; e.dwin=e.enraged?0.4:0.55; e.da=Math.atan2(P.y-e.y,P.x-e.x); }
-  } else if(e.spr==='crocodilo'){          // bomber: carpet-bomb telegraphed zones
-    if(e.gim>(e.enraged?1.1:1.7)){ e.gim=0; for(let k=0;k<3;k++) addZone(P.x+rand(-130,130),P.y+rand(-130,130),44,{tele:0.7,life:1.0,dps:16,col:'#ff2e2e'}); }
-  } else if(e.spr==='sahur'){              // rhythmic ground-slam shockwave
-    if(e.gim>(e.enraged?1.0:1.5)){ e.gim=0; addZone(P.x,P.y,72,{tele:0.55,life:0.7,dps:20,col:'#a9763e'}); shake=Math.max(shake,8); sfx.hit(); }
-  } else if(e.spr==='vaca'){               // gravity pulse: tugs you toward it
-    if(e.gim>2.6){ e.gim=0; e.pull=0.7; }
-    if(e.pull>0){ e.pull-=dt; const a=Math.atan2(e.y-P.y,e.x-P.x); P.x+=Math.cos(a)*95*dt; P.y+=Math.sin(a)*95*dt; P.x=clamp(P.x,WALL+P.r,WORLD.w-WALL-P.r); P.y=clamp(P.y,WALL+P.r,WORLD.h-WALL-P.r); }
-  } else if(e.spr==='gorillo'){            // watermelon smash: big zone + seed ring
-    if(e.gim>(e.enraged?1.6:2.4)){ e.gim=0; addZone(P.x,P.y,60,{tele:0.7,life:1.0,dps:18,col:'#3f7d33'}); const off=rand(0,TAU); for(let k=0;k<12;k++) fireEB(e.x,e.y,off+k*TAU/12,130,'#e0503f'); }
-  } else if(e.spr==='trippi'){             // glitch: randomly swaps its own pattern
-    if(e.gim>3){ e.gim=0; e.pattern=pick(['spiral','rings','chaos']); }
+  if(e.pull>0){ e.pull-=dt; const a=Math.atan2(e.y-P.y,e.x-P.x), str=e.pullStr||100;
+    P.x=clamp(P.x+Math.cos(a)*str*dt,WALL+P.r,WORLD.w-WALL-P.r); P.y=clamp(P.y+Math.sin(a)*str*dt,WALL+P.r,WORLD.h-WALL-P.r); }
+  if(e.dst==='wind'){ dashing=true; e.dwin-=dt; if(e.dwin<=0){ e.dst='dash'; e.ddur=0.4; } }
+  else if(e.dst==='dash'){ dashing=true; e.ddur-=dt; e.x+=Math.cos(e.da)*520*dt; e.y+=Math.sin(e.da)*520*dt; if(e.ddur<=0) e.dst='idle'; }
+  if(e.spin>0){ e.spin-=dt; e.spinT=(e.spinT||0)-dt; if(e.spinT<=0){ e.spinT=0.1; e.phase=(e.phase||0)+0.42;
+    const col=e.spinCol||'#e54d4d'; fireEB(e.x,e.y,e.phase,170,col); fireEB(e.x,e.y,e.phase+Math.PI,170,col); } }
+
+  // ---- telegraphed move cycle: recover -> wind -> fire -> recover ----
+  const enr = e.enraged?0.65:1;
+  e.mt -= dt;
+  if(e.mt<=0){
+    if(e.mst==='recover'){ e.mst='wind'; e.mt=0.5; e.mv=pickMove(e); e.tellCol=MOVE_COL[e.mv]||'#fff'; sfx.warn(); }
+    else if(e.mst==='wind'){ e.mst='fire'; e.mt=execMove(e); }
+    else { e.mst='recover'; e.mt=(e.spr==='vaca'&&e.vph>=3?0.7:1.1)*enr; }
   }
 
   // anchor drift toward the player (unless mid-dash)
@@ -645,25 +774,23 @@ function updateBoss(e,dt){
   }
   e.x = clamp(e.x, WALL+e.r, WORLD.w-WALL-e.r); e.y = clamp(e.y, WALL+e.r, WORLD.h-WALL-e.r);
   if(arena){ e.x=clamp(e.x, arena.x+e.r, arena.x+arena.w-e.r); e.y=clamp(e.y, arena.y+e.r, arena.y+arena.h-e.r); }
-
-  const rage = e.enraged ? 0.6 : 1;
-  if(e.pattern==='spiral'){
-    if(e.atk > 0.13*rage){ e.atk=0; e.phase+=0.42;
-      fireEB(e.x,e.y,e.phase,160,'#e54d4d'); fireEB(e.x,e.y,e.phase+Math.PI,160,'#e54d4d'); }
-  } else if(e.pattern==='rings'){
-    if(e.atk > 1.6*rage){ e.atk=0; const n=16, off=rand(0,TAU);
-      for(let i=0;i<n;i++) fireEB(e.x,e.y,off+i*TAU/n,140,'#4aa3df'); }
-  } else {
-    if(e.atk > 0.5*rage){ e.atk=0; e.phase+=0.9;
-      const aim=Math.atan2(P.y-e.y,P.x-e.x);
-      for(let i=-2;i<=2;i++) fireEB(e.x,e.y,aim+i*0.22,180,'#e23b3b');
-      fireEB(e.x,e.y,e.phase,130,'#b14de5'); fireEB(e.x,e.y,-e.phase,130,'#b14de5'); }
-  }
 }
 
 function hurtPlayer(dmg, src){
   if(P.inv>0 || P.dashT>0) return;
-  P.hp -= dmg; P.inv = 0.8;
+  // Aegis Bubble: a charge blocks the hit entirely
+  if(P.shield>0){
+    P.shield--; P.inv=0.8; P.shieldCd=P.shieldCdBase;
+    sfx.dash(); burst(P.x,P.y,'#7ecbff',16,260);
+    parts.push({x:P.x,y:P.y,vx:0,vy:0,life:0.35,max:0.35,color:'#aee4ff',r:P.r+18,ring:true,gr:260});
+    if(P.aegisEvo){   // Aegis Fortress: blocking emits a damaging, bullet-clearing shockwave
+      const R=170; shake=Math.max(shake,10);
+      for(const e of enemies){ if(dist2(P.x,P.y,e.x,e.y)<R*R) damageEnemy(e,40*P.dmg,P.x,P.y,false); }
+      ebullets = ebullets.filter(b=>dist2(P.x,P.y,b.x,b.y)>R*R);
+    }
+    return;
+  }
+  P.hp -= dmg*(P.shieldDR||1); P.inv = 0.8;
   shake = Math.max(shake,10); hitFlash = 1; hitstop=Math.max(hitstop,0.04);
   sfx.hurt(); burst(P.x,P.y,'#e54d4d',12,200);
   if(navigator.vibrate) navigator.vibrate(60);
@@ -672,7 +799,19 @@ function hurtPlayer(dmg, src){
     P.x = clamp(P.x+Math.cos(a)*30, WALL+P.r, WORLD.w-WALL-P.r);
     P.y = clamp(P.y+Math.sin(a)*30, WALL+P.r, WORLD.h-WALL-P.r);
   }
-  if(P.hp<=0) gameOver();
+  if(P.hp<=0){
+    if(P.phoenix>0){   // Phoenix: rise from the ashes instead of dying
+      P.phoenix--; P.phoenixCd=P.phoenixCdBase;
+      P.hp=Math.max(1,Math.round(P.maxHp*P.phoenixHeal)); P.inv=2;
+      bigText('REBORN','#ff7a3a'); shake=Math.max(shake,16);
+      const R=P.phoenixEvo?320:230; burst(P.x,P.y,'#ff7a3a',46,440); sfx.win();
+      parts.push({x:P.x,y:P.y,vx:0,vy:0,life:0.5,max:0.5,color:'#ffd0a0',r:R,ring:true,gr:520});
+      for(const e of enemies){ if(dist2(P.x,P.y,e.x,e.y)<R*R) damageEnemy(e,(P.phoenixEvo?80:50)*P.dmg,P.x,P.y,false); }
+      ebullets = ebullets.filter(b=>dist2(P.x,P.y,b.x,b.y)>R*R);
+      return;
+    }
+    gameOver();
+  }
 }
 
 // ============ RENDER ============
@@ -731,6 +870,19 @@ function render(){
   // --- ground hazard zones (telegraph + active) ---
   renderZones();
 
+  // --- black holes ---
+  for(const h of holes){
+    if(h.x<vx0-h.r||h.x>vx1+h.r||h.y<vy0-h.r||h.y>vy1+h.r) continue;
+    const k=Math.max(0,1-h.t/h.life), pr=h.r*(0.85+0.15*Math.sin(h.t*8));
+    cx.globalAlpha=0.5*k; cx.fillStyle='#2a0d3a'; cx.beginPath(); cx.arc(h.x,h.y,pr,0,TAU); cx.fill();
+    cx.globalAlpha=0.85*k; cx.strokeStyle='#b06ff0'; cx.lineWidth=3; cx.beginPath(); cx.arc(h.x,h.y,pr,0,TAU); cx.stroke();
+    cx.globalAlpha=0.5*k; cx.strokeStyle='#d2a0ff'; cx.lineWidth=2;
+    for(let s=0;s<3;s++){ const a0=h.t*4+s*TAU/3; cx.beginPath();
+      for(let t=0;t<=1.001;t+=0.12){ const rr=pr*t, aa=a0+t*5, xx=h.x+Math.cos(aa)*rr, yy=h.y+Math.sin(aa)*rr; t===0?cx.moveTo(xx,yy):cx.lineTo(xx,yy);} cx.stroke(); }
+    cx.globalAlpha=0.9*k; cx.fillStyle='#110018'; cx.beginPath(); cx.arc(h.x,h.y,pr*0.4,0,TAU); cx.fill();
+    cx.globalAlpha=1;
+  }
+
   // --- gems / pickups ---
   for(const gm of gems){
     if(gm.x<vx0-40||gm.x>vx1+40||gm.y<vy0-40||gm.y>vy1+40) continue;
@@ -769,6 +921,12 @@ function render(){
     if(e.dst==='wind'){   // charge-dash wind-up telegraph line
       cx.globalAlpha=0.45; cx.strokeStyle='#ff5a5a'; cx.lineWidth=4; cx.setLineDash([10,8]);
       cx.beginPath(); cx.moveTo(e.x,e.y); cx.lineTo(e.x+Math.cos(e.da)*150, e.y+Math.sin(e.da)*150); cx.stroke();
+      cx.setLineDash([]); cx.globalAlpha=1;
+    }
+    if(e.isBoss && e.mst==='wind'){   // boss attack wind-up: pulsing charge ring in the move's color
+      const pulse=0.5+0.5*Math.sin(e.t*26), col=e.tellCol||'#fff';
+      cx.globalAlpha=0.35+0.4*pulse; cx.strokeStyle=col; cx.lineWidth=4+3*pulse; cx.setLineDash([8,7]);
+      cx.beginPath(); cx.arc(e.x,e.y,e.r+14+pulse*8,0,TAU); cx.stroke();
       cx.setLineDash([]); cx.globalAlpha=1;
     }
     const wob = e.isBoss ? Math.sin(e.t*2)*0.06 : Math.sin(e.t*6)*0.12;
@@ -810,6 +968,19 @@ function render(){
       const bob=Math.sin(P.walk)*0.06;
       const flip = Math.cos(P.face)<0;
       drawSprite('player', P.x, P.y, P.r*2.6, bob, 0, 0, flip);
+    }
+    // Phoenix burn aura
+    if(P.burnAura>0){
+      cx.globalAlpha=0.12+0.05*Math.sin(elapsed*8); cx.fillStyle='#ff7a3a';
+      cx.beginPath(); cx.arc(P.x,P.y,80,0,TAU); cx.fill(); cx.globalAlpha=1;
+    }
+    // Aegis shield bubble (one ring per remaining charge)
+    if(P.shield>0){
+      for(let s=0;s<P.shield;s++){
+        cx.globalAlpha=0.5-s*0.12; cx.strokeStyle=P.aegisEvo?'#aee4ff':'#7ecbff'; cx.lineWidth=3;
+        cx.beginPath(); cx.arc(P.x,P.y,P.r+12+s*5,0,TAU); cx.stroke();
+      }
+      cx.globalAlpha=1;
     }
   }
 
