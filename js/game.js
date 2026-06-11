@@ -23,7 +23,7 @@ function dropOrb(x,y,tier,smin=90,smax=210){
 // numbers are big enough that % upgrades (e.g. +25%) visibly change the damage.
 const HP_MULT = 10;
 // ---- enemy archetypes: the Italian Brainrot bestiary (ordered easy -> hard) ----
-const FOES = [
+const FOES_GRASS = [
   // Tier I — fodder
   { spr:'pigeon',   name:'Spijuniro',     hp:3,  sp:80, r:15, xp:1, score:10 },
   { spr:'chimp',    name:'Chimpanzini',   hp:3,  sp:86, r:16, xp:1, score:12 },
@@ -54,7 +54,7 @@ const FOES = [
   { spr:'tiger',     name:'Tigrrullini',   hp:14, sp:76, r:20, xp:4, score:44, dash:true, range:360, shoot:{type:'aim',n:5,cd:3.4,spd:155,col:'#e54d4d',move:true} },
   { spr:'capy',      name:'Capybarelli',   hp:16, sp:46, r:21, xp:5, score:48, support:true },
 ];
-const BOSSES = [
+const BOSSES_GRASS = [
   { spr:'tralalero', name:'TRALALERO TRALALA',        hp:150, r:54, pattern:'spiral' },
   { spr:'crocodilo', name:'BOMBARDIRO CROCODILO',     hp:230, r:56, pattern:'rings'  },
   { spr:'sahur',     name:'TUNG TUNG TUNG SAHUR',     hp:300, r:58, pattern:'chaos'  },
@@ -62,6 +62,18 @@ const BOSSES = [
   { spr:'gorillo',   name:'GORILLO WATERMELLONDRILLO',hp:460, r:62, pattern:'chaos'  },
   { spr:'trippi',    name:'TRIPPI TROPPI',            hp:560, r:56, pattern:'spiral' },
 ];
+// ---- worlds: each = theme + roster + boss list + wave target (boss wave). ----
+const WORLDS = [
+  { id:'grass', name:'GRASSLANDS', waveTarget:20, endless:false,
+    theme:{ void:'#5b7d33', tile1:'#86c64a', tile2:'#7cbd43', tuft:'rgba(60,110,40,0.35)',
+            wall:null, post:null, bg:'#6fae3d', tint:null, music:'game' },
+    foes:FOES_GRASS, bosses:BOSSES_GRASS },
+];
+let worldIdx = 0;
+function curWorld(){ return WORLDS[worldIdx]; }
+let curFoes   = WORLDS[0].foes;
+let curBosses = WORLDS[0].bosses;
+let curTheme  = WORLDS[0].theme;
 
 // ---- rarity tiers: lower weight = rarer in the level-up draw (appearance-only) ----
 const RARITY = {
@@ -222,7 +234,7 @@ function ringPos(){ // spawn point on a ring around player, clamped to world
 }
 
 function spawnBoss(){
-  const def = BOSSES[(Math.floor(wave/5)-1) % BOSSES.length];
+  const def = curBosses[(Math.floor(wave/5)-1) % curBosses.length];
   const mult = 1 + (wave-5)*0.22;
   const p = arena ? { x:arena.x+arena.w/2, y:arena.y+arena.h*0.28 } : ringPos();
   boss = {
@@ -244,8 +256,8 @@ function spawnBoss(){
 }
 
 function spawnEnemy(){
-  const maxIdx = Math.min(FOES.length-1, Math.floor(wave/2));
-  const def = FOES[Math.floor(Math.random()*(maxIdx+1))];
+  const maxIdx = Math.min(curFoes.length-1, Math.floor(wave/2));
+  const def = curFoes[Math.floor(Math.random()*(maxIdx+1))];
   const p = ringPos();
   const hpMult = 1 + (wave-1)*0.16;
   enemies.push({
