@@ -87,7 +87,7 @@ const FOES_DIRT = [
   // Tier IV — heavies
   { spr:'rhino',     name:'Rhino Toasterino 2.0', hp:18, sp:42, r:23, xp:4, score:45, range:340, shoot:{type:'aim',n:2,cd:3.0,spd:140,col:'#e8b96a'}, death:{type:'split',n:2} },
   { spr:'burbaloni', name:'Burbaloni Luliloli',  hp:20, sp:36, r:24, xp:5, score:50, aoe:{r:52,dps:9,life:1.6,tele:0.6,slow:true,col:'#9fd0ff',cd:3.4} },
-  { spr:'cocofanto', name:'Cocofanto Elefanto',  hp:22, sp:32, r:25, xp:5, score:55, pullAura:60 },
+  { spr:'cocofanto', name:'Cocofanto Elefanto',  hp:22, sp:32, r:25, xp:5, score:55, pullAura:60, trail:{cd:0.5,r:34,life:1.6,dps:7,col:'#3a2616'} },
   { spr:'girafa',    name:'Girafa Celeste',      hp:26, sp:30, r:26, xp:5, score:55, dash:true, kb:true },
   // Tier V — elites
   { spr:'bicus',     name:'Brri Brri Bicus Dicus Bombicus', hp:14, sp:50, r:20, xp:4, score:44, cast:{kind:'summon',cd:5,spr:'golubiro',n:3,cap:4} },
@@ -177,10 +177,10 @@ function triggerUnlockReveal(){
 // ---- rarity tiers: lower weight = rarer in the level-up draw (appearance-only) ----
 const RARITY = {
   common:    { w:100, label:'COMMON' },
-  uncommon:  { w:52,  label:'UNCOMMON' },
-  rare:      { w:24,  label:'RARE' },
-  epic:      { w:9,   label:'EPIC' },
-  legendary: { w:3,   label:'LEGENDARY' },
+  uncommon:  { w:88,  label:'UNCOMMON' },
+  rare:      { w:70,  label:'RARE' },
+  epic:      { w:50,  label:'EPIC' },
+  legendary: { w:34,  label:'LEGENDARY' },
 };
 // ---- card pool: passives level to a cap; abilities take 4 levels, then EVOLVE on the 5th pick ----
 // rarity: tier (appearance + draw odds). req:[ids] = synergy card, hidden until those cards are owned.
@@ -345,7 +345,7 @@ function spawnBoss(){
     hp:total, maxHp:total,
     t:0, phase:0, isBoss:true, sp:46, xp:0, score:500, hitT:0, sq:0,
     mst:'recover', mt:1.0, mv:null, lastMv:null, vph:1, pull:0, spin:0, dst:'idle', iv:0,
-    rollSpray:0, warpT:0
+    rollSpray:0, warpT:0, wd:null, gsweep:null, carpet:0, cbT:0, tether:0
   };
   enemies.push(boss);
   if(def.duo){   // final-boss partner: own body + move cycle, shares the lead's HP pool
@@ -354,7 +354,7 @@ function spawnBoss(){
       x:clamp(p.x+110,WALL+def.r,WORLD.w-WALL-def.r), y:p.y, r:def.r,
       hp:1, maxHp:1, t:0, phase:0, isBoss:true, sp:46, xp:0, score:0, hitT:0, sq:0,
       mst:'recover', mt:1.6, mv:null, lastMv:null, vph:1, pull:0, spin:0, dst:'idle', iv:0,
-      rollSpray:0, warpT:0
+      rollSpray:0, warpT:0, wd:null, gsweep:null, carpet:0, cbT:0, tether:0
     };
     enemies.push(mate); boss.mate=mate;
   }
@@ -383,7 +383,7 @@ function spawnEnemy(){
     shell:def.shell, shellCd:rand(3,5), iv:0,
     support:def.support, supCd:rand(2,3.5),
     // ---- World 2 (DIRT DEPTHS) fields ----
-    front:def.front, kb:def.kb, pullAura:def.pullAura,
+    front:def.front, kb:def.kb, pullAura:def.pullAura, trail:def.trail, trailT:0,
     cast:def.cast, castCd: def.cast ? rand(1.4,2.8) : 0,
     under: !!def.burrow, digT: def.burrow ? rand(0.7,1.3) : 0, spin:0,
     t:rand(0,TAU), wob:rand(2,4), shootCd:rand(1.5,4), frz:0, isBoss:false, hitT:0, sq:0, face:1
@@ -750,6 +750,8 @@ function update(dt){
       if(e.spin>0){ e.spin-=dt; e.spinT=(e.spinT||0)-dt; if(e.spinT<=0){ e.spinT=0.12; e.sphase=(e.sphase||0)+0.5; const col=e.spinCol||'#b06ff0'; fireEB(e.x,e.y,e.sphase,150,col); fireEB(e.x,e.y,e.sphase+Math.PI,150,col); } }
       // sinkhole pull aura — drags the player toward this enemy every frame
       if(e.pullAura){ const a=Math.atan2(e.y-P.y,e.x-P.x); P.x=clamp(P.x+Math.cos(a)*e.pullAura*dt,WALL+P.r,WORLD.w-WALL-P.r); P.y=clamp(P.y+Math.sin(a)*e.pullAura*dt,WALL+P.r,WORLD.h-WALL-P.r); }
+      // hazard trail — leaves cracked, damaging ground behind it as it moves
+      if(e.trail){ e.trailT-=dt; if(e.trailT<=0){ e.trailT=e.trail.cd||0.5; addZone(e.x,e.y,e.trail.r||34,{tele:0.15,life:e.trail.life||1.5,dps:e.trail.dps||7,slow:e.trail.slow,col:e.trail.col||'#5a3d28'}); } }
       // turtle: periodically pull into an invulnerable shell and hold still
       if(e.shell && e.iv<=0){ e.shellCd-=dt; if(e.shellCd<=0){ e.iv=1.6; e.shellCd=4.5; } }
       // charge-dash state machine (Penguino slide, Tigrrullini pounce, ...)
@@ -879,7 +881,11 @@ function update(dt){
   // --- enemy bullets ---
   for(let i=ebullets.length-1;i>=0;i--){
     const b=ebullets[i];
-    b.x += b.vx*dt*P.bslow; b.y += b.vy*dt*P.bslow;
+    if(b.orbit){   // Saturn ring: revolve around a fixed center while spiralling outward
+      b.orbit.ang += b.orbit.angV*dt; b.orbit.rad += b.orbit.radV*dt;
+      b.x = b.orbit.cx + Math.cos(b.orbit.ang)*b.orbit.rad;
+      b.y = b.orbit.cy + Math.sin(b.orbit.ang)*b.orbit.rad;
+    } else { b.x += b.vx*dt*P.bslow; b.y += b.vy*dt*P.bslow; }
     b.t = (b.t||0)+dt;
     if(b.x<-30||b.x>WORLD.w+30||b.y<-30||b.y>WORLD.h+30||b.t>9){ ebullets.splice(i,1); continue; }
     if(b.split && b.t>=b.splitT){    // shard bursts into a 3-way fan mid-flight
@@ -975,6 +981,13 @@ function mAimed(e,n,spread,spd,col){ const aim=Math.atan2(P.y-e.y,P.x-e.x); for(
 function geyserLine(x,y,a,col,n=5,step=46){
   for(let k=1;k<=n;k++) addZone(x+Math.cos(a)*step*k, y+Math.sin(a)*step*k, 34, {tele:0.35+k*0.12, life:0.45, dps:15, col:col||'#e0503f'});
 }
+// shortest distance from point (px,py) to the segment (ax,ay)-(bx,by) — used by the duo tether beam
+function segDist(px,py,ax,ay,bx,by){
+  const dx=bx-ax, dy=by-ay, l2=dx*dx+dy*dy || 1;
+  let t=((px-ax)*dx+(py-ay)*dy)/l2; t=clamp(t,0,1);
+  const cxp=ax+t*dx, cyp=ay+t*dy;
+  return Math.hypot(px-cxp,py-cyp);
+}
 // overhead rocks dropping near the player
 function debrisDrop(n=3,col){
   for(let k=0;k<n;k++) addZone(P.x+rand(-100,100), P.y+rand(-100,100), 40, {tele:0.9, life:0.5, dps:16, col:col||'#9a7a52'});
@@ -1014,29 +1027,29 @@ function bossMoves(e){
       if(e.vph>=2) return ['ring2','spiral','aimed5','pull'];
       return ['ring16','pull'];
     // ---- World 2 (DIRT DEPTHS) ----
-    case 'tatasahur':                      // burrow-slam intro
-      if(e.vph>=3) return ['BURROW_DOUBLE','DEBRIS3','aimed5'];
-      if(e.vph>=2) return ['BURROW_SLAM','DEBRIS3','ring2','aimed5'];
+    case 'tatasahur':                      // burrow-slam + marching drum beat
+      if(e.vph>=3) return ['DRUM_MARCH','BURROW_DOUBLE','DEBRIS3','aimed5'];
+      if(e.vph>=2) return ['DRUM_MARCH','BURROW_SLAM','DEBRIS3','ring2'];
       return ['BURROW_SLAM','aimed3','ring16'];
-    case 'hotspot':                        // geyser ground-denial
-      if(e.vph>=3) return ['QUAKE_RADIAL','dblslam','aimed5'];
-      if(e.vph>=2) return ['QUAKE_CROSS','dblslam','aimed5'];
+    case 'hotspot':                        // geyser ground-denial + rotating sweep
+      if(e.vph>=3) return ['GEYSER_SWEEP','QUAKE_RADIAL','dblslam'];
+      if(e.vph>=2) return ['GEYSER_SWEEP','QUAKE_CROSS','aimed5'];
       return ['QUAKE_LINE','slam','ring16'];
-    case 'saturnita':                      // lava floor
-      if(e.vph>=3) return ['MELTDOWN','spiral','ring2x'];
-      if(e.vph>=2) return ['LAVA_POOL','EMBER_RAIN','aimed5','spiral'];
+    case 'saturnita':                      // lava floor + Saturn orbital rings
+      if(e.vph>=3) return ['SATURN_RING','MELTDOWN','spiral'];
+      if(e.vph>=2) return ['SATURN_RING','LAVA_POOL','EMBER_RAIN','aimed5'];
       return ['LAVA_POOL','ring16','aimed3'];
-    case 'tralala2':                       // crystal refractor
-      if(e.vph>=3) return ['EXPAND_IMPLODE','SWEEP_DUAL','ring2'];
-      if(e.vph>=2) return ['SWEEP_DUAL','PRISM_SPLIT','ring2'];
+    case 'tralala2':                       // the BOUNCE boss — ricochets off the walls
+      if(e.vph>=3) return ['RICOCHET','SWEEP_DUAL','ring2'];
+      if(e.vph>=2) return ['RICOCHET','PRISM_SPLIT','ring2'];
       return ['SWEEP','ring16','aimed3'];
-    case 'croco2':                         // brood / adds
-      if(e.vph>=3) return ['BROOD_BURST','SPORE_FIELD','ring2x'];
-      if(e.vph>=2) return ['SUMMON','SPORE_FIELD','spiral'];
+    case 'croco2':                         // brood / adds + carpet bombing run
+      if(e.vph>=3) return ['CARPET_RUN','BROOD_BURST','SPORE_FIELD'];
+      if(e.vph>=2) return ['CARPET_RUN','SUMMON','spiral'];
       return ['SUMMON','ring16','aimed5'];
-    case 'madudung':                       // final boss — lead
-      if(e.vph>=3) return ['DEVOUR','MELTDOWN','SUMMON','ring2x'];
-      if(e.vph>=2) return ['LAVA_POOL','SWEEP_DUAL','BURROW_DOUBLE','ring2'];
+    case 'madudung':                       // final boss — lead (tether links the duo)
+      if(e.vph>=3) return ['TETHER','DEVOUR','MELTDOWN','SUMMON'];
+      if(e.vph>=2) return ['TETHER','LAVA_POOL','SWEEP_DUAL','BURROW_DOUBLE'];
       return ['BURROW_SLAM','QUAKE_LINE','aimed5','ring16'];
     case 'garamaraman':                    // final boss — duo partner (complementary)
       if(e.vph>=3) return ['QUAKE_RADIAL','EMBER_RAIN','spiral'];
@@ -1055,7 +1068,9 @@ const MOVE_COL = { dash:'#e54d4d', spiral:'#e54d4d', aimed3:'#e23b3b', aimed5:'#
   LAVA_POOL:'#e0503f', EMBER_RAIN:'#ff7a2a', MELTDOWN:'#ff7a2a',
   SWEEP:'#b06ff0', SWEEP_DUAL:'#d2a0ff', PRISM_SPLIT:'#7ec8ff',
   EXPAND_IMPLODE:'#d2a0ff', SUMMON:'#d2a0ff', SPORE_FIELD:'#7ab955',
-  BROOD_BURST:'#d2a0ff', DEVOUR:'#d2a0ff' };
+  BROOD_BURST:'#d2a0ff', DEVOUR:'#d2a0ff',
+  RICOCHET:'#7ec8ff', DRUM_MARCH:'#a9763e', GEYSER_SWEEP:'#e0503f',
+  SATURN_RING:'#ffd24a', CARPET_RUN:'#ff7a2a', TETHER:'#ff5acd' };
 function pickMove(e){ const pool=bossMoves(e); let m; do{ m=pick(pool); }while(pool.length>1 && m===e.lastMv); e.lastMv=m; return m; }
 // run one move; returns how long the boss stays in the "fire" state before recovering
 function execMove(e){
@@ -1098,6 +1113,13 @@ function execMove(e){
     case 'SPORE_FIELD':   for(let k=0;k<4;k++) addZone(P.x+rand(-160,160),P.y+rand(-160,160),60,{tele:0.6,life:2.4,dps:8,slow:true,col:'#7ab955'}); return 0.4;
     case 'BROOD_BURST':   summonAdds(e,'golubiro',4,8); mRing(e,20,160,'#d2a0ff'); mRing(e,16,110,'#b06ff0'); return 0.4;
     case 'DEVOUR':        e.pull=1.4; e.pullStr=150; mRing(e,20,160,'#d2a0ff'); mRing(e,20,110,'#b06ff0'); return 1.2;
+    // ---- original signature attacks ----
+    case 'RICOCHET':      e.wd={ n:6, ang:Math.atan2(P.y-e.y,P.x-e.x), spd:e.enraged?640:560, tT:0 }; sfx.warn(); burst(e.x,e.y,'#7ec8ff',20,320); return 2.8;
+    case 'DRUM_MARCH':    { const a=Math.atan2(P.y-e.y,P.x-e.x); for(let k=1;k<=5;k++) addZone(e.x+Math.cos(a)*92*k, e.y+Math.sin(a)*92*k, 70, {tele:0.3+k*0.22, life:0.45, dps:20, col:'#a9763e'}); sfx.hit(); return 0.7; }
+    case 'GEYSER_SWEEP':  e.gsweep={ t:1.8, ang:Math.atan2(P.y-e.y,P.x-e.x), dir:Math.random()<0.5?1:-1, dropT:0 }; return 1.8;
+    case 'SATURN_RING':   { const N=18, off=rand(0,TAU), dir=Math.random()<0.5?1:-1; for(let k=0;k<N;k++) fireEB(e.x,e.y,0,0,'#ffd24a',{orbit:{cx:e.x,cy:e.y,ang:off+k*TAU/N,rad:42,angV:dir*1.8,radV:58}}); muzzleFlash(e.x,e.y,'#ffd24a'); return 0.4; }
+    case 'CARPET_RUN':    e.dst='wind'; e.dwin=e.enraged?0.3:0.45; e.da=Math.atan2(P.y-e.y,P.x-e.x); e.carpet=0.62; e.cbT=0; return 0.9;
+    case 'TETHER':        e.tether=2.2; return 2.2;
   }
   return 0.2;
 }
@@ -1137,6 +1159,34 @@ function updateBoss(e,dt){
     if(e.warpT<=0){
       const a=rand(0,TAU); e.x=clamp(P.x+Math.cos(a)*180,WALL+e.r,WORLD.w-WALL-e.r); e.y=clamp(P.y+Math.sin(a)*180,WALL+e.r,WORLD.h-WALL-e.r);
       burst(e.x,e.y,'#c77dff',22,260); e.spin=0.7; e.spinCol='#c77dff'; e.iv=0.2; }
+  }
+  // RICOCHET (Tralalero 2.0 only): rockets across the arena bouncing off the walls, trailing wake
+  if(e.wd){
+    dashing=true;
+    e.x += Math.cos(e.wd.ang)*e.wd.spd*dt; e.y += Math.sin(e.wd.ang)*e.wd.spd*dt;
+    const minX=(arena?arena.x:WALL)+e.r, maxX=(arena?arena.x+arena.w:WORLD.w-WALL)-e.r;
+    const minY=(arena?arena.y:WALL)+e.r, maxY=(arena?arena.y+arena.h:WORLD.h-WALL)-e.r;
+    let bounced=false;
+    if(e.x<minX){ e.x=minX; e.wd.ang=Math.PI-e.wd.ang; bounced=true; }
+    else if(e.x>maxX){ e.x=maxX; e.wd.ang=Math.PI-e.wd.ang; bounced=true; }
+    if(e.y<minY){ e.y=minY; e.wd.ang=-e.wd.ang; bounced=true; }
+    else if(e.y>maxY){ e.y=maxY; e.wd.ang=-e.wd.ang; bounced=true; }
+    if(bounced){ e.wd.n--; shake=Math.max(shake,9); sfx.hit(); burst(e.x,e.y,'#7ec8ff',16,300); mRing(e,10,150,'#7ec8ff'); }
+    e.wd.tT-=dt; if(e.wd.tT<=0){ e.wd.tT=0.04; parts.push({x:e.x,y:e.y,vx:0,vy:0,life:0.4,max:0.4,color:'#7ec8ff',r:e.r*0.85}); }
+    if(e.wd.n<=0) e.wd=null;
+  }
+  // GEYSER_SWEEP (Pot Hotspot): a rotating clock-hand of erupting geyser lines
+  if(e.gsweep){
+    e.gsweep.t-=dt; e.gsweep.ang += e.gsweep.dir*1.7*dt; e.gsweep.dropT-=dt;
+    if(e.gsweep.dropT<=0){ e.gsweep.dropT=0.13; geyserLine(e.x,e.y,e.gsweep.ang,'#e0503f',6,52); }
+    if(e.gsweep.t<=0) e.gsweep=null;
+  }
+  // CARPET_RUN (Bombardiro 2.0): lays a carpet of delayed bombs along its bombing run
+  if(e.carpet>0 && e.dst==='dash'){ e.carpet-=dt; e.cbT-=dt;
+    if(e.cbT<=0){ e.cbT=0.1; addZone(e.x,e.y,58,{tele:0.5,life:0.55,dps:18,col:'#ff7a2a'}); } }
+  // TETHER (final duo): a damaging beam strung between the two titans that sweeps as they move
+  if(e.tether>0 && e.mate){ e.tether-=dt;
+    if(P.inv<=0 && P.dashT<=0 && segDist(P.x,P.y,e.x,e.y,e.mate.x,e.mate.y) < 28) hurtPlayer(14);
   }
 
   // ---- telegraphed move cycle: recover -> wind -> fire -> recover ----
@@ -1459,17 +1509,40 @@ function renderArena(vx0,vy0,vx1,vy1){
 
 function renderZones(){
   for(const z of zones){
-    if(z.t<z.tele){                       // telegraph: pulsing dashed ring + filling
-      const k=z.t/z.tele;
-      cx.globalAlpha=0.7+0.3*Math.sin(z.t*22);
-      cx.strokeStyle=z.col; cx.lineWidth=5; cx.setLineDash([9,8]);
+    const danger = z.col||'#e8a93a';
+    if(z.t<z.tele){                       // telegraph: clearly shows WHERE + WHEN it lands
+      const k=z.t/z.tele;                 // 0..1 charge
+      const imminent = k>0.62;
+      // dark base disc so the hazard reads on any ground color
+      cx.globalAlpha=0.34; cx.fillStyle='#000'; cx.beginPath(); cx.arc(z.x,z.y,z.r,0,TAU); cx.fill();
+      // danger fill grows to full exactly at impact = a visible countdown
+      cx.globalAlpha=0.30+0.34*k; cx.fillStyle=danger; cx.beginPath(); cx.arc(z.x,z.y,z.r*k,0,TAU); cx.fill();
+      // bold rotating warning ring (turns white the instant before it fires)
+      cx.globalAlpha=1; cx.lineWidth=imminent?8:5; cx.strokeStyle=imminent?'#fff':danger;
+      cx.setLineDash([11,7]); cx.lineDashOffset=-elapsed*140;
       cx.beginPath(); cx.arc(z.x,z.y,z.r,0,TAU); cx.stroke(); cx.setLineDash([]);
-      cx.globalAlpha=0.30; cx.fillStyle=z.col; cx.beginPath(); cx.arc(z.x,z.y,z.r*k,0,TAU); cx.fill();
-    } else {                              // active: fades over its life
+      // dark contrast outline
+      cx.lineWidth=2.5; cx.strokeStyle='rgba(0,0,0,0.55)'; cx.beginPath(); cx.arc(z.x,z.y,z.r+2,0,TAU); cx.stroke();
+      // pulsing center marker so the exact spot is unmistakable
+      const ps=0.5+0.5*Math.sin(z.t*26);
+      cx.globalAlpha=0.75+0.25*ps; cx.fillStyle=imminent?'#fff':danger;
+      cx.beginPath(); cx.arc(z.x,z.y,4+3*ps,0,TAU); cx.fill();
+    } else {                              // active: bright fill + a white impact flash
       const k=Math.max(0,1-(z.t-z.tele)/z.life);
-      cx.globalAlpha=0.45*k+0.14; cx.fillStyle=z.col; cx.beginPath(); cx.arc(z.x,z.y,z.r,0,TAU); cx.fill();
-      cx.globalAlpha=0.85*k; cx.strokeStyle=z.col; cx.lineWidth=5; cx.beginPath(); cx.arc(z.x,z.y,z.r,0,TAU); cx.stroke();
+      cx.globalAlpha=0.5*k+0.18; cx.fillStyle=danger; cx.beginPath(); cx.arc(z.x,z.y,z.r,0,TAU); cx.fill();
+      cx.globalAlpha=0.9*k; cx.lineWidth=6; cx.strokeStyle=danger; cx.beginPath(); cx.arc(z.x,z.y,z.r,0,TAU); cx.stroke();
+      const f=(z.t-z.tele)/0.12;
+      if(f<1){ cx.globalAlpha=0.8*(1-f); cx.fillStyle='#fff'; cx.beginPath(); cx.arc(z.x,z.y,z.r*0.7,0,TAU); cx.fill(); }
     }
+  }
+  // duo tether beam: bright energy line between the two final-boss titans
+  if(boss && boss.tether>0 && boss.mate){
+    const m=boss.mate, pulse=0.6+0.4*Math.sin(elapsed*30);
+    cx.globalAlpha=0.85; cx.lineCap='round';
+    cx.strokeStyle='rgba(0,0,0,0.5)'; cx.lineWidth=20; cx.beginPath(); cx.moveTo(boss.x,boss.y); cx.lineTo(m.x,m.y); cx.stroke();
+    cx.strokeStyle='#ff5acd'; cx.lineWidth=10+4*pulse; cx.beginPath(); cx.moveTo(boss.x,boss.y); cx.lineTo(m.x,m.y); cx.stroke();
+    cx.strokeStyle='#fff'; cx.lineWidth=3; cx.globalAlpha=0.9*pulse; cx.beginPath(); cx.moveTo(boss.x,boss.y); cx.lineTo(m.x,m.y); cx.stroke();
+    cx.lineCap='butt';
   }
   cx.globalAlpha=1;
 }
