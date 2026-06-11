@@ -13,6 +13,7 @@
 <canvas id="game"></canvas>
 
 <div id="hud" class="hidden">
+  <button id="pausebtn" type="button" aria-label="Pause">II</button>
   <div class="bar"><div id="hpfill"></div></div>
   <div class="bar"><div id="xpfill"></div></div>
   <div id="hudrow">
@@ -70,6 +71,15 @@
       best <b id="fbest">0</b>
     </div>
     <button class="bigbtn green" id="retrybtn">PLAY AGAIN</button>
+  </div>
+</div>
+
+<div id="pause" class="overlay hidden">
+  <div class="panel">
+    <h2 class="ptitle">PAUSED</h2>
+    <button class="bigbtn green" id="resumebtn">RESUME</button>
+    <button class="bigbtn" id="pausemute">🎵 Music</button>
+    <button class="bigbtn quit" id="quitbtn">Quit to Menu</button>
   </div>
 </div>
 

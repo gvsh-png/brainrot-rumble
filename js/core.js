@@ -35,5 +35,5 @@ function computeCamera(){
 }
 
 // ============ GLOBAL GAME-STATE FLAG ============
-const ST = { MENU:0, PLAY:1, LEVELUP:2, OVER:3 };
+const ST = { MENU:0, PLAY:1, LEVELUP:2, OVER:3, PAUSE:4 };
 let state = ST.MENU;

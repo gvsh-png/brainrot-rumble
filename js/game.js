@@ -1195,16 +1195,48 @@ $('charimg').src = SP['player'].toDataURL();
 $('goldicon').src = SP['coin'].toDataURL();
 $('goldtxt').textContent = gold;
 $('besttxt').textContent = +(localStorage.getItem('brainrot_best')||0);
-// mute toggle (saved)
-function refreshMute(){ $('mutebtn').textContent = muted ? '🔇' : '🔊'; }
-$('mutebtn').addEventListener('click', ()=>{
+// ---- music mute (SFX always on); shared by the menu + pause buttons ----
+function currentTrack(){
+  if(state===ST.MENU) return 'menu';
+  if(boss) return 'boss'+(((Math.floor(wave/5)-1)%3+3)%3);
+  return 'game';
+}
+function refreshMute(){
+  $('mutebtn').textContent  = muted ? '🔇' : '🎵';
+  $('pausemute').textContent = muted ? '🔇 Music Off' : '🎵 Music On';
+}
+function setMusicMuted(v){
   initAudio();
-  muted = !muted; localStorage.setItem('br_muted', muted?'1':'0');
-  if(!muted && AC) AC.resume();
-  if(!muted && state===ST.MENU && !musicName) playMusic('menu');
+  muted = v; localStorage.setItem('br_muted', muted?'1':'0');
+  if(muted){ stopMusic(); }
+  else { if(AC) AC.resume(); playMusic(currentTrack()); }
   refreshMute();
-});
+}
+$('mutebtn').addEventListener('click', ()=>setMusicMuted(!muted));
+$('pausemute').addEventListener('click', ()=>setMusicMuted(!muted));
 refreshMute();
+
+// ---- pause / resume / quit ----
+function pauseGame(){ if(state!==ST.PLAY) return; state=ST.PAUSE; $('pause').classList.remove('hidden'); }
+function resumeGame(){ if(state!==ST.PAUSE) return; state=ST.PLAY; $('pause').classList.add('hidden'); }
+function togglePause(){ if(state===ST.PLAY) pauseGame(); else if(state===ST.PAUSE) resumeGame(); }
+function quitToMenu(){
+  state=ST.MENU; arena=null; bossPending=0; boss=null;
+  bullets=[]; ebullets=[]; enemies=[]; gems=[]; parts=[]; texts=[]; zones=[]; holes=[];
+  resetPlayer(); computeCamera();
+  $('pause').classList.add('hidden');
+  $('hud').classList.add('hidden');
+  $('dashbtn').classList.add('hidden');
+  $('zoomctl').classList.add('hidden');
+  $('bossbar').classList.add('hidden');
+  $('menu').classList.remove('hidden');
+  $('goldtxt').textContent = gold;
+  $('besttxt').textContent = +(localStorage.getItem('brainrot_best')||0);
+  playMusic(muted ? null : 'menu');
+}
+$('pausebtn').addEventListener('click', pauseGame);
+$('resumebtn').addEventListener('click', resumeGame);
+$('quitbtn').addEventListener('click', quitToMenu);
 setInterval(()=>{
   if(state===ST.MENU && enemies.length<6){ spawnEnemy(); const e=enemies[enemies.length-1]; e.sp=0; }
 }, 700);

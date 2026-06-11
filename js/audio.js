@@ -1,10 +1,10 @@
 'use strict';
 // ============ AUDIO (tiny synth, no assets) ============
 let AC = null;
-let muted = localStorage.getItem('br_muted')==='1';
+let muted = localStorage.getItem('br_muted')==='1';   // music-only mute (SFX always play)
 function initAudio(){ if(!AC){ try{ AC = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(AC && AC.state==='suspended') AC.resume(); }
 function beep(freq, dur, type='square', vol=0.05, slide=0){
-  if(!AC || muted) return;
+  if(!AC) return;
   try{
     const o=AC.createOscillator(), g=AC.createGain();
     o.type=type; o.frequency.value=freq;

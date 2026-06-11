@@ -27,7 +27,7 @@ if(IS_TOUCH){
   window.addEventListener('mouseup', joyEnd);
 }
 const keys={};
-window.addEventListener('keydown',e=>{ keys[e.key.toLowerCase()]=true; if(e.key===' '||e.key==='Shift') tryDash(); });
+window.addEventListener('keydown',e=>{ keys[e.key.toLowerCase()]=true; if(e.key===' '||e.key==='Shift') tryDash(); if(e.key==='Escape') togglePause(); });
 window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
 $('dashbtn').addEventListener('touchstart', e=>{ e.preventDefault(); tryDash(); }, {passive:false});
 $('dashbtn').addEventListener('mousedown', e=>{ e.preventDefault(); tryDash(); });
