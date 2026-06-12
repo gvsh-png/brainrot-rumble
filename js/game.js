@@ -747,7 +747,7 @@ function update(dt){
       e.digT-=dt;
       const a=Math.atan2(P.y-e.y,P.x-e.x);
       e.x=clamp(e.x+Math.cos(a)*e.sp*1.35*dt,WALL,WORLD.w-WALL); e.y=clamp(e.y+Math.sin(a)*e.sp*1.35*dt,WALL,WORLD.h-WALL);
-      if(e.digT<=0){ e.under=false; e.iv=0.2; burst(e.x,e.y,'#7a5a30',16,220); shake=Math.max(shake,4); }
+      if(e.digT<=0){ e.under=false; e.iv=0.2; burst(e.x,e.y,'#7a5a30',16,220); }
     } else {
       if(e.iv>0) e.iv-=dt;
       // sweep spoke (sweep cast) — rotating dual bullet arm
