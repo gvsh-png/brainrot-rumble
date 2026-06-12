@@ -60,9 +60,9 @@ const BOSSES_GRASS = [
   { spr:'tralalero', name:'TRALALERO TRALALA',        hp:150, r:54, pattern:'spiral' },
   { spr:'crocodilo', name:'BOMBARDIRO CROCODILO',     hp:230, r:56, pattern:'rings'  },
   { spr:'sahur',     name:'TUNG TUNG TUNG SAHUR',     hp:300, r:58, pattern:'chaos'  },
-  { spr:'vaca',      name:'LA VACA SATURNO',          hp:380, r:58, pattern:'rings'  },
-  { spr:'gorillo',   name:'GORILLO WATERMELLONDRILLO',hp:460, r:62, pattern:'chaos'  },
-  { spr:'trippi',    name:'TRIPPI TROPPI',            hp:560, r:56, pattern:'spiral' },
+  { spr:'vaca',      name:'LA VACA SATURNO',          hp:440, r:58, pattern:'rings'  },
+  { spr:'gorillo',   name:'GORILLO WATERMELLONDRILLO',hp:560, r:62, pattern:'chaos',  phased:true },
+  { spr:'trippi',    name:'TRIPPI TROPPI',            hp:680, r:56, pattern:'spiral', phased:true },
 ];
 // ============ WORLD 2 — DIRT DEPTHS roster ============
 const FOES_DIRT = [
@@ -101,8 +101,8 @@ const BOSSES_DIRT = [
   { spr:'hotspot',   name:'POT HOTSPOT',              hp:230, r:60, pattern:'rings',  phased:true },
   { spr:'saturnita', name:'LA VACA SATURNO SATURNITA',hp:300, r:58, pattern:'chaos',  phased:true },
   { spr:'tralalero', name:'TRALALERO TRALALA 2.0',    hp:380, r:56, pattern:'spiral', phased:true, moveKey:'tralala2' },
-  { spr:'crocodilo', name:'BOMBARDIRO CROCODILO 2.0', hp:460, r:58, pattern:'rings',  phased:true, moveKey:'croco2' },
-  { spr:'madudung',  name:'MADUDUNGDUNG',             hp:560, r:62, pattern:'chaos',  bars:2, hp2:400, duo:'garamaraman' },
+  { spr:'crocodilo', name:'BOMBARDIRO CROCODILO 2.0', hp:560, r:58, pattern:'rings',  phased:true, moveKey:'croco2' },
+  { spr:'madudung',  name:'MADUDUNGDUNG',             hp:680, r:62, pattern:'chaos',  bars:2, hp2:480, duo:'garamaraman' },
 ];
 // ---- worlds: each = theme + roster + boss list + wave target (boss wave). ----
 const WORLDS = [
@@ -1029,40 +1029,46 @@ function bossMoves(e){
     case 'tralalero': return ['dash','spiral','aimed3'];
     case 'crocodilo': return ['carpet','ring16'];
     case 'sahur':     return ['slam','aimed5','dblslam'];
-    case 'gorillo':   return ['roll','seedsmash','ring12'];
-    case 'trippi':    return ['warp','spiral','ring16'];
+    case 'gorillo':
+      if(e.vph>=3) return ['roll','SPIRAL_STORM','seedsmash','RING_VOLLEY','ring12'];
+      if(e.vph>=2) return ['roll','seedsmash','ring12','RING_VOLLEY'];
+      return ['roll','seedsmash','ring12'];
+    case 'trippi':
+      if(e.vph>=3) return ['warp','TWIN_STORM','RING_VOLLEY','spiral'];
+      if(e.vph>=2) return ['warp','spiral','ring16','SPIRAL_STORM'];
+      return ['warp','spiral','ring16'];
     case 'vaca':
-      if(e.vph>=3) return ['ring2x','pullspiral','aimed5'];
-      if(e.vph>=2) return ['ring2','spiral','aimed5','pull'];
+      if(e.vph>=3) return ['ring2x','pullspiral','aimed5','SPIRAL_STORM'];
+      if(e.vph>=2) return ['ring2','spiral','aimed5','pull','RING_VOLLEY'];
       return ['ring16','pull'];
     // ---- World 2 (DIRT DEPTHS) ----
     case 'tatasahur':                      // burrow-slam + marching drum beat
-      if(e.vph>=3) return ['DRUM_MARCH','BURROW_DOUBLE','DEBRIS3','aimed5'];
+      if(e.vph>=3) return ['DRUM_MARCH','BURROW_DOUBLE','DEBRIS3','aimed5','AIMED_WALL'];
       if(e.vph>=2) return ['DRUM_MARCH','BURROW_SLAM','DEBRIS3','ring2'];
       return ['BURROW_SLAM','aimed3','ring16'];
     case 'hotspot':                        // geyser ground-denial + rotating sweep
-      if(e.vph>=3) return ['GEYSER_SWEEP','QUAKE_RADIAL','dblslam'];
-      if(e.vph>=2) return ['GEYSER_SWEEP','QUAKE_CROSS','aimed5'];
+      if(e.vph>=3) return ['GEYSER_SWEEP','QUAKE_RADIAL','dblslam','RING_VOLLEY'];
+      if(e.vph>=2) return ['GEYSER_SWEEP','QUAKE_CROSS','aimed5','SPIRAL_STORM'];
       return ['QUAKE_LINE','slam','ring16'];
     case 'saturnita':                      // lava floor + Saturn orbital rings
-      if(e.vph>=3) return ['SATURN_RING','MELTDOWN','spiral'];
+      if(e.vph>=3) return ['SATURN_RING','MELTDOWN','spiral','SPIRAL_STORM'];
       if(e.vph>=2) return ['SATURN_RING','LAVA_POOL','EMBER_RAIN','aimed5'];
       return ['LAVA_POOL','ring16','aimed3'];
     case 'tralala2':                       // the BOUNCE boss — ricochets off the walls
-      if(e.vph>=3) return ['RICOCHET','SWEEP_DUAL','ring2'];
-      if(e.vph>=2) return ['RICOCHET','PRISM_SPLIT','ring2'];
+      if(e.vph>=3) return ['RICOCHET','SWEEP_DUAL','ring2','TWIN_STORM'];
+      if(e.vph>=2) return ['RICOCHET','PRISM_SPLIT','ring2','RING_VOLLEY'];
       return ['SWEEP','ring16','aimed3'];
     case 'croco2':                         // brood / adds + carpet bombing run
-      if(e.vph>=3) return ['CARPET_RUN','BROOD_BURST','SPORE_FIELD'];
-      if(e.vph>=2) return ['CARPET_RUN','SUMMON','spiral'];
+      if(e.vph>=3) return ['CARPET_RUN','BROOD_BURST','SPORE_FIELD','RING_VOLLEY'];
+      if(e.vph>=2) return ['CARPET_RUN','SUMMON','spiral','SPIRAL_STORM'];
       return ['SUMMON','ring16','aimed5'];
     case 'madudung':                       // final boss — lead (tether links the duo)
-      if(e.vph>=3) return ['TETHER','DEVOUR','MELTDOWN','SUMMON'];
-      if(e.vph>=2) return ['TETHER','LAVA_POOL','SWEEP_DUAL','BURROW_DOUBLE'];
+      if(e.vph>=3) return ['TETHER','DEVOUR','MELTDOWN','SUMMON','SPIRAL_STORM'];
+      if(e.vph>=2) return ['TETHER','LAVA_POOL','SWEEP_DUAL','BURROW_DOUBLE','RING_VOLLEY'];
       return ['BURROW_SLAM','QUAKE_LINE','aimed5','ring16'];
     case 'garamaraman':                    // final boss — duo partner (complementary)
-      if(e.vph>=3) return ['QUAKE_RADIAL','EMBER_RAIN','spiral'];
-      if(e.vph>=2) return ['QUAKE_CROSS','PRISM_SPLIT','aimed5'];
+      if(e.vph>=3) return ['QUAKE_RADIAL','EMBER_RAIN','spiral','TWIN_STORM'];
+      if(e.vph>=2) return ['QUAKE_CROSS','PRISM_SPLIT','aimed5','RING_VOLLEY'];
       return ['QUAKE_LINE','aimed5','ring12'];
   }
   return ['ring16'];
@@ -1079,7 +1085,9 @@ const MOVE_COL = { dash:'#e54d4d', spiral:'#e54d4d', aimed3:'#e23b3b', aimed5:'#
   EXPAND_IMPLODE:'#d2a0ff', SUMMON:'#d2a0ff', SPORE_FIELD:'#7ab955',
   BROOD_BURST:'#d2a0ff', DEVOUR:'#d2a0ff',
   RICOCHET:'#7ec8ff', DRUM_MARCH:'#a9763e', GEYSER_SWEEP:'#e0503f',
-  SATURN_RING:'#ffd24a', CARPET_RUN:'#ff7a2a', TETHER:'#ff5acd' };
+  SATURN_RING:'#ffd24a', CARPET_RUN:'#ff7a2a', TETHER:'#ff5acd',
+  // bullet-hell phase moves
+  SPIRAL_STORM:'#ff5acd', TWIN_STORM:'#c77dff', RING_VOLLEY:'#7ec8ff', AIMED_WALL:'#e23b3b' };
 function pickMove(e){ const pool=bossMoves(e); let m; do{ m=pick(pool); }while(pool.length>1 && m===e.lastMv); e.lastMv=m; return m; }
 // run one move; returns how long the boss stays in the "fire" state before recovering
 function execMove(e){
@@ -1129,6 +1137,11 @@ function execMove(e){
     case 'SATURN_RING':   { const N=18, off=rand(0,TAU), dir=Math.random()<0.5?1:-1; for(let k=0;k<N;k++) fireEB(e.x,e.y,0,0,'#ffd24a',{orbit:{cx:e.x,cy:e.y,ang:off+k*TAU/N,rad:42,angV:dir*1.8,radV:58}}); muzzleFlash(e.x,e.y,'#ffd24a'); return 0.4; }
     case 'CARPET_RUN':    e.dst='wind'; e.dwin=e.enraged?0.3:0.45; e.da=Math.atan2(P.y-e.y,P.x-e.x); e.carpet=0.62; e.cbT=0; return 0.9;
     case 'TETHER':        e.tether=2.2; return 2.2;
+    // ---- bullet-hell phase moves ----
+    case 'SPIRAL_STORM':  e.storm=2.4; e.stormN=9;  e.stormSpd=150; e.stormStep=0.30; e.stormDir=Math.random()<0.5?1:-1; e.stormCol='#ff5acd'; e.stormCd=0.10; e.stormTwin=false; sfx.warn(); return 2.4;
+    case 'TWIN_STORM':    e.storm=2.6; e.stormN=8;  e.stormSpd=145; e.stormStep=0.26; e.stormDir=1; e.stormCol='#c77dff'; e.stormCd=0.11; e.stormTwin=true; sfx.warn(); return 2.6;
+    case 'RING_VOLLEY':   mRing(e,22,180,'#4aa3df'); mRing(e,18,130,'#7ec8ff'); mRing(e,14,85,'#d2a0ff'); shake=Math.max(shake,5); return 0.4;
+    case 'AIMED_WALL':    mAimed(e,9,0.12,200,'#e23b3b'); mRing(e,14,120,'#e23b3b'); return 0.3;
   }
   return 0.2;
 }
@@ -1156,6 +1169,14 @@ function updateBoss(e,dt){
   else if(e.dst==='dash'){ dashing=true; e.ddur-=dt; e.x+=Math.cos(e.da)*520*dt; e.y+=Math.sin(e.da)*520*dt; if(e.ddur<=0) e.dst='idle'; }
   if(e.spin>0){ e.spin-=dt; e.spinT=(e.spinT||0)-dt; if(e.spinT<=0){ e.spinT=0.1; e.phase=(e.phase||0)+0.42;
     const col=e.spinCol||'#e54d4d'; fireEB(e.x,e.y,e.phase,170,col); fireEB(e.x,e.y,e.phase+Math.PI,170,col); } }
+  // sustained bullet-hell storm: a rotating multi-arm spiral (optionally a counter-rotating twin)
+  if(e.storm>0){ e.storm-=dt; e.stormT=(e.stormT||0)-dt;
+    if(e.stormT<=0){ e.stormT=e.stormCd||0.12; e.stormA=(e.stormA||0)+(e.stormStep||0.28)*(e.stormDir||1);
+      const n=e.stormN||10, sp=e.stormSpd||150, col=e.stormCol||'#ff5acd';
+      for(let k=0;k<n;k++) fireEB(e.x,e.y, e.stormA + k*TAU/n, sp, col);
+      if(e.stormTwin) for(let k=0;k<n;k++) fireEB(e.x,e.y, -e.stormA + k*TAU/n + 0.3, sp, col);
+    }
+  }
   // Gorillo rolling-melon: while dashing from a 'roll', spray seeds sideways + drop trail
   if(e.rollSpray>0 && e.dst==='dash'){
     e.rollSpray-=dt; e.spT=(e.spT||0)-dt;
