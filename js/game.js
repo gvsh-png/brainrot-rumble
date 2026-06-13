@@ -48,6 +48,8 @@ function foeIsHazard(d){ return !!d.aoe || (d.cast && (d.cast.kind==='geyser'||d
 function foeIsBurst(d){ return !!d.shoot && (d.shoot.type==='ring' || (d.shoot.n||1)>=3); }
 function foeIsSpecial(d){ return foeIsHazard(d) || foeIsBurst(d); }
 function worldDmgMul(){ return curWorld().dmgMul||1; }   // per-world enemy damage multiplier
+// coins are scarce early; from wave 20 on they pay out progressively more (later worlds reach higher waves)
+function coinMult(){ return wave < 20 ? 1 : 1 + (wave-19)*0.3; }
 // ---- enemy archetypes: the Italian Brainrot bestiary (ordered easy -> hard) ----
 const FOES_GRASS = [
   // Tier I — fodder
@@ -1062,7 +1064,7 @@ function update(dt){
     if(d < (P.r+12)*(P.r+12)){
       gems.splice(i,1);
       if(g.heart){ P.hp=Math.min(P.maxHp,P.hp+25); floatText(P.x,P.y-24,'+25','#e8556a',16); burst(P.x,P.y,'#ff97a6',8,120); sfx.coin(); }
-      else if(g.coin){ const v=Math.round(5*(P.goldMul||1)); gold+=v; worldCoins+=v; localStorage.setItem('br_gold',gold); setCoinHUD(); floatText(g.x,g.y,'+'+v,'#f5c542',13); sfx.coin(); }
+      else if(g.coin){ const v=Math.round(5*(P.goldMul||1)*coinMult()); gold+=v; worldCoins+=v; localStorage.setItem('br_gold',gold); setCoinHUD(); floatText(g.x,g.y,'+'+v,'#f5c542',13); sfx.coin(); }
       else { gainXp(g.v); sfx.gem(2); }
     }
   }
