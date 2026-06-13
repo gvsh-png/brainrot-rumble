@@ -13,7 +13,7 @@ function joyMove(x,y){
   if(!joy.active) return;
   let dx=x-joy.ox, dy=y-joy.oy;
   const len=Math.hypot(dx,dy), max=58;
-  if(len>max){ joy.ox = x - dx/len*max; joy.oy = y - dy/len*max; dx = dx/len*max; dy = dy/len*max; }
+  if(len>max){ dx = dx/len*max; dy = dy/len*max; }   // clamp the KNOB to the ring; base stays put (no relocation)
   joy.dx = dx/max; joy.dy = dy/max;
 }
 function joyEnd(){ joy.active=false; joy.dx=0; joy.dy=0; }
