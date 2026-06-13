@@ -5,7 +5,7 @@ let shake = 0, hitFlash = 0, hitstop = 0, tPrev = 0, elapsed = 0;
 const P = {}; // player
 let bullets=[], ebullets=[], enemies=[], gems=[], parts=[], texts=[], zones=[], holes=[];
 let _vis=[];   // reused per-frame scratch list of visible enemies (depth sort) — avoids GC churn
-let wave=1, score=0, kills=0, spawnTimer=0, waveEnemiesLeft=0, betweenWaves=false, boss=null;
+let wave=1, kills=0, spawnTimer=0, waveEnemiesLeft=0, betweenWaves=false, boss=null;
 let worldCoins=0;   // coins collected during the CURRENT world run (in-game HUD display; total still banked in `gold`)
 function setCoinHUD(){ const c=$('coincount'); if(c){ const s=c.querySelector('span'); if(s) s.textContent=worldCoins; } }
 let combo=0, comboT=0, waveGapT=0;   // waveGapT: countdown between a cleared wave and the next
@@ -335,7 +335,7 @@ function startGame(idx){
   if(typeof equippedSpeedMult==='function') P.speed *= equippedSpeedMult();
   if(typeof equippedRangeMult==='function') P.range *= equippedRangeMult();
   bullets=[]; ebullets=[]; enemies=[]; gems=[]; parts=[]; texts=[]; zones=[]; holes=[];
-  wave=1; score=0; kills=0; elapsed=0; boss=null; combo=0; comboT=0; waveGapT=0; arena=null; bossPending=0;
+  wave=1; kills=0; elapsed=0; boss=null; combo=0; comboT=0; waveGapT=0; arena=null; bossPending=0;
   worldCoins=0;
   { const ci=$('coincount'); if(ci){ const img=ci.querySelector('img'); if(img && !img.getAttribute('src')) img.src=SP['coin'].toDataURL(); } }
   setCoinHUD();
@@ -418,9 +418,13 @@ function spawnEnemy(){
   // count live specials so we can keep them few (earthquake + burst shooters especially)
   let nShoot=0, nHaz=0, nBurst=0;
   for(const o of enemies){ if(o.isBoss) continue; if(o._shooter)nShoot++; if(o._hazard)nHaz++; if(o._burst)nBurst++; }
+  // 60% of spawns are the world's basic chasers (tier-I: low HP, melee, just follow you) so the
+  // screen stays a thick swarm of weak enemies; the rest roll across everything unlocked so far.
+  const fodderMax = Math.min(maxIdx, 4);
   let def=null;
   for(let tries=0; tries<6; tries++){
-    const c = curFoes[Math.floor(Math.random()*(maxIdx+1))];
+    const c = (Math.random() < 0.6) ? curFoes[Math.floor(Math.random()*(fodderMax+1))]
+                                    : curFoes[Math.floor(Math.random()*(maxIdx+1))];
     if(foeIsHazard(c)  && nHaz   >= MAX_HAZARD)   continue;
     if(foeIsBurst(c)   && nBurst >= MAX_BURST)    continue;
     if(foeIsShooter(c) && nShoot >= MAX_SHOOTERS) continue;
@@ -563,12 +567,9 @@ function gameOver(){
   stopMusic();
   sfx.die();
   shake = 22; hitstop = 0.12;
-  const best = Math.max(score, +(localStorage.getItem('brainrot_best')||0));
-  localStorage.setItem('brainrot_best', best);
   $('fwave').textContent = 'wave '+wave;
-  $('fscore').textContent = score;
+  $('fcoins').textContent = worldCoins;
   $('fkills').textContent = kills;
-  $('fbest').textContent = best;
   $('hud').classList.add('hidden');
   $('dashbtn').classList.add('hidden');
   $('zoomctl').classList.add('hidden');
@@ -642,7 +643,6 @@ function addCombo(){
     const ct=$('combotag'); ct.textContent='COMBO x'+combo; ct.style.opacity='1';
   }
 }
-function comboMult(){ return 1 + Math.floor(combo/5)*0.5; }
 
 function update(dt){
   elapsed += dt;
@@ -967,8 +967,6 @@ function update(dt){
     if(e.hp<=0 && !e.lead){   // duo partner (e.lead) is never killed on its own -> damage routes to the lead
       enemies.splice(i,1);
       kills++; addCombo();
-      const gain = Math.round(e.score*comboMult());
-      score += gain;
       sfx.hit();
       shake=Math.max(shake,e.isBoss?16:5); hitstop=Math.max(hitstop,e.isBoss?0.08:0.03);
       burst(e.x,e.y,'#ff9f3a',e.isBoss?60:14,e.isBoss?420:200);
@@ -1009,7 +1007,6 @@ function update(dt){
         if(Math.random()<0.03){ const a=rand(0,TAU), s=rand(90,210); gems.push({x:e.x,y:e.y,coin:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s}); }
         if(Math.random()<0.025){ const a=rand(0,TAU), s=rand(90,210); gems.push({x:e.x,y:e.y,heart:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s}); }
       }
-      $('scoretag').textContent = '★ '+score;
     }
   }
 
@@ -1020,9 +1017,7 @@ function update(dt){
   // wave cleared? (not while the boss is still incoming)
   if(!betweenWaves && bossPending<=0 && waveEnemiesLeft===0 && enemies.length===0){
     betweenWaves=true; waveGapT=2.2;
-    const bonus=wave*50; score+=bonus;
-    bigText('WAVE CLEARED +'+bonus,'#5fbf52');
-    $('scoretag').textContent='★ '+score;
+    bigText('WAVE CLEARED','#5fbf52');
   }
 
   // --- enemy bullets ---
@@ -1058,7 +1053,7 @@ function update(dt){
     if(d < (P.r+12)*(P.r+12)){
       gems.splice(i,1);
       if(g.heart){ P.hp=Math.min(P.maxHp,P.hp+25); floatText(P.x,P.y-24,'+25','#e8556a',16); burst(P.x,P.y,'#ff97a6',8,120); sfx.coin(); }
-      else if(g.coin){ const v=Math.round(5*(P.goldMul||1)); score+=v; gold+=v; worldCoins+=v; localStorage.setItem('br_gold',gold); $('scoretag').textContent='★ '+score; setCoinHUD(); floatText(g.x,g.y,'+'+v,'#f5c542',13); sfx.coin(); }
+      else if(g.coin){ const v=Math.round(5*(P.goldMul||1)); gold+=v; worldCoins+=v; localStorage.setItem('br_gold',gold); setCoinHUD(); floatText(g.x,g.y,'+'+v,'#f5c542',13); sfx.coin(); }
       else { gainXp(g.v); sfx.gem(Math.min(combo,8)); }
     }
   }
@@ -1815,11 +1810,10 @@ function menuUpdate(dt){
 resetPlayer(); state=ST.MENU;
 computeCamera();
 document.body.style.background = curTheme.bg;
-// populate the main menu (character + saved gold + best)
+// populate the main menu (character + saved gold)
 $('charimg').src = SP['player'].toDataURL();
 $('goldicon').src = SP['coin'].toDataURL();
 $('goldtxt').textContent = gold;
-$('besttxt').textContent = +(localStorage.getItem('brainrot_best')||0);
 // ---- music mute (SFX always on); shared by the menu + pause buttons ----
 function currentTrack(){
   if(state===ST.MENU) return 'menu';
@@ -1856,7 +1850,6 @@ function quitToMenu(){
   $('bossbar').classList.add('hidden');
   $('menu').classList.remove('hidden');
   $('goldtxt').textContent = gold;
-  $('besttxt').textContent = +(localStorage.getItem('brainrot_best')||0);
   playMusic(muted ? null : 'menu');
 }
 $('pausebtn').addEventListener('click', pauseGame);

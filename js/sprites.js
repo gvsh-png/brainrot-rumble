@@ -690,7 +690,8 @@ makeSprite('orbL', 64, (g,u)=>{
 makeSprite('coin', 52, (g,u)=>{
   sh(g,'#f5c542',3.4*u,(g)=>{ g.arc(0,0,20*u,0,TAU); });
   sh(g,'#ffe39a',0,(g)=>{ g.arc(0,0,13*u,0,TAU); });
-  g.fillStyle='#caa12f'; g.font='900 '+(22*u)+'px sans-serif'; g.textAlign='center'; g.textBaseline='middle'; g.fillText('★',0,1*u);
+  g.strokeStyle='#caa12f'; g.lineWidth=2.4*u; g.beginPath(); g.arc(0,0,9*u,0,TAU); g.stroke();   // minted ring (coin face)
+  sh(g,'#fff7d8',0,(g)=>{ g.ellipse(-6*u,-7*u,4*u,2.6*u,-0.6,0,TAU); });                          // shine
 });
 makeSprite('heart', 52, (g,u)=>{
   sh(g,'#e8556a',3*u,(g)=>{ g.moveTo(0,18*u); g.bezierCurveTo(-22*u,2*u,-14*u,-18*u,0,-6*u); g.bezierCurveTo(14*u,-18*u,22*u,2*u,0,18*u); });
