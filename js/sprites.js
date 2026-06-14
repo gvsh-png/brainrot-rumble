@@ -1172,3 +1172,199 @@ makeSprite('cocofantoboss', 256, (g,u)=>{
   g.strokeStyle=OUT; g.lineWidth=3*u; g.beginPath(); g.moveTo(-18*u,-40*u); g.lineTo(-8*u,-36*u); g.moveTo(8*u,-36*u); g.lineTo(18*u,-40*u); g.stroke(); // angry brows
   sh(g,'#9e9e9e',3.5*u,(p)=>{ p.roundRect(-38*u,50*u,16*u,22*u,5*u); p.roundRect(-16*u,52*u,16*u,20*u,5*u); p.roundRect(0,52*u,16*u,20*u,5*u); p.roundRect(22*u,50*u,16*u,22*u,5*u); }); // 4 massive legs
 });
+
+// ============================================================
+// WORLD 4 — GELATO GLACIER : enemy sprites (frozen-dessert OG brainrots)
+// ============================================================
+
+// ---- Gelato Gattino: cat head on a scoop-and-cone body ----
+makeSprite('gelatogattino', 120, (g,u)=>{
+  sh(g,'#e0a85a',3*u,(p)=>{ p.moveTo(-14*u,6*u); p.lineTo(14*u,6*u); p.lineTo(0,40*u); p.closePath(); }); // cone
+  g.strokeStyle='#b9823c'; g.lineWidth=1.5*u; // waffle lines
+  g.beginPath(); g.moveTo(-9*u,14*u); g.lineTo(9*u,14*u); g.moveTo(-6*u,24*u); g.lineTo(6*u,24*u); g.stroke();
+  sh(g,'#ffd9e6',3*u,(p)=>{ p.ellipse(0,-2*u,18*u,16*u,0,0,TAU); }); // strawberry scoop
+  sh(g,'#ffeef4',0,(p)=>{ p.ellipse(-5*u,-6*u,7*u,5*u,0,0,TAU); }); // scoop sheen
+  dot(g,-12*u,-14*u,5*u,'#ffd9e6'); dot(g,12*u,-14*u,5*u,'#ffd9e6'); // ears
+  g.strokeStyle=OUT; g.lineWidth=2*u; g.beginPath(); g.arc(-12*u,-14*u,5*u,0,TAU); g.arc(12*u,-14*u,5*u,0,TAU); g.stroke();
+  dot(g,-12*u,-14*u,2.4*u,'#f48fb1'); dot(g,12*u,-14*u,2.4*u,'#f48fb1'); // inner ear
+  eyes(g,u,0,-4*u,7*u,4*u);
+  dot(g,0,3*u,2*u,'#f48fb1'); // nose
+  g.strokeStyle=OUT; g.lineWidth=1.3*u; for(const s of [-1,1]){ g.beginPath(); g.moveTo(s*5*u,4*u); g.lineTo(s*18*u,2*u); g.moveTo(s*5*u,6*u); g.lineTo(s*18*u,8*u); g.stroke(); } // whiskers
+});
+
+// ---- Pinguino Caramelino: little penguin with a caramel box on its belly ----
+makeSprite('pinguinocaramelino', 120, (g,u)=>{
+  sh(g,'#2b3a55',3*u,(p)=>{ p.ellipse(0,4*u,20*u,24*u,0,0,TAU); }); // body
+  sh(g,'#f3ead7',0,(p)=>{ p.ellipse(0,8*u,13*u,17*u,0,0,TAU); }); // white belly
+  sh(g,'#2b3a55',2.5*u,(p)=>{ p.ellipse(-20*u,4*u,5*u,12*u,0.3,0,TAU); p.ellipse(20*u,4*u,5*u,12*u,-0.3,0,TAU); }); // flippers
+  sh(g,'#c98a3a',2*u,(p)=>{ p.roundRect(-9*u,8*u,18*u,14*u,3*u); }); // caramel box
+  g.strokeStyle='#8a5a22'; g.lineWidth=1.5*u; g.beginPath(); g.moveTo(0,8*u); g.lineTo(0,22*u); g.moveTo(-9*u,15*u); g.lineTo(9*u,15*u); g.stroke();
+  sh(g,'#f5a623',2*u,(p)=>{ p.moveTo(-4*u,-6*u); p.lineTo(4*u,-6*u); p.lineTo(0,0); p.closePath(); }); // beak
+  sh(g,'#f5a623',2*u,(p)=>{ p.ellipse(-7*u,28*u,6*u,3*u,0,0,TAU); p.ellipse(7*u,28*u,6*u,3*u,0,0,TAU); }); // feet
+  eyes(g,u,0,-12*u,6*u,4*u);
+});
+
+// ---- Trulimero Trulicina: icy fish with a kitten face ----
+makeSprite('trulimero', 110, (g,u)=>{
+  sh(g,'#6fc7e6',3*u,(p)=>{ p.moveTo(18*u,2*u); p.lineTo(34*u,-12*u); p.lineTo(30*u,2*u); p.lineTo(34*u,16*u); p.closePath(); }); // tail fin
+  sh(g,'#7fd4f0',3*u,(p)=>{ p.ellipse(0,2*u,22*u,16*u,0,0,TAU); }); // fish body
+  sh(g,'#aee6f7',0,(p)=>{ p.ellipse(-4*u,6*u,12*u,8*u,0,0,TAU); }); // belly sheen
+  sh(g,'#5bb4d6',2*u,(p)=>{ p.moveTo(-2*u,-14*u); p.lineTo(6*u,-24*u); p.lineTo(10*u,-13*u); p.closePath(); }); // dorsal fin
+  dot(g,-16*u,-12*u,5*u,'#7fd4f0'); dot(g,-8*u,-14*u,5*u,'#7fd4f0'); // cat ears
+  g.strokeStyle=OUT; g.lineWidth=2*u; g.beginPath(); g.arc(-16*u,-12*u,5*u,0,TAU); g.arc(-8*u,-14*u,5*u,0,TAU); g.stroke();
+  eyes(g,u,-12*u,-2*u,6*u,3.6*u);
+  g.strokeStyle=OUT; g.lineWidth=1.2*u; for(const s of [-1,1]){ g.beginPath(); g.moveTo(-14*u,4*u); g.lineTo(-26*u,2*u+s*4*u); g.stroke(); } // whiskers
+});
+
+// ---- Americano Penguino: confident penguin with shades and a coffee cup ----
+makeSprite('americanopenguino', 120, (g,u)=>{
+  sh(g,'#34404f',3*u,(p)=>{ p.ellipse(0,6*u,19*u,26*u,0,0,TAU); }); // body
+  sh(g,'#f1ece1',0,(p)=>{ p.ellipse(0,10*u,12*u,18*u,0,0,TAU); }); // belly
+  sh(g,'#34404f',2.5*u,(p)=>{ p.ellipse(-19*u,8*u,5*u,13*u,0.3,0,TAU); }); // left flipper
+  sh(g,'#34404f',2.5*u,(p)=>{ p.ellipse(21*u,2*u,5*u,12*u,-0.7,0,TAU); }); // right flipper raised
+  sh(g,'#f5a623',2*u,(p)=>{ p.moveTo(-4*u,-8*u); p.lineTo(4*u,-8*u); p.lineTo(0,-2*u); p.closePath(); }); // beak
+  sh(g,'#1a1a1a',1.5*u,(p)=>{ p.roundRect(-12*u,-18*u,24*u,7*u,2*u); }); // shades
+  g.strokeStyle='#1a1a1a'; g.lineWidth=1.5*u; g.beginPath(); g.moveTo(0,-15*u); g.lineTo(0,-15*u); g.stroke();
+  sh(g,'#d7c4a6',2*u,(p)=>{ p.roundRect(20*u,-6*u,12*u,14*u,2*u); }); // coffee cup
+  sh(g,'#5a3a22',0,(p)=>{ p.ellipse(26*u,-4*u,5*u,2*u,0,0,TAU); }); // coffee
+  sh(g,'#f5a623',2*u,(p)=>{ p.ellipse(-7*u,32*u,6*u,3*u,0,0,TAU); p.ellipse(7*u,32*u,6*u,3*u,0,0,TAU); }); // feet
+});
+
+// ---- Ghiacciolo Spaziale: galaxy popsicle on a stick with big eyes ----
+makeSprite('ghiacciolospaziale', 120, (g,u)=>{
+  sh(g,'#c79a5b',3*u,(p)=>{ p.roundRect(-4*u,22*u,8*u,18*u,2*u); }); // stick
+  sh(g,'#3a2a6a',3*u,(p)=>{ p.roundRect(-16*u,-26*u,32*u,50*u,12*u); }); // popsicle
+  sh(g,'#6a4fb0',0,(p)=>{ p.roundRect(-12*u,-12*u,24*u,34*u,8*u); }); // inner glow
+  // stars
+  g.fillStyle='#ffe9a8'; for(const [sx,sy] of [[-8,-16],[7,-6],[-4,6],[9,12],[2,-20]]) { g.beginPath(); g.arc(sx*u,sy*u,1.6*u,0,TAU); g.fill(); }
+  dot(g,-9*u,18*u,2.2*u,'#ff8fd0'); dot(g,8*u,16*u,2.2*u,'#7fe0ff'); // nebula dots
+  eyes(g,u,0,-4*u,7*u,4.5*u);
+  g.strokeStyle=OUT; g.lineWidth=1.6*u; g.beginPath(); g.arc(0,8*u,5*u,0.15,Math.PI-0.15); g.stroke(); // smile
+});
+
+// ---- Frulli Frulla: penguin in swim goggles holding a frosty cup ----
+makeSprite('frullifrulla', 120, (g,u)=>{
+  sh(g,'#2f4858',3*u,(p)=>{ p.ellipse(0,6*u,20*u,25*u,0,0,TAU); }); // body
+  sh(g,'#eaf2f0',0,(p)=>{ p.ellipse(0,10*u,13*u,17*u,0,0,TAU); }); // belly
+  sh(g,'#2f4858',2.5*u,(p)=>{ p.ellipse(-20*u,6*u,5*u,12*u,0.3,0,TAU); p.ellipse(20*u,6*u,5*u,12*u,-0.3,0,TAU); }); // flippers
+  sh(g,'#f5a623',2*u,(p)=>{ p.moveTo(-4*u,-8*u); p.lineTo(4*u,-8*u); p.lineTo(0,-2*u); p.closePath(); }); // beak
+  // goggles
+  g.fillStyle='#7fe0ff'; g.strokeStyle=OUT; g.lineWidth=2*u;
+  for(const s of [-1,1]){ g.beginPath(); g.arc(s*7*u,-15*u,6*u,0,TAU); g.fill(); g.stroke(); }
+  g.beginPath(); g.moveTo(-1*u,-15*u); g.lineTo(1*u,-15*u); g.stroke();
+  g.beginPath(); g.moveTo(-13*u,-15*u); g.lineTo(-20*u,-17*u); g.moveTo(13*u,-15*u); g.lineTo(20*u,-17*u); g.stroke(); // strap
+  sh(g,'#bfe6ff',2*u,(p)=>{ p.roundRect(19*u,-4*u,13*u,16*u,2*u); }); // frosty cup
+  sh(g,'#7fbfe0',0,(p)=>{ p.ellipse(25*u,-1*u,5*u,2*u,0,0,TAU); });
+  sh(g,'#f5a623',2*u,(p)=>{ p.ellipse(-7*u,31*u,6*u,3*u,0,0,TAU); p.ellipse(7*u,31*u,6*u,3*u,0,0,TAU); }); // feet
+});
+
+// ---- Sorbetto Leonino: sherbet-scoop lion (heavy) ----
+makeSprite('sorbettoleonino', 132, (g,u)=>{
+  // pastel scoop mane
+  const mane=['#ffd1dc','#cdeccd','#fff1c1','#d6e8ff','#ffe0c0'];
+  for(let i=0;i<10;i++){ const a=i*TAU/10; dot(g, Math.cos(a)*30*u, Math.sin(a)*30*u, 11*u, mane[i%mane.length]); }
+  for(let i=0;i<10;i++){ const a=i*TAU/10; g.strokeStyle=OUT; g.lineWidth=2*u; g.beginPath(); g.arc(Math.cos(a)*30*u, Math.sin(a)*30*u, 11*u, 0, TAU); g.stroke(); }
+  sh(g,'#f6c27a',3.5*u,(p)=>{ p.ellipse(0,2*u,24*u,22*u,0,0,TAU); }); // face
+  sh(g,'#ffe2b8',0,(p)=>{ p.ellipse(0,8*u,14*u,11*u,0,0,TAU); }); // muzzle
+  dot(g,-7*u,-18*u,5*u,'#f6c27a'); dot(g,7*u,-18*u,5*u,'#f6c27a'); // ears
+  g.strokeStyle=OUT; g.lineWidth=2.4*u; g.beginPath(); g.arc(-7*u,-18*u,5*u,0,TAU); g.arc(7*u,-18*u,5*u,0,TAU); g.stroke();
+  eyes(g,u,0,-2*u,8*u,4.5*u);
+  dot(g,0,6*u,3*u,OUT); // nose
+  g.strokeStyle=OUT; g.lineWidth=2*u; g.beginPath(); g.moveTo(0,9*u); g.lineTo(0,13*u); g.moveTo(0,13*u); g.arc(0,13*u,4*u,0,Math.PI); g.stroke(); // mouth
+});
+
+// ---- Granita Gabbiano: seagull with an icy granita cup (support) ----
+makeSprite('granitagabbiano', 120, (g,u)=>{
+  sh(g,'#f2f4f6',3*u,(p)=>{ p.ellipse(0,6*u,20*u,18*u,0,0,TAU); }); // body
+  sh(g,'#cdd6dd',3*u,(p)=>{ p.ellipse(0,-14*u,12*u,11*u,0,0,TAU); }); // head
+  sh(g,'#c4ccd2',2.5*u,(p)=>{ p.moveTo(-18*u,0); p.quadraticCurveTo(-40*u,-6*u,-30*u,12*u); p.lineTo(-16*u,8*u); p.closePath(); }); // left wing
+  sh(g,'#c4ccd2',2.5*u,(p)=>{ p.moveTo(18*u,0); p.quadraticCurveTo(40*u,-6*u,30*u,12*u); p.lineTo(16*u,8*u); p.closePath(); }); // right wing
+  sh(g,'#f5a623',2*u,(p)=>{ p.moveTo(-2*u,-12*u); p.lineTo(12*u,-10*u); p.lineTo(-2*u,-7*u); p.closePath(); }); // beak
+  // granita cup on belly
+  sh(g,'#d8ecff',2*u,(p)=>{ p.moveTo(-9*u,8*u); p.lineTo(9*u,8*u); p.lineTo(6*u,24*u); p.lineTo(-6*u,24*u); p.closePath(); });
+  sh(g,'#74b9ff',0,(p)=>{ p.ellipse(0,9*u,8*u,3*u,0,0,TAU); }); // blue ice
+  dot(g,-3*u,11*u,1.4*u,'#fff'); dot(g,4*u,13*u,1.4*u,'#fff'); // ice flecks
+  eyes(g,u,0,-16*u,5*u,3.2*u);
+  sh(g,'#f5a623',2*u,(p)=>{ p.moveTo(-5*u,24*u); p.lineTo(-7*u,30*u); p.moveTo(5*u,24*u); p.lineTo(7*u,30*u); }); // legs
+});
+
+// ============================================================
+// WORLD 4 — GELATO GLACIER : boss sprites (size 256)
+// ============================================================
+
+// ---- Tiramisubmarini: coffee-brown train-submarine with a mug conning tower ----
+makeSprite('tiramisubmarini', 256, (g,u)=>{
+  sh(g,'#5b3a22',5*u,(p)=>{ p.roundRect(-46*u,-14*u,90*u,46*u,20*u); }); // sub-train hull
+  sh(g,'#7a5234',0,(p)=>{ p.roundRect(-40*u,-8*u,78*u,16*u,8*u); }); // cocoa sheen
+  for(const px of [-30,-12,8,28]){ dot(g,px*u,6*u,7*u,'#bfe6ff'); g.strokeStyle=OUT; g.lineWidth=2.5*u; g.beginPath(); g.arc(px*u,6*u,7*u,0,TAU); g.stroke(); } // portholes
+  sh(g,'#3a2414',3*u,(p)=>{ p.moveTo(44*u,-9*u); p.lineTo(50*u,2*u); p.lineTo(44*u,13*u); p.closePath(); }); // nose
+  sh(g,'#9e9e9e',2.5*u,(p)=>{ p.roundRect(-46*u,-4*u,9*u,12*u,3*u); }); // rear jet
+  sh(g,'#caa46a',4*u,(p)=>{ p.roundRect(-16*u,-40*u,34*u,30*u,6*u); }); // mug conning tower
+  sh(g,'#3a2414',0,(p)=>{ p.ellipse(1*u,-37*u,14*u,5*u,0,0,TAU); }); // coffee top
+  sh(g,'#caa46a',3*u,(p)=>{ p.arc(22*u,-26*u,9*u,-1.2,1.2); }); // mug handle
+  g.strokeStyle='#f4f4f4'; g.lineWidth=3*u; g.beginPath(); g.moveTo(-4*u,-44*u); g.lineTo(4*u,-48*u); g.stroke(); // straw
+  eyes(g,u,16*u,0,11*u,6*u);
+  g.strokeStyle=OUT; g.lineWidth=3.5*u; g.beginPath(); g.arc(6*u,20*u,16*u,0.15,Math.PI-0.15); g.stroke(); // big grin
+  sh(g,'#caa46a',3*u,(p)=>{ p.roundRect(-40*u,30*u,16*u,12*u,3*u); p.roundRect(24*u,30*u,16*u,12*u,3*u); }); // wheels/fins
+});
+
+// ---- Frigo Camello: camel with a refrigerator torso, frosty ----
+makeSprite('frigocamello', 256, (g,u)=>{
+  // legs
+  sh(g,'#b98a5e',4*u,(p)=>{ p.roundRect(-34*u,40*u,13*u,30*u,4*u); p.roundRect(-6*u,40*u,13*u,30*u,4*u); p.roundRect(20*u,40*u,13*u,30*u,4*u); });
+  // camel neck + head rising at top (drawn first so the fridge overlaps its base)
+  sh(g,'#d2a679',4*u,(p)=>{ p.moveTo(12*u,-14*u); p.lineTo(6*u,-34*u); p.lineTo(20*u,-34*u); p.lineTo(28*u,-14*u); p.closePath(); }); // neck
+  sh(g,'#d2a679',4*u,(p)=>{ p.ellipse(20*u,-38*u,14*u,11*u,0,0,TAU); }); // head
+  sh(g,'#c3946a',3*u,(p)=>{ p.roundRect(28*u,-40*u,12*u,11*u,4*u); }); // snout
+  dot(g,42*u,-36*u,2*u,OUT); // nostril
+  dot(g,12*u,-45*u,4*u,'#d2a679'); dot(g,24*u,-46*u,4*u,'#d2a679'); // ears
+  g.strokeStyle=OUT; g.lineWidth=2.5*u; g.beginPath(); g.arc(12*u,-45*u,4*u,0,TAU); g.arc(24*u,-46*u,4*u,0,TAU); g.stroke();
+  eyes(g,u,18*u,-39*u,7*u,4*u);
+  // fridge torso
+  sh(g,'#cfe8ee',5*u,(p)=>{ p.roundRect(-40*u,-16*u,76*u,58*u,10*u); }); // x -40..36
+  g.strokeStyle='#9fc3cf'; g.lineWidth=3*u; g.beginPath(); g.moveTo(-40*u,8*u); g.lineTo(36*u,8*u); g.stroke(); // door split
+  sh(g,'#b6d8e0',3*u,(p)=>{ p.roundRect(24*u,-10*u,6*u,16*u,2*u); p.roundRect(24*u,16*u,6*u,16*u,2*u); }); // handles
+  g.fillStyle='rgba(255,255,255,0.6)'; for(const [fx,fy] of [[-26,-6],[-12,24],[4,2],[12,30]]){ g.beginPath(); g.arc(fx*u,fy*u,3*u,0,TAU); g.fill(); } // frost
+  sh(g,'#e8f6fa',2.5*u,(p)=>{ p.moveTo(-38*u,-16*u); p.lineTo(-30*u,-28*u); p.lineTo(-22*u,-16*u); p.closePath(); }); // ice crystal corner
+});
+
+// ---- Il Mago Tiramisù: tiramisu cake wizard with hat and staff ----
+makeSprite('magotiramisu', 256, (g,u)=>{
+  // staff
+  g.save(); g.translate(40*u,4*u); g.rotate(0.22);
+  sh(g,'#7a5234',3*u,(p)=>{ p.roundRect(-3*u,-26*u,6*u,60*u,3*u); });
+  dot(g,0,-30*u,8*u,'#9fd0ff'); g.strokeStyle=OUT; g.lineWidth=2.5*u; g.beginPath(); g.arc(0,-30*u,8*u,0,TAU); g.stroke();
+  g.restore();
+  // cake layers
+  sh(g,'#caa46a',4.5*u,(p)=>{ p.roundRect(-42*u,14*u,84*u,32*u,8*u); }); // sponge base
+  sh(g,'#f3ead7',4*u,(p)=>{ p.roundRect(-44*u,-4*u,88*u,22*u,8*u); }); // mascarpone layer
+  sh(g,'#caa46a',4*u,(p)=>{ p.roundRect(-40*u,-18*u,80*u,18*u,7*u); }); // top sponge
+  g.fillStyle='#5b3a22'; for(let i=0;i<14;i++){ g.beginPath(); g.arc(rand(-36,36)*u,rand(-15,-4)*u,1.6*u,0,TAU); g.fill(); } // cocoa dust
+  // wizard hat (compact)
+  sh(g,'#3f2a6a',4*u,(p)=>{ p.moveTo(-24*u,-18*u); p.lineTo(2*u,-47*u); p.lineTo(24*u,-18*u); p.closePath(); });
+  sh(g,'#5a3fa0',0,(p)=>{ p.moveTo(-9*u,-28*u); p.lineTo(2*u,-42*u); p.lineTo(7*u,-26*u); p.closePath(); }); // hat fold
+  g.fillStyle='#ffe9a8'; for(const [sx,sy] of [[-7,-24],[5,-32],[0,-40]]){ g.beginPath(); for(let k=0;k<10;k++){ const a=k/10*TAU, rr=(k%2?2:4.5)*u; const X=sx*u+Math.cos(a)*rr, Y=sy*u+Math.sin(a)*rr; k?g.lineTo(X,Y):g.moveTo(X,Y);} g.closePath(); g.fill(); } // stars
+  eyes(g,u,0,4*u,10*u,5.5*u);
+  g.strokeStyle=OUT; g.lineWidth=3*u; g.beginPath(); g.arc(0,18*u,8*u,0.2,Math.PI-0.2); g.stroke(); // mouth
+});
+
+// ---- Ice Ice Bearlini Polari Orangini: polar bear with orange-slice markings ----
+makeSprite('icebearlini', 256, (g,u)=>{
+  // ears
+  dot(g,-34*u,-46*u,13*u,'#f3f7fa'); dot(g,34*u,-46*u,13*u,'#f3f7fa');
+  g.strokeStyle=OUT; g.lineWidth=3.5*u; g.beginPath(); g.arc(-34*u,-46*u,13*u,0,TAU); g.arc(34*u,-46*u,13*u,0,TAU); g.stroke();
+  dot(g,-34*u,-46*u,6*u,'#ff9f43'); dot(g,34*u,-46*u,6*u,'#ff9f43'); // orange inner ear
+  sh(g,'#f3f7fa',5*u,(p)=>{ p.ellipse(0,22*u,48*u,44*u,0,0,TAU); }); // body
+  sh(g,'#f7fbfe',5*u,(p)=>{ p.ellipse(0,-22*u,40*u,36*u,0,0,TAU); }); // head
+  // orange-slice marking on belly
+  sh(g,'#ff9f43',3*u,(p)=>{ p.arc(0,30*u,26*u,Math.PI,TAU); p.closePath(); });
+  g.strokeStyle='#e07a1f'; g.lineWidth=2*u; for(let k=0;k<5;k++){ const a=Math.PI+ (k+0.5)*Math.PI/5; g.beginPath(); g.moveTo(0,30*u); g.lineTo(Math.cos(a)*24*u, 30*u+Math.sin(a)*24*u); g.stroke(); }
+  // frosty breath puffs
+  g.fillStyle='rgba(190,230,255,0.7)'; for(const [fx,fy] of [[-44,-30],[46,-34],[40,8]]){ g.beginPath(); g.arc(fx*u,fy*u,7*u,0,TAU); g.fill(); }
+  sh(g,'#ffe8d0',4*u,(p)=>{ p.ellipse(0,-10*u,20*u,15*u,0,0,TAU); }); // muzzle
+  dot(g,0,-18*u,6*u,OUT); // nose
+  eyes(g,u,0,-30*u,12*u,6.5*u);
+  g.strokeStyle=OUT; g.lineWidth=4*u; g.beginPath(); g.moveTo(-24*u,-46*u); g.lineTo(-10*u,-40*u); g.moveTo(10*u,-40*u); g.lineTo(24*u,-46*u); g.stroke(); // brows
+  // arms
+  sh(g,'#f3f7fa',4*u,(p)=>{ p.ellipse(-40*u,20*u,11*u,18*u,0.3,0,TAU); p.ellipse(40*u,20*u,11*u,18*u,-0.3,0,TAU); });
+});

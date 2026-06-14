@@ -219,6 +219,30 @@ const BOSSES_W3 = [
   { spr:'frullone',      name:'FRULLONE VIBRASSONE',         hp:290, r:57, phased:true },
   { spr:'cocofantoboss', name:'COCOFANTO MASTODONTE',        hp:420, r:62, phased:true },
 ];
+// ============ WORLD 4 — GELATO GLACIER roster (frozen-dessert OG brainrots). band 2: gentle, a few light specials. ============
+const FOES_W4 = [
+  // Tier I — fodder (fast, weak, swarm)
+  { spr:'gelatogattino',     name:'Gelato Gattino',       hp:4,  sp:96,  r:15, xp:1, score:11 },
+  { spr:'pinguinocaramelino',name:'Pinguino Caramelino',  hp:5,  sp:78,  r:17, xp:1, score:12 },
+  { spr:'trulimero',         name:'Trulimero Trulicina',  hp:4,  sp:104, r:15, xp:1, score:11 },
+  // Tier II — infantry (one dasher, one light shooter)
+  { spr:'americanopenguino', name:'Americano Penguino',   hp:8,  sp:84,  r:18, xp:2, score:18, dash:true },
+  { spr:'ghiacciolospaziale',name:'Ghiacciolo Spaziale',  hp:7,  sp:60,  r:17, xp:2, score:18, range:300, shoot:{type:'aim',n:1,cd:2.8,spd:150,col:'#7ec8ff'} },
+  // Tier III — caster (mobile dasher + twin shot)
+  { spr:'frullifrulla',      name:'Frulli Frulla',        hp:10, sp:66,  r:19, xp:3, score:26, dash:true, range:320, shoot:{type:'aim',n:2,cd:3.2,spd:140,col:'#4aa3df'} },
+  // Tier IV — heavy (armored, leaves a cold slow-zone, pops a death ring)
+  { spr:'sorbettoleonino',   name:'Sorbetto Leonino',     hp:30, sp:36,  r:38, xp:5, score:60, front:0.55, death:{type:'ring',n:5},
+    aoe:{r:44,tele:0.5,life:1.6,dps:8,slow:true,cd:4.2} },
+  // Tier V — elite (support: heals nearby foes -> priority kill)
+  { spr:'granitagabbiano',   name:'Granita Gabbiano',     hp:20, sp:62,  r:24, xp:4, score:55, support:true,
+    range:280, shoot:{type:'aim',n:1,cd:4.0,spd:120,col:'#9fd0ff'} },
+];
+const BOSSES_W4 = [   // original frozen-dessert movesets (keyed on spr in bossMoves); telegraphed melee/zone (band 2, forgiving)
+  { spr:'tiramisubmarini', name:'TIRAMISUBMARINI',                 hp:135, r:54, phased:true },
+  { spr:'frigocamello',    name:'FRIGO CAMELLO',                   hp:205, r:56, phased:true },
+  { spr:'magotiramisu',    name:'IL MAGO TIRAMISÙ',                hp:300, r:56, phased:true },
+  { spr:'icebearlini',     name:'ICE ICE BEARLINI POLARI ORANGINI',hp:430, r:62, phased:true },
+];
 // ---- worlds: each = theme + roster + boss list + wave target (boss wave). ----
 // ---- 10 worlds: gradual difficulty bands (0..9), distinct map shapes, per-world enemy tints. ----
 // Phase 1 reuses the grass roster (W1-5) and dirt roster (W6-10) recolored via enemyTint; dedicated
@@ -239,10 +263,10 @@ const WORLDS = [
             tuft:'rgba(30,80,20,0.40)', wall:'#5c3a1e', post:'#7a4e28',
             bg:'#478a2e', tint:null, music:'game' },
     foes:FOES_W3, bosses:BOSSES_W3 },
-  { id:'sand', name:'SUNNY SANDS', band:2, waveTarget:20, endless:false, map:{w:3400,h:3400}, enemyTint:'#e0b050',
-    theme:{ void:'#b8893a', tile1:'#e8c878', tile2:'#ddb95f', tuft:'rgba(150,110,40,0.30)',
-            wall:null, post:null, bg:'#d9b86a', tint:'#e0b050', music:'game' },
-    foes:FOES_GRASS, bosses:BOSSES_GRASS },
+  { id:'glacier', name:'GELATO GLACIER', band:2, waveTarget:20, endless:false, map:{w:3000,h:2800}, enemyTint:null,
+    theme:{ void:'#7fb8b0', tile1:'#e2f6ef', tile2:'#cfeae2', tuft:'rgba(120,180,170,0.28)',
+            wall:'#a6d6cc', post:'#d6f0e8', postDark:'#6f9f96', bg:'#cfeae2', tint:'#e0fff5', music:'game' },
+    foes:FOES_W4, bosses:BOSSES_W4 },
   { id:'frost', name:'FROSTBITE', band:3, waveTarget:20, endless:false, map:{w:1100,h:3800}, enemyTint:'#9fd0ff',
     theme:{ void:'#6f9fb5', tile1:'#bfe0ef', tile2:'#aed4e6', tuft:'rgba(110,160,190,0.30)',
             wall:'#7fa6bc', post:'#a8cfe0', postDark:'#5a7e92', bg:'#b3d8e8', tint:'#9fd0ff', music:'boss2' },
@@ -488,6 +512,24 @@ const UPGRADES = [
     steps:[{desc:'SYNERGY — each Rizz Chain bounce also detonates a mini nova burst.',
             f:()=>P.chainNova=true}] },
 
+  // ❄️ World 4 (GELATO GLACIER) cards
+  { id:'permafrost', name:'Permafrost', icon:'gem', rarity:'uncommon', cap:5, minWorld:3,
+    steps:[{desc:'your hits chill enemies, slowing them. (+duration per level)',f:()=>P.chillHit=(P.chillHit||0)+1}] },
+  { id:'coldblood', name:'Cold Blooded', icon:'coin', rarity:'uncommon', cap:5, minWorld:3,
+    steps:[{desc:'+12% damage to chilled or frozen enemies. (+12% per level)',f:()=>P.coldBlood=(P.coldBlood||0)+1}] },
+  { id:'frostbloom', name:'Frost Bloom', icon:'gembig', rarity:'rare', minWorld:3,
+    steps:[
+      {desc:'every 6s, bloom a frost field that slows & damages nearby foes.',f:()=>{P.frostBloom=true;}},
+      {desc:'frost field: larger & blooms more often.',                       f:()=>{P.fbR+=30;P.fbCdBase=Math.max(4.5,P.fbCdBase-0.7);}},
+      {desc:'frost field: stronger.',                                         f:()=>{P.fbDps+=6;P.fbR+=20;}},
+      {desc:'frost field: larger & blooms more often.',                       f:()=>{P.fbR+=30;P.fbCdBase=Math.max(3.5,P.fbCdBase-0.7);P.fbDps+=4;}},
+    ],
+    evo:{name:'Eternal Winter', icon:'gembig',
+         desc:'EVOLVE — a huge, lasting blizzard that freezes foes solid.',
+         f:()=>{P.frostBloom=true;P.frostBloomEvo=true;P.fbR+=50;P.fbDps+=10;P.fbCdBase=Math.max(3,P.fbCdBase-1);}} },
+  { id:'glacierheart', name:'Glacier Heart', icon:'gem', rarity:'epic', cap:1, req:['frostbloom','permafrost'],
+    steps:[{desc:'SYNERGY — your frost fields freeze enemies solid, not just slow them.',f:()=>P.glacierHeart=true}] },
+
   // ✨ SYNERGY cards — hidden until you own the prerequisite cards (req)
   { id:'frostfire', name:'Frostfire Core', icon:'gem', rarity:'epic', cap:1, req:['slow','nova'],
     steps:[{desc:'SYNERGY — Nova does +120% to frozen foes, who shatter into shards on death.',f:()=>P.frostfire=true}] },
@@ -521,6 +563,8 @@ const CARD_MINWORLD = {
   abyssal:9,
   // World 3
   chain:2, boomerang:2, execute:2, secondwind:2, chainstorm:2,
+  // World 4
+  permafrost:3, coldblood:3, frostbloom:3, glacierheart:3,
 };
 for(const u of UPGRADES){ if(CARD_MINWORLD[u.id]!=null) u.minWorld = CARD_MINWORLD[u.id]; }
 // returns the next card "move" for an upgrade, or null if exhausted
@@ -558,7 +602,10 @@ function resetPlayer(){
     chain:0, chainEvo:false, chainHeal:0, chainNova:false,
     boomerang:false, boomCd:0, boomCdBase:7, boomN:0, boomR:8, boomEvo:false, boomT:0,
     execute:0,
-    secondWind:0, swCdBase:60, swCd:0
+    secondWind:0, swCdBase:60, swCd:0,
+    // World 4: GELATO GLACIER
+    chillHit:0, coldBlood:0,
+    frostBloom:false, frostBloomEvo:false, fbCd:0, fbCdBase:6, fbR:120, fbDps:10, glacierHeart:false
   });
 }
 
@@ -987,6 +1034,24 @@ function update(dt){
     }
   }
 
+  // --- Frost Bloom: periodic frost field that slows (or freezes) & damages nearby foes ---
+  if(P.frostBloom){
+    P.fbCd -= dt;
+    if(P.fbCd<=0){
+      P.fbCd = P.fbCdBase;
+      addZone(P.x,P.y,P.fbR,{tele:0.1, life:P.frostBloomEvo?2.6:1.8, dps:P.fbDps, slow:true, col:'#bfe6ff'});
+      forEnemiesNear(P.x,P.y,P.fbR,(e)=>{
+        if(e.isBoss || e.lead) return;
+        if(dist2(P.x,P.y,e.x,e.y) < P.fbR*P.fbR){
+          if(P.glacierHeart) e.frz = Math.max(e.frz, 1.0);   // Glacier Heart: freeze solid
+          else e.chillT = Math.max(e.chillT||0, 1.4);
+        }
+      });
+      for(let k=0;k<3;k++) parts.push({x:P.x,y:P.y,vx:0,vy:0,life:0.4,max:0.4,color:'#cfeaff',r:P.fbR,ring:true});
+      burst(P.x,P.y,'#bfe6ff',P.frostBloomEvo?22:14,300); sfx.boss();
+    }
+  }
+
   // --- Killing Frenzy stacks decay when you stop killing ---
   if(P.frenzy>0) P.frenzy = Math.max(0, P.frenzy - dt*2);
 
@@ -1198,6 +1263,7 @@ function update(dt){
     if(e.hitT>0) e.hitT-=dt;
     if(e.sq>0) e.sq-=dt*4;
     if(e.frz>0) e.frz-=dt;
+    if(e.chillT>0) e.chillT-=dt;   // Permafrost partial slow
 
     if(e.isBoss){
       updateBoss(e,dt);
@@ -1225,7 +1291,7 @@ function update(dt){
         else { e.dcd-=dt; if(e.dcd<=0 && e.iv<=0 && dist2(e.x,e.y,P.x,P.y)<380*380){ e.dst='wind'; e.dwin=0.5; e.da=Math.atan2(P.y-e.y,P.x-e.x); dashing=true; } }
       }
       if(!dashing && e.iv<=0){
-        const fs = e.frz>0 ? 0.2 : 1;     // Absolute Ohio freeze
+        const fs = e.frz>0 ? 0.2 : (e.chillT>0 ? 0.55 : 1);     // frozen (0.2x) / Permafrost chill (0.55x)
         const toP = Math.atan2(P.y-e.y, P.x-e.x);
         const d2  = dist2(e.x,e.y,P.x,P.y);
         const rng = e.range||0;           // 0 = melee: always chase
@@ -1450,8 +1516,10 @@ function damageEnemy(e,dmg,fx,fy,crit){
     let d=Math.abs(((toSrc-toP+Math.PI)%TAU+TAU)%TAU-Math.PI);
     if(d<1.2) dmg*=e.front;
   }
+  if(P.coldBlood && (e.frz>0 || e.chillT>0)) dmg *= (1 + 0.12*P.coldBlood);   // Cold Blooded: bonus vs chilled/frozen
   e.hp -= dmg; e.hitT=0.12; e.sq=1;
   if(P.freeze && !e.isBoss) e.frz=1.2;
+  if(P.chillHit && !e.isBoss && e.frz<=0) e.chillT = Math.max(e.chillT||0, 0.8 + 0.25*P.chillHit);   // Permafrost: chill-on-hit
   sfx.hit();
   floatText(e.x,e.y-e.r-4, (crit?'':'')+Math.round(dmg), crit?'#ffd23a':'#fff', crit?18:13);
   if(crit) floatText(e.x,e.y-e.r-20,'CRIT','#ffd23a',15);
@@ -1566,6 +1634,23 @@ function bossMoves(e){
       if(e.vph>=3) return ['STOMP_QUAKE','TUSK_SWEEP','COCONUT_BARRAGE','STAMPEDE','TREMOR_STOMP'];
       if(e.vph>=2) return ['STOMP_QUAKE','TUSK_SWEEP','COCONUT_BARRAGE','STAMPEDE'];
       return ['STOMP_QUAKE','TUSK_SWEEP','COCONUT_BARRAGE'];
+    // ---- World 4 (GELATO GLACIER) — original frozen-dessert movesets, telegraphed & forgiving ----
+    case 'tiramisubmarini':                // B1: charging coffee sub-train
+      if(e.vph>=3) return ['TORPEDO_DASH','DEPTH_CHARGE','STEAM_RING','BUBBLE_VOLLEY','DEPTH_CHARGE'];
+      if(e.vph>=2) return ['TORPEDO_DASH','DEPTH_CHARGE','BUBBLE_VOLLEY'];
+      return ['TORPEDO_DASH','BUBBLE_VOLLEY'];
+    case 'frigocamello':                   // B2: ice-fridge camel
+      if(e.vph>=3) return ['FROST_CONE','ICE_FAN','BODY_SLAM','ICE_SUMMON','ICE_FAN'];
+      if(e.vph>=2) return ['FROST_CONE','ICE_FAN','BODY_SLAM'];
+      return ['ICE_FAN','BODY_SLAM'];
+    case 'magotiramisu':                   // B3: tiramisu frost-wizard
+      if(e.vph>=3) return ['ARCANE_SPIRAL','FROST_BOLTS','HEX_FIELD','CONJURE','ARCANE_RING'];
+      if(e.vph>=2) return ['FROST_BOLTS','HEX_FIELD','ARCANE_RING','CONJURE'];
+      return ['FROST_BOLTS','ARCANE_RING','HEX_FIELD'];
+    case 'icebearlini':                    // B4: polar-bear colossus (W4 finale)
+      if(e.vph>=3) return ['FROST_SPIRAL','AVALANCHE_CHARGE','ORANGE_BURST','GLACIER_SLAM','PERMA_RING'];
+      if(e.vph>=2) return ['AVALANCHE_CHARGE','ORANGE_BURST','GLACIER_SLAM','PERMA_RING'];
+      return ['GLACIER_SLAM','ORANGE_BURST','AVALANCHE_CHARGE'];
     // ---- World 2 (DIRT DEPTHS) ----
     case 'tatasahur':                      // burrow-slam + marching drum beat
       if(e.vph>=3) return ['DRUM_MARCH','BURROW_DOUBLE','DEBRIS3','aimed5','AIMED_WALL'];
@@ -1622,7 +1707,12 @@ const MOVE_COL = { dash:'#e54d4d', spiral:'#e54d4d', aimed3:'#e23b3b', aimed5:'#
   ROSE_LUNGE:'#e91e63', THORN_RING:'#c62828', PETAL_FAN:'#e91e63', BLOOM_STORM:'#e91e63',
   MACHETE_DASH:'#c0392b', KNIFE_VOLLEY:'#c0392b', BLADE_ORBIT:'#9e9e9e', DOUBLE_DASH:'#c0392b',
   BLADE_SPRAY:'#9e9e9e', BLENDER_CHARGE:'#e0e0e0', GRIND_ZONE:'#bdbdbd', VORTEX_PULL:'#e0e0e0',
-  STOMP_QUAKE:'#8d6e63', TUSK_SWEEP:'#8d6e63', COCONUT_BARRAGE:'#8d6e63', STAMPEDE:'#8d6e63', TREMOR_STOMP:'#6d4c41' };
+  STOMP_QUAKE:'#8d6e63', TUSK_SWEEP:'#8d6e63', COCONUT_BARRAGE:'#8d6e63', STAMPEDE:'#8d6e63', TREMOR_STOMP:'#6d4c41',
+  // World 4 (GELATO GLACIER)
+  TORPEDO_DASH:'#9fd0ff', DEPTH_CHARGE:'#7ec8ff', STEAM_RING:'#cfeaff', BUBBLE_VOLLEY:'#9fd0ff',
+  FROST_CONE:'#bfe6ff', ICE_FAN:'#7ec8ff', BODY_SLAM:'#a9d6ef', ICE_SUMMON:'#cfeaff',
+  ARCANE_RING:'#b388ff', FROST_BOLTS:'#7ec8ff', HEX_FIELD:'#b388ff', CONJURE:'#b388ff', ARCANE_SPIRAL:'#b388ff',
+  GLACIER_SLAM:'#a9d6ef', ORANGE_BURST:'#ff8f2e', AVALANCHE_CHARGE:'#bfe6ff', PERMA_RING:'#7ec8ff', FROST_SPIRAL:'#9fd0ff' };
 function pickMove(e){ const pool=bossMoves(e); let m; do{ m=pick(pool); }while(pool.length>1 && m===e.lastMv); e.lastMv=m; return m; }
 // run one move; returns how long the boss stays in the "fire" state before recovering
 function execMove(e){
@@ -1752,6 +1842,55 @@ function execMove(e){
     case 'TREMOR_STOMP':
       addZone(e.x,e.y,110,{tele:0.45,life:0.9,dps:20,col:'#6d4c41'});
       mAimed(e,5,0.24,148,'#8d6e63'); shake=Math.max(shake,10); sfx.hit(); return 0.5;
+    // ---- W4 moves (GELATO GLACIER) ----
+    // B1 · Tiramisubmarini (coffee sub-train)
+    case 'TORPEDO_DASH':
+      e.dst='wind'; e.dwin=e.enraged?0.3:0.45; e.da=Math.atan2(P.y-e.y,P.x-e.x);
+      e.landFx={type:'dive'}; e.dashTrail={kind:'guac',col:'#9fd0ff'}; sfx.warn(); return 0.9;
+    case 'DEPTH_CHARGE':
+      for(let k=0;k<4;k++) addZone(P.x+rand(-150,150),P.y+rand(-150,150),52,{tele:0.7,life:0.6,dps:16,col:'#7ec8ff'}); return 0.35;
+    case 'STEAM_RING':
+      mRingGap(e,18,120,'#cfeaff',0.30); return 0.3;
+    case 'BUBBLE_VOLLEY':
+      mAimed(e,5,0.20,140,'#9fd0ff'); return 0.2;
+    // B2 · Frigo Camello (ice-fridge camel)
+    case 'FROST_CONE':
+      { const a=Math.atan2(P.y-e.y,P.x-e.x);
+        for(let l=-1;l<=1;l++){ const aa=a+l*0.4; for(let k=1;k<=4;k++) addZone(e.x+Math.cos(aa)*70*k, e.y+Math.sin(aa)*70*k, 46, {tele:0.4+k*0.12,life:1.4,dps:9,slow:true,col:'#bfe6ff'}); }
+        sfx.warn(); return 0.5; }
+    case 'ICE_FAN':
+      mAimed(e, e.vph>=3?7:5, 0.16, 150, '#7ec8ff'); return 0.2;
+    case 'BODY_SLAM':
+      addZone(e.x,e.y,96,{tele:0.5,life:0.7,dps:20,col:'#a9d6ef'});
+      { const a=rand(0,TAU); for(let q=0;q<5;q++) geyserLine(e.x,e.y,a+q*TAU/5,'#a9d6ef',5,54); }
+      shake=Math.max(shake,9); sfx.hit(); return 0.45;
+    case 'ICE_SUMMON':
+      summonAdds(e,'gelatogattino',3,6); return 0.4;
+    // B3 · Il Mago Tiramisù (frost-wizard)
+    case 'ARCANE_RING':
+      mRingGap(e,18,130,'#b388ff',0.28); return 0.3;
+    case 'FROST_BOLTS':
+      { const aim=Math.atan2(P.y-e.y,P.x-e.x); for(let k=-2;k<=2;k++) fireEB(e.x,e.y,aim+k*0.18,150,'#7ec8ff',{split:true,splitT:0.5}); muzzleFlash(e.x,e.y,'#7ec8ff'); return 0.25; }
+    case 'HEX_FIELD':
+      for(let k=0;k<4;k++) addZone(P.x+rand(-160,160),P.y+rand(-160,160),58,{tele:0.6,life:2.2,dps:8,slow:true,col:'#b388ff'}); return 0.4;
+    case 'CONJURE':
+      summonAdds(e,'ghiacciolospaziale',3,6); return 0.4;
+    case 'ARCANE_SPIRAL':
+      e.storm=2.0; e.stormN=6; e.stormSpd=120; e.stormStep=0.30; e.stormDir=Math.random()<0.5?1:-1; e.stormCol='#b388ff'; e.stormCd=0.13; e.stormTwin=(e.vph>=3); e.stormRainbow=false; sfx.warn(); return 2.0;
+    // B4 · Ice Ice Bearlini (polar colossus)
+    case 'GLACIER_SLAM':
+      addZone(e.x,e.y,104,{tele:0.45,life:0.8,dps:20,col:'#a9d6ef'});
+      { const a=rand(0,TAU); for(let q=0;q<6;q++) geyserLine(e.x,e.y,a+q*TAU/6,'#a9d6ef',6,56); }
+      shake=Math.max(shake,11); sfx.hit(); return 0.5;
+    case 'ORANGE_BURST':
+      { for(let k=0;k<3;k++) addZone(P.x+rand(-150,150),P.y+rand(-150,150),50,{tele:0.7,life:0.5,dps:15,col:'#ff8f2e'}); mRingGap(e, e.vph>=3?20:16, 130, '#ff8f2e', 0.30); return 0.3; }
+    case 'AVALANCHE_CHARGE':
+      e.dst='wind'; e.dwin=e.enraged?0.32:0.5; e.da=Math.atan2(P.y-e.y,P.x-e.x);
+      e.kb=true; e.landFx={type:'pounce'}; e.dashTrail={kind:'guac',col:'#bfe6ff'}; sfx.warn(); return 1.0;
+    case 'PERMA_RING':
+      mRing(e,18,150,'#7ec8ff'); mRingGap(e,14,100,'#9fd0ff',0.30); return 0.3;
+    case 'FROST_SPIRAL':
+      e.storm=2.2; e.stormN=7; e.stormSpd=120; e.stormStep=0.29; e.stormDir=Math.random()<0.5?1:-1; e.stormCol='#9fd0ff'; e.stormCd=0.13; e.stormTwin=(e.vph>=3); e.stormRainbow=false; sfx.warn(); return 2.2;
   }
   return 0.2;
 }
@@ -2112,6 +2251,7 @@ function render(){
     drawSprite(e.spr, e.x, e.y, e.r*2.5*(e.deathScale||1), wob, e.sq, e.hitT, e.face===-1, e.isBoss?null:curWorld().enemyTint);   // per-world enemy recolor
     if(e.cut){ cx.globalAlpha = 1; }
     if(e.frz>0){ cx.globalAlpha=0.4; cx.fillStyle='#bfe6ff'; cx.beginPath(); cx.arc(e.x,e.y,e.r*1.05,0,TAU); cx.fill(); cx.globalAlpha=1; }
+    else if(e.chillT>0){ cx.globalAlpha=0.22; cx.fillStyle='#bfe6ff'; cx.beginPath(); cx.arc(e.x,e.y,e.r*1.05,0,TAU); cx.fill(); cx.globalAlpha=1; }   // Permafrost chill tint
     if(e.iv>0){ cx.strokeStyle='#d8b46a'; cx.lineWidth=4; cx.globalAlpha=0.85; cx.beginPath(); cx.arc(e.x,e.y,e.r+6,0,TAU); cx.stroke(); cx.globalAlpha=1; }
     if(e.hp<e.maxHp){
       const w=e.r*1.9;
