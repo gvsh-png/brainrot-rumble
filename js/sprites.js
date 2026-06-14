@@ -697,6 +697,36 @@ makeSprite('heart', 52, (g,u)=>{
   sh(g,'#e8556a',3*u,(g)=>{ g.moveTo(0,18*u); g.bezierCurveTo(-22*u,2*u,-14*u,-18*u,0,-6*u); g.bezierCurveTo(14*u,-18*u,22*u,2*u,0,18*u); });
   sh(g,'#ff97a6',0,(g)=>{ g.ellipse(-7*u,-4*u,4*u,5*u,-0.5,0,TAU); });
 });
+// ---- gold "lucky" XP gem: medium size, dropped by lucky blocks ----
+makeSprite('orbGold', 56, (g,u)=>{
+  sh(g,'#ffcf3a',3.2*u,(g)=>{ g.moveTo(0,-22*u); g.lineTo(16*u,-3*u); g.lineTo(0,22*u); g.lineTo(-16*u,-3*u); g.closePath(); });
+  sh(g,'#ffeeb0',0,(g)=>{ g.moveTo(0,-22*u); g.lineTo(16*u,-3*u); g.lineTo(0,-3*u); g.closePath(); });
+  sh(g,'#ffffff',0,(g)=>{ g.moveTo(0,-11*u); g.lineTo(3*u,-3*u); g.lineTo(0,5*u); g.lineTo(-3*u,-3*u); g.closePath(); });
+});
+// ---- lucky block: gold "?" block in the house style (a standing, shootable target) ----
+makeSprite('luckyblock', 72, (g,u)=>{
+  sh(g,'#f0901e',4*u,(g)=>{ g.roundRect(-28*u,-28*u,56*u,56*u,9*u); });   // orange frame
+  sh(g,'#ffd23a',0,(g)=>{ g.roundRect(-21*u,-21*u,42*u,42*u,5*u); });     // gold panel
+  sh(g,'#ffe88a',0,(g)=>{ g.roundRect(-21*u,-21*u,42*u,18*u,5*u); });     // top sheen
+  for(const sx of [-1,1]) for(const sy of [-1,1]){ dot(g, sx*21*u, sy*21*u, 3*u, '#fff3c4'); g.strokeStyle=OUT; g.lineWidth=1.4*u; g.beginPath(); g.arc(sx*21*u, sy*21*u, 3*u, 0, TAU); g.stroke(); }   // corner studs
+  g.font='900 '+Math.round(44*u)+'px sans-serif'; g.textAlign='center'; g.textBaseline='middle';
+  g.lineJoin='round'; g.strokeStyle=OUT; g.lineWidth=4*u; g.strokeText('?',0,3*u);
+  g.fillStyle='#fff'; g.fillText('?',0,3*u);
+});
+// ---- magnet pickup icon: red horseshoe magnet with steel tips ----
+makeSprite('magnet', 56, (g,u)=>{
+  const R=15*u, legY=18*u;
+  function horse(col,w){ g.strokeStyle=col; g.lineWidth=w; g.lineCap='butt';
+    g.beginPath(); g.arc(0,-3*u,R,Math.PI,TAU); g.stroke();
+    g.beginPath(); g.moveTo(-R,-3*u); g.lineTo(-R,legY); g.stroke();
+    g.beginPath(); g.moveTo( R,-3*u); g.lineTo( R,legY); g.stroke(); }
+  horse(OUT, 15*u);        // dark outline
+  horse('#e0392e', 10*u);  // red body
+  g.strokeStyle='#d7dde6'; g.lineWidth=10*u;   // steel tips
+  g.beginPath(); g.moveTo(-R,legY-7*u); g.lineTo(-R,legY); g.stroke();
+  g.beginPath(); g.moveTo( R,legY-7*u); g.lineTo( R,legY); g.stroke();
+  g.fillStyle='#ffffff'; g.globalAlpha=0.5; g.beginPath(); g.arc(-2*u,-15*u,3*u,0,TAU); g.fill(); g.globalAlpha=1;   // sheen
+});
 
 // ============ UI ICONS (house-drawn, replace emojis) ============
 function _sword(g,u,blade){

@@ -3,7 +3,7 @@
 let shake = 0, hitFlash = 0, hitstop = 0, tPrev = 0, elapsed = 0;
 
 const P = {}; // player
-let bullets=[], ebullets=[], enemies=[], gems=[], parts=[], texts=[], zones=[], holes=[];
+let bullets=[], ebullets=[], enemies=[], gems=[], parts=[], texts=[], zones=[], holes=[], luckies=[];
 let _vis=[];   // reused per-frame scratch list of visible enemies (depth sort) — avoids GC churn
 let wave=1, kills=0, spawnTimer=0, waveEnemiesLeft=0, betweenWaves=false, boss=null;
 let worldCoins=0;   // coins collected during the CURRENT world run (in-game HUD display; total still banked in `gold`)
@@ -25,8 +25,41 @@ let gold = +(localStorage.getItem('br_gold')||0);   // persistent currency (save
 let arena=null, bossPending=0;
 const ARENA_SIZE=1000, ARENA_LEAD=4, ARENA_ZOOM=1.3;
 // XP orb tiers (index = tier). Enemies drop one orb; tier scales with their xp value.
-const ORB = [null, {spr:'orbS',v:1,sz:28}, {spr:'orbM',v:4,sz:34}, {spr:'orbL',v:10,sz:44}];
+// Tier 4 is the gold "lucky" gem — only dropped by lucky blocks, never rolled by orbTier().
+const ORB = [null, {spr:'orbS',v:1,sz:28}, {spr:'orbM',v:4,sz:34}, {spr:'orbL',v:10,sz:44}, {spr:'orbGold',v:6,sz:40}];
 function orbTier(xp){ return xp<=1 ? 1 : xp<=3 ? 2 : 3; }
+// ---- lucky blocks: stationary, shootable ? blocks that spawn around the map and drop a reward ----
+const LUCKY_CAP = 4;                 // most live at once
+let luckyTimer = 0;                  // countdown to the next spawn batch
+function spawnLuckyBatch(){
+  const n = 2 + (Math.random()<0.5?1:0);   // 2-3 blocks
+  for(let k=0;k<n;k++){
+    let x,y,tries=0;
+    do { x=rand(WALL+80,WORLD.w-WALL-80); y=rand(WALL+80,WORLD.h-WALL-80); tries++; }
+    while(dist2(x,y,P.x,P.y) < 360*360 && tries<8);   // not right on top of the player
+    if(luckies.length>=LUCKY_CAP) break;
+    const hp = 6*HP_MULT*(1+(wave-1)*0.12);
+    luckies.push({ x,y, r:26, hp, maxHp:hp, t:rand(0,TAU), hitT:0, sq:0 });
+  }
+}
+function damageLucky(lb,dmg,fx,fy,crit){
+  lb.hp -= dmg; lb.hitT=0.12; lb.sq=1; sfx.hit();
+  floatText(lb.x,lb.y-lb.r-4, Math.round(dmg), crit?'#ffd23a':'#fff', crit?18:13);
+}
+// burst the block open and scatter its reward: heal heart / magnet / 3 gold gems
+function popLucky(lb){
+  burst(lb.x,lb.y,'#ffd23a',26,260); shake=Math.max(shake,6); sfx.evolve();
+  parts.push({x:lb.x,y:lb.y,vx:0,vy:0,life:0.4,max:0.4,color:'#fff0b0',r:lb.r,ring:true,gr:420});
+  const roll = (Math.random()*3)|0;
+  if(roll===0){            // big heart, heals 50
+    const a=rand(0,TAU), s=rand(40,90); gems.push({x:lb.x,y:lb.y,heart:true,big:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s});
+  } else if(roll===1){     // magnet — vacuums every pickup on the map
+    const a=rand(0,TAU), s=rand(40,90); gems.push({x:lb.x,y:lb.y,magnet:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s});
+  } else {                 // 3 medium gold gems
+    for(let g=0;g<3;g++){ const a=rand(0,TAU), s=rand(120,260); gems.push({x:lb.x,y:lb.y,tier:4,v:ORB[4].v,t:rand(0,6),vx:Math.cos(a)*s,vy:Math.sin(a)*s}); }
+  }
+  floatText(lb.x,lb.y-lb.r-10,'LUCKY!','#ffd23a',18);
+}
 // spawn one xp orb of the given tier with a little scatter velocity
 function dropOrb(x,y,tier,smin=90,smax=210){
   const a=rand(0,TAU), s=rand(smin,smax);
@@ -344,11 +377,12 @@ function startGame(idx){
   initAudio();
   playMusic(curTheme.music);
   resetPlayer();
-  if(typeof equippedDmgMult==='function')   P.dmg   *= equippedDmgMult();    // equipped gear boosts starting stats
-  if(typeof equippedSpeedMult==='function') P.speed *= equippedSpeedMult();
+  if(typeof equippedFlatDmg==='function')   P.dmg   += equippedFlatDmg();    // damage gear adds FLAT damage
+  if(typeof equippedSpeedMult==='function') P.speed *= equippedSpeedMult();  // speed/range gear still scale the starting stat
   if(typeof equippedRangeMult==='function') P.range *= equippedRangeMult();
-  bullets=[]; ebullets=[]; enemies=[]; gems=[]; parts=[]; texts=[]; zones=[]; holes=[];
+  bullets=[]; ebullets=[]; enemies=[]; gems=[]; parts=[]; texts=[]; zones=[]; holes=[]; luckies=[];
   wave=1; kills=0; elapsed=0; boss=null; waveGapT=0; arena=null; bossPending=0;
+  luckyTimer=rand(18,30);
   worldCoins=0;
   { const ci=$('coincount'); if(ci){ const img=ci.querySelector('img'); if(img && !img.getAttribute('src')) img.src=SP['coin'].toDataURL(); } }
   refreshHUD();   // reset level badge / kills / timer / coins so nothing shows last run's value
@@ -376,6 +410,7 @@ function startBossArena(){
   const cxw = clamp(P.x, WALL+half, WORLD.w-WALL-half);
   const cyw = clamp(P.y, WALL+half, WORLD.h-WALL-half);
   arena = { x:cxw-half, y:cyw-half, w:ARENA_SIZE, h:ARENA_SIZE };
+  luckies=[];                                // clear lucky blocks: they'd be stranded outside the arena
   setZoom(clamp(ARENA_ZOOM, ZMIN, ZMAX));   // auto zoom-in (player can still re-zoom)
   bossPending = ARENA_LEAD;
   const bw=$('bosswarn'); bw.textContent='⚠ BOSS INCOMING ⚠'; bw.classList.remove('hidden');
@@ -692,9 +727,10 @@ function update(dt){
 
   // --- auto-fire at nearest enemy within range ---
   P.fireCd -= dt;
-  if(P.fireCd<=0 && enemies.length){
+  if(P.fireCd<=0 && (enemies.length || luckies.length)){
     let best=null, bd=Infinity;
     for(const e of enemies){ const d=dist2(P.x,P.y,e.x,e.y); if(d<bd){bd=d;best=e;} }
+    for(const lb of luckies){ const d=dist2(P.x,P.y,lb.x,lb.y); if(d<bd){bd=d;best=lb;} }   // lucky blocks are auto-targeted too
     if(best && bd <= P.range*P.range){   // only shoot what's in range
       P.fireCd = P.fireRate / (1 + (P.frenzy||0)*0.002);   // Killing Frenzy speeds up fire (+0.2%/stack)
       const spd = (P.railgun ? 760 : 560) * (P.bulletSpd||1);
@@ -861,6 +897,20 @@ function update(dt){
           }
           if(b.pierce>0){ b.pierce--; } else { bullets.splice(i,1); }
           hitDone=true; break;   // one enemy per frame (pierced bullets hit the next on later frames)
+        }
+      }
+    }
+    if(!hitDone){   // lucky blocks aren't in the enemy grid — test them directly (there are only a few)
+      for(const lb of luckies){
+        if(b.hit.has(lb)) continue;
+        if(dist2(b.x,b.y,lb.x,lb.y) < (lb.r+b.r)*(lb.r+b.r)){
+          const isCrit = Math.random() < (P.crit + (P.overdrive ? (P.frenzy||0)*0.001 : 0));
+          const dmg = P.dmg * (b.dmgMul||1) * (P.abyssalMul||1) * (1 + (P.frenzy||0)*0.002) * (isCrit?(P.critMul||3):1);
+          b.hit.add(lb);
+          hitSpark(b.x,b.y,isCrit?'#ffe14d':'#ff9f3a',isCrit);
+          damageLucky(lb,dmg,b.x,b.y,isCrit);
+          if(b.pierce>0){ b.pierce--; } else { bullets.splice(i,1); }
+          break;
         }
       }
     }
@@ -1050,21 +1100,36 @@ function update(dt){
     if(dist2(b.x,b.y,P.x,P.y) < (b.r+P.r-3)*(b.r+P.r-3)){ ebullets.splice(i,1); hurtPlayer(8); }
   }
 
+  // --- lucky blocks: stand still, take fire, drop a reward when destroyed ---
+  if(!arena && !boss && state===ST.PLAY){
+    luckyTimer -= dt;
+    if(luckyTimer<=0 && luckies.length<LUCKY_CAP){ luckyTimer = rand(24,40); spawnLuckyBatch(); }
+  }
+  for(let i=luckies.length-1;i>=0;i--){
+    const lb=luckies[i];
+    lb.t+=dt; if(lb.hitT>0) lb.hitT-=dt; if(lb.sq>0) lb.sq-=dt*4;
+    if(lb.hp<=0){ luckies.splice(i,1); popLucky(lb); }
+  }
+
   // --- gems ---
   for(let i=gems.length-1;i>=0;i--){
     const g=gems[i];
     g.t+=dt;
     if(g.vx||g.vy){ g.x += g.vx*dt; g.y += g.vy*dt; const damp = Math.pow(0.0008, dt); g.vx *= damp; g.vy *= damp; }
     const d = dist2(g.x,g.y,P.x,P.y);
-    if(d < P.magnet*P.magnet){
+    if(g.vac){   // magnet active: home in fast from anywhere on the map
+      const dd=Math.sqrt(d)||1; const sp=900;
+      g.x += (P.x-g.x)/dd*sp*dt; g.y += (P.y-g.y)/dd*sp*dt;
+    } else if(d < P.magnet*P.magnet){
       const dd=Math.sqrt(d)||1;
       const pull = 460*(1 - dd/P.magnet) + 130;
       g.x += (P.x-g.x)/dd*pull*dt; g.y += (P.y-g.y)/dd*pull*dt;
     }
     if(d < (P.r+12)*(P.r+12)){
       gems.splice(i,1);
-      if(g.heart){ P.hp=Math.min(P.maxHp,P.hp+25); floatText(P.x,P.y-24,'+25','#e8556a',16); burst(P.x,P.y,'#ff97a6',8,120); sfx.coin(); }
+      if(g.heart){ const h=g.big?50:25; P.hp=Math.min(P.maxHp,P.hp+h); floatText(P.x,P.y-24,'+'+h,'#e8556a',g.big?20:16); burst(P.x,P.y,'#ff97a6',g.big?14:8,140); sfx.coin(); }
       else if(g.coin){ const v=Math.round(5*(P.goldMul||1)*coinMult()); gold+=v; worldCoins+=v; localStorage.setItem('br_gold',gold); setCoinHUD(); floatText(g.x,g.y,'+'+v,'#f5c542',13); sfx.coin(); }
+      else if(g.magnet){ for(const o of gems) o.vac=true; floatText(P.x,P.y-24,'MAGNET','#9fe0ff',16); burst(P.x,P.y,'#9fe0ff',12,160); sfx.level(); }   // pull in every pickup on the map
       else { gainXp(g.v); sfx.gem(2); }
     }
   }
@@ -1543,13 +1608,28 @@ function render(){
     cx.globalAlpha=1;
   }
 
+  // --- lucky blocks (drawn under pickups/enemies; gentle hover + hit flash) ---
+  for(const lb of luckies){
+    if(lb.x<vx0-60||lb.x>vx1+60||lb.y<vy0-60||lb.y>vy1+60) continue;
+    const bob=Math.sin(lb.t*3)*4, wob=Math.sin(lb.t*2)*0.05;
+    cx.fillStyle='rgba(40,60,25,0.28)'; cx.beginPath(); cx.ellipse(lb.x,lb.y+lb.r*0.9,lb.r*0.8,lb.r*0.3,0,0,TAU); cx.fill();
+    cx.globalAlpha=0.5; cx.strokeStyle='#ffe88a'; cx.lineWidth=2; cx.setLineDash([6,6]);   // faint glow ring marks it as a target
+    cx.beginPath(); cx.arc(lb.x,lb.y+bob,lb.r+8,0,TAU); cx.stroke(); cx.setLineDash([]); cx.globalAlpha=1;
+    drawSprite('luckyblock', lb.x, lb.y+bob, lb.r*2.6, wob, lb.sq, lb.hitT, false, null);
+    if(lb.hp<lb.maxHp){
+      const w=lb.r*1.9;
+      cx.fillStyle='rgba(0,0,0,0.45)'; cx.fillRect(lb.x-w/2,lb.y-lb.r-12,w,5);
+      cx.fillStyle='#ffd23a'; cx.fillRect(lb.x-w/2,lb.y-lb.r-12,w*Math.max(0,lb.hp/lb.maxHp),5);
+    }
+  }
+
   // --- gems / pickups ---
   for(const gm of gems){
     if(gm.x<vx0-40||gm.x>vx1+40||gm.y<vy0-40||gm.y>vy1+40) continue;
     const bob=Math.sin(gm.t*5)*3;
     const orb = ORB[gm.tier] || ORB[1];
-    const name = gm.heart?'heart':(gm.coin?'coin':orb.spr);
-    const psz = gm.heart?32 : (gm.coin?32 : orb.sz);
+    const name = gm.magnet?'magnet':(gm.heart?'heart':(gm.coin?'coin':orb.spr));
+    const psz = gm.magnet?38 : (gm.heart?(gm.big?46:32) : (gm.coin?32 : orb.sz));
     drawSprite(name, gm.x, gm.y+bob, psz, 0,0,0,false);
   }
 
@@ -1797,8 +1877,12 @@ function drawMinimap(){
   cx.fillStyle=curTheme.void||'#3a2d22'; cx.fillRect(mx-3,my-3,ms+6,ms+6);   // frame = world's dark/void tone
   cx.fillStyle=curTheme.tile1||'#6fae3d'; cx.fillRect(mx,my,ms,ms);          // playfield = world's ground tone
   const sxk=ms/WORLD.w, syk=ms/WORLD.h;
+  cx.fillStyle='#4ab3ff';   // XP orbs = blue
+  for(const g of gems){ if(g.coin||g.heart||g.magnet) continue; cx.fillRect(mx+g.x*sxk, my+g.y*syk, 2,2); }
   cx.fillStyle='#e54d4d';
   for(const e of enemies){ cx.fillRect(mx+e.x*sxk-1, my+e.y*syk-1, e.isBoss?4:2, e.isBoss?4:2); }
+  cx.fillStyle='#ffd23a';   // lucky blocks = yellow
+  for(const lb of luckies){ cx.fillRect(mx+lb.x*sxk-2, my+lb.y*syk-2, 4,4); }
   cx.fillStyle='#fff'; cx.fillRect(mx+P.x*sxk-2, my+P.y*syk-2, 4,4);
   cx.strokeStyle='#fff'; cx.lineWidth=2; cx.strokeRect(mx+camera.x*sxk, my+camera.y*syk, (W/zoom)*sxk, (H/zoom)*syk);
   cx.globalAlpha=1;
@@ -1866,7 +1950,7 @@ function resumeGame(){ if(state!==ST.PAUSE) return; state=ST.PLAY; $('pause').cl
 function togglePause(){ if(state===ST.PLAY) pauseGame(); else if(state===ST.PAUSE) resumeGame(); }
 function quitToMenu(){
   state=ST.MENU; arena=null; bossPending=0; boss=null;
-  bullets=[]; ebullets=[]; enemies=[]; gems=[]; parts=[]; texts=[]; zones=[]; holes=[];
+  bullets=[]; ebullets=[]; enemies=[]; gems=[]; parts=[]; texts=[]; zones=[]; holes=[]; luckies=[];
   resetPlayer(); computeCamera();
   $('pause').classList.add('hidden');
   $('hud').classList.add('hidden');

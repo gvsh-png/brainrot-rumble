@@ -1,8 +1,8 @@
 'use strict';
 // ============ GEAR: SHOP + INVENTORY + CASES ============
 // Loaded after game.js so it shares the globals `gold`, `P`, sprite helpers, sfx, $.
-// Items boost STARTING stats — damage / move speed / attack range. 4 typed slots: the equipped
-// piece's SLOT picks the on-character silhouette + rarity tint, its STAT picks the bonus.
+// Items boost STARTING stats — damage (FLAT +N) / move speed (%) / attack range (%). 4 typed slots:
+// the equipped piece's SLOT picks the on-character silhouette + rarity tint, its STAT picks the bonus.
 // Catalog = 3 stats × 5 rarities × 7 named variants = 105 items (21 per rarity).
 
 const GEAR_CATS = ['helmet','chest','pants','shoes'];
@@ -19,9 +19,10 @@ const RAR = {
 };
 const RAR_ORDER = ['common','uncommon','rare','epic','legendary'];
 
-// stat lines: the fraction each rarity adds to that starting stat
+// stat lines: damage adds a FLAT amount; speed/range add a fraction of the starting stat.
+// `flat:true` marks a stat whose vals are absolute numbers (shown "+N") rather than percentages.
 const STAT = {
-  dmg:   { label:'damage',       short:'DMG', icon:'coin',  vals:{common:0.06,uncommon:0.12,rare:0.20,epic:0.32,legendary:0.50} },
+  dmg:   { label:'damage',       short:'DMG', icon:'coin',  flat:true, vals:{common:2,uncommon:4,rare:7,epic:12,legendary:20} },
   speed: { label:'move speed',   short:'SPD', icon:'heart', vals:{common:0.03,uncommon:0.05,rare:0.08,epic:0.12,legendary:0.18} },
   range: { label:'attack range', short:'RNG', icon:'gem',   vals:{common:0.05,uncommon:0.09,rare:0.14,epic:0.20,legendary:0.30} },
 };
@@ -41,7 +42,10 @@ function itemCat(id){  return GEAR_CATS[itemVar(id) % 4]; }   // slot spreads ac
 function itemBonus(id){ return STAT[itemStat(id)].vals[itemRar(id)]; }
 function itemPrice(id){ return RAR[itemRar(id)].price; }
 function itemName(id){ return ITEM_ADJ[itemStat(id)][itemVar(id)] + ' ' + CAT_NOUN[itemCat(id)]; }
-function itemBonusTxt(id){ return '+'+Math.round(itemBonus(id)*100)+'% '+STAT[itemStat(id)].label; }
+// short "+N" (flat stats) or "+N%" (percent stats) badge used on tiles/slots
+function statIsFlat(stat){ return !!STAT[stat].flat; }
+function itemBonusShort(id){ const s=itemStat(id); return statIsFlat(s) ? '+'+itemBonus(id) : '+'+Math.round(itemBonus(id)*100)+'%'; }
+function itemBonusTxt(id){ const s=itemStat(id); return (statIsFlat(s) ? '+'+itemBonus(id) : '+'+Math.round(itemBonus(id)*100)+'%') + ' ' + STAT[s].label; }
 
 const GEAR_CATALOG = [];
 for(const s of STAT_ORDER) for(const r of RAR_ORDER) for(let i=0;i<7;i++) GEAR_CATALOG.push(s+'_'+r+'_'+i);
@@ -74,12 +78,14 @@ function unseenCount(){ let n=0; for(const id of gearOwned) if(!gearSeen.has(id)
 function updateInvBadge(){ const b=$('invbadge'); if(!b) return; const n=unseenCount();
   b.textContent = n>99?'99+':n; b.classList.toggle('hidden', n<=0); }
 
-// ---- equipped starting-stat multipliers (summed bonuses across the 4 slots) ----
-function equippedStatMult(stat){
+// ---- equipped bonuses (summed across the 4 slots) ----
+// percent stats (speed/range) return a starting-stat multiplier; flat stats (dmg) return a raw sum.
+function equippedStatBonus(stat){
   let b=0; for(const c of GEAR_CATS){ const id=gearEquip[c]; if(id && itemStat(id)===stat) b+=itemBonus(id); }
-  return 1 + b;
+  return b;
 }
-function equippedDmgMult(){   return equippedStatMult('dmg');   }   // consumed by game.js startGame()
+function equippedStatMult(stat){ return 1 + equippedStatBonus(stat); }   // for percent stats / UI
+function equippedFlatDmg(){   return equippedStatBonus('dmg');   }   // consumed by game.js startGame() (flat +damage)
 function equippedSpeedMult(){ return equippedStatMult('speed'); }
 function equippedRangeMult(){ return equippedStatMult('range'); }
 
@@ -250,7 +256,7 @@ function autoEquipBest(){   // fill every slot with its rarest owned piece — o
 function eqSlotHTML(cat){
   const id=gearEquip[cat];
   if(id) return '<div class="eqslot r-'+itemRar(id)+'" data-cat="'+cat+'"><span class="eqlv">'+STAT[itemStat(id)].short+'</span>'+
-    '<img src="'+gearIconURL(id)+'"><span class="eqpct">+'+Math.round(itemBonus(id)*100)+'%</span></div>';
+    '<img src="'+gearIconURL(id)+'"><span class="eqpct">'+itemBonusShort(id)+'</span></div>';
   return '<div class="eqslot" data-cat="'+cat+'"><span class="eqlv">'+CAT_LABEL[cat]+'</span><span class="eqempty">+</span></div>';
 }
 function renderInventory(){
@@ -260,7 +266,7 @@ function renderInventory(){
     '<div class="eqside left">'+eqSlotHTML('helmet')+eqSlotHTML('chest')+'</div>'+
     '<div class="eqmid"><img class="eqchar" src="'+compositeCharURL()+'" alt="">'+
       '<div class="eqstats">'+
-        '<span class="eqstat"><img class="ei" src="'+icURL('ic_dmg')+'">+'+pct('dmg')+'%</span>'+
+        '<span class="eqstat"><img class="ei" src="'+icURL('ic_dmg')+'">+'+equippedFlatDmg()+'</span>'+
         '<span class="eqstat"><img class="ei" src="'+icURL('ic_spd')+'">+'+pct('speed')+'%</span>'+
         '<span class="eqstat"><img class="ei" src="'+icURL('ic_rng')+'">+'+pct('range')+'%</span>'+
       '</div></div>'+
@@ -284,7 +290,7 @@ function renderInventory(){
   for(const id of list){ const equipped=gearEquip[itemCat(id)]===id;
     html += '<div class="itile r-'+itemRar(id)+(equipped?' equipped':'')+'" data-id="'+id+'" title="'+itemName(id)+'">'+
       (equipped?'<span class="ieq">✓</span>':'')+'<span class="ilv">'+STAT[itemStat(id)].short+'</span>'+
-      '<img src="'+gearIconURL(id)+'"><span class="ipct">+'+Math.round(itemBonus(id)*100)+'%</span></div>';
+      '<img src="'+gearIconURL(id)+'"><span class="ipct">'+itemBonusShort(id)+'</span></div>';
   }
   owned.innerHTML=html;
   owned.querySelectorAll('.itile[data-id]').forEach(el=>el.addEventListener('click',()=>openItemPop(el.dataset.id)));
