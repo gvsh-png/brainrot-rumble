@@ -30,7 +30,7 @@ const FINAL_CHARGE=2.6;   // seconds a final boss spends invincible & still befo
 const ORB = [null, {spr:'orbS',v:1,sz:28}, {spr:'orbM',v:4,sz:34}, {spr:'orbL',v:10,sz:44}, {spr:'orbGold',v:6,sz:40}];
 function orbTier(xp){ return xp<=1 ? 1 : xp<=3 ? 2 : 3; }
 // ---- lucky blocks: stationary, shootable ? blocks that spawn around the map and drop a reward ----
-const LUCKY_CAP = 4;                 // most live at once
+const LUCKY_CAP = 2;                 // most live at once (overworld spawns 2 at the start of each wave)
 let luckyTimer = 0;                  // countdown to the next spawn batch
 let bossLuckyT = 0;                  // countdown to the next boss-fight lucky batch
 // boss fights normally clear lucky blocks; this drops fresh ones inside the arena for sustain
@@ -45,13 +45,12 @@ function spawnBossLucky(n){
     luckies.push({ x,y, r:26, hp, maxHp:hp, t:rand(0,TAU), hitT:0, sq:0 });
   }
 }
-function spawnLuckyBatch(){
-  const n = 2 + (Math.random()<0.5?1:0);   // 2-3 blocks
+function spawnLuckyBatch(n=2){           // up to n blocks (default 2), capped by LUCKY_CAP
   for(let k=0;k<n;k++){
+    if(luckies.length>=LUCKY_CAP) break;
     let x,y,tries=0;
     do { x=rand(WALL+80,WORLD.w-WALL-80); y=rand(WALL+80,WORLD.h-WALL-80); tries++; }
     while(dist2(x,y,P.x,P.y) < 360*360 && tries<8);   // not right on top of the player
-    if(luckies.length>=LUCKY_CAP) break;
     const hp = 6*HP_MULT*(1+(wave-1)*0.12);
     luckies.push({ x,y, r:26, hp, maxHp:hp, t:rand(0,TAU), hitT:0, sq:0 });
   }
@@ -702,7 +701,9 @@ function startWave(){
   betweenWaves=false;
   $('wavetag').textContent = 'WAVE '+wave;
   if(wave % 5 === 0){ startBossArena(); waveEnemiesLeft = 0; }
-  else { waveEnemiesLeft = Math.max(4, Math.round((7 + wave*3) * (curWorld().enemyMul||1))); spawnTimer = 0; sfx.wave(); }
+  else { waveEnemiesLeft = Math.max(4, Math.round((7 + wave*3) * (curWorld().enemyMul||1))); spawnTimer = 0; sfx.wave();
+    spawnLuckyBatch(2);   // lucky blocks: spawn up to 2 only at the START of each (non-boss) wave, never during
+  }
   bigText(wave%5===0 ? 'BOSS WAVE' : 'WAVE '+wave, wave%5===0?'#e54d4d':'#ffe08a');
 }
 
@@ -1438,7 +1439,8 @@ function update(dt){
         }
         if(e.cast){                        // generic dirt-caster ability (geyser / debris / sweep / summon)
           e.castCd -= dt;
-          const inRange = !e.cast.range || dist2(e.x,e.y,P.x,P.y) <= e.cast.range*e.cast.range;
+          const cRng = e.cast.range || 420;      // cap casts that had no range so they can't fire from across the map
+          const inRange = dist2(e.x,e.y,P.x,P.y) <= cRng*cRng;
           if(e.castCd<=0 && inRange){
             const c=e.cast; e.castCd = c.cd||3.5;
             if(c.kind==='geyser'){ const a=Math.atan2(P.y-e.y,P.x-e.x), lines=c.lines||1; for(let l=0;l<lines;l++) geyserLine(e.x,e.y, a + (l-(lines-1)/2)*0.5, c.col, c.n||5); muzzleFlash(e.x,e.y,c.col||'#e0503f'); }
@@ -1449,7 +1451,12 @@ function update(dt){
         }
         if(e.aoe){
           e.aoeCd -= dt;
-          if(e.aoeCd<=0){ e.aoeCd = e.aoe.cd||3.5; addZone(P.x+rand(-24,24), P.y+rand(-24,24), e.aoe.r, e.aoe); }
+          const aoeRng = e.aoe.range || 360;     // no more infinite-range slows/earthquakes
+          if(e.aoeCd<=0 && dist2(e.x,e.y,P.x,P.y) <= aoeRng*aoeRng){
+            e.aoeCd = e.aoe.cd||3.5;
+            const z = Object.assign({}, e.aoe, { tele: Math.max(e.aoe.tele||0, 1.0) });   // forewarning: >=1s before it slows/hurts
+            addZone(P.x+rand(-24,24), P.y+rand(-24,24), e.aoe.r, z);
+          }
         }
         if(e.support){     // Capybarelli heals nearby foes -> priority kill
           e.supCd -= dt;
@@ -1549,11 +1556,8 @@ function update(dt){
     if(dist2(b.x,b.y,P.x,P.y) < (b.r+P.r-3)*(b.r+P.r-3)){ ebullets.splice(i,1); hurtPlayer(8); }
   }
 
-  // --- lucky blocks: stand still, take fire, drop a reward when destroyed ---
-  if(!arena && !boss && state===ST.PLAY){
-    luckyTimer -= dt;
-    if(luckyTimer<=0 && luckies.length<LUCKY_CAP){ luckyTimer = rand(24,40); spawnLuckyBatch(); }
-  } else if(boss && boss.finalPhase && state===ST.PLAY){
+  // --- lucky blocks: overworld blocks spawn only at wave start (startWave); during fights only final bosses drop them ---
+  if(boss && boss.finalPhase && state===ST.PLAY){
     bossLuckyT -= dt;                                  // FINAL bosses only: 2 blocks every 20s for sustain
     if(bossLuckyT<=0){ bossLuckyT = 20; spawnBossLucky(2); }
   }
