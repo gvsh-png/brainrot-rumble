@@ -898,6 +898,17 @@ makeSprite('ic_rng', 64, (g,u)=>{
   dot(g,0,0,4*u,'#e0392e');
   g.strokeStyle=OUT; g.lineWidth=2.8*u; for(const a of [0,Math.PI/2,Math.PI,-Math.PI/2]){ g.beginPath(); g.moveTo(Math.cos(a)*21*u,Math.sin(a)*21*u); g.lineTo(Math.cos(a)*31*u,Math.sin(a)*31*u); g.stroke(); }
 });
+makeSprite('ic_hp', 64, (g,u)=>{   // heart with a white cross = bonus max HP
+  sh(g,'#e23b5a',2.8*u,(g)=>{
+    g.moveTo(0,-9*u);
+    g.bezierCurveTo(-3*u,-21*u,-22*u,-19*u,-22*u,-5*u);
+    g.bezierCurveTo(-22*u,7*u,-5*u,16*u,0,23*u);
+    g.bezierCurveTo(5*u,16*u,22*u,7*u,22*u,-5*u);
+    g.bezierCurveTo(22*u,-19*u,3*u,-21*u,0,-9*u);
+    g.closePath();
+  });
+  g.fillStyle='#fff'; g.fillRect(-2.6*u,-7*u,5.2*u,15*u); g.fillRect(-8*u,-1.4*u,16*u,5.2*u);
+});
 makeSprite('ic_crate', 64, (g,u)=>{
   sh(g,'#b98248',3.6*u,(g)=>{ g.rect(-25*u,-20*u,50*u,44*u); });
   g.strokeStyle='#8a5d2c'; g.lineWidth=3*u;

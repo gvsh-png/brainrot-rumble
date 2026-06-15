@@ -32,6 +32,19 @@ function orbTier(xp){ return xp<=1 ? 1 : xp<=3 ? 2 : 3; }
 // ---- lucky blocks: stationary, shootable ? blocks that spawn around the map and drop a reward ----
 const LUCKY_CAP = 4;                 // most live at once
 let luckyTimer = 0;                  // countdown to the next spawn batch
+let bossLuckyT = 0;                  // countdown to the next boss-fight lucky batch
+// boss fights normally clear lucky blocks; this drops fresh ones inside the arena for sustain
+function spawnBossLucky(n){
+  const ax0 = arena ? arena.x+60 : WALL+80, ax1 = arena ? arena.x+arena.w-60 : WORLD.w-WALL-80;
+  const ay0 = arena ? arena.y+60 : WALL+80, ay1 = arena ? arena.y+arena.h-60 : WORLD.h-WALL-80;
+  const hp = 4*HP_MULT*(1+(wave-1)*0.07);   // softer than world blocks so they're breakable mid-fight
+  for(let k=0;k<n;k++){
+    if(luckies.length>=6) break;
+    let x,y,tries=0;
+    do { x=rand(ax0,ax1); y=rand(ay0,ay1); tries++; } while(dist2(x,y,P.x,P.y) < 240*240 && tries<10);
+    luckies.push({ x,y, r:26, hp, maxHp:hp, t:rand(0,TAU), hitT:0, sq:0 });
+  }
+}
 function spawnLuckyBatch(){
   const n = 2 + (Math.random()<0.5?1:0);   // 2-3 blocks
   for(let k=0;k<n;k++){
@@ -51,7 +64,8 @@ function damageLucky(lb,dmg,fx,fy,crit){
 function popLucky(lb){
   burst(lb.x,lb.y,'#ffd23a',26,260); shake=Math.max(shake,6); sfx.evolve();
   parts.push({x:lb.x,y:lb.y,vx:0,vy:0,life:0.4,max:0.4,color:'#fff0b0',r:lb.r,ring:true,gr:420});
-  const roll = (Math.random()*3)|0;
+  let roll = (Math.random()*3)|0;
+  if(boss && boss.vph>=3) roll=0;   // boss phase 3: healing is guaranteed
   if(roll===0){            // big heart, heals 50
     const a=rand(0,TAU), s=rand(40,90); gems.push({x:lb.x,y:lb.y,heart:true,big:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s});
   } else if(roll===1){     // magnet — vacuums every pickup on the map
@@ -411,6 +425,7 @@ const RARITY = {
   rare:      { w:70,  label:'RARE' },
   epic:      { w:50,  label:'EPIC' },
   legendary: { w:34,  label:'LEGENDARY' },
+  mythic:    { w:18,  label:'MYTHIC' },
 };
 // ---- card pool: passives level to a cap; abilities take 4 levels, then EVOLVE on the 5th pick ----
 // rarity: tier (appearance + draw odds). req:[ids] = synergy card, hidden until those cards are owned.
@@ -660,6 +675,7 @@ function startGame(idx){
   playMusic(curTheme.music);
   resetPlayer();
   if(typeof equippedFlatDmg==='function')   P.dmg   += equippedFlatDmg();    // damage gear adds FLAT damage
+  if(typeof equippedHp==='function'){ const h=equippedHp(); P.maxHp += h; P.hp = P.maxHp; }   // HP gear adds FLAT max HP
   if(typeof equippedSpeedMult==='function') P.speed *= equippedSpeedMult();  // speed/range gear still scale the starting stat
   if(typeof equippedRangeMult==='function') P.range *= equippedRangeMult();
   bullets=[]; ebullets=[]; enemies=[]; gems=[]; parts=[]; texts=[]; zones=[]; holes=[]; luckies=[];
@@ -740,6 +756,8 @@ function spawnBoss(){
     };
     enemies.push(mate); boss.mate=mate;
   }
+  bossLuckyT = 20;                              // first periodic lucky batch ~20s into the fight
+  if(isFinal) spawnBossLucky(1);               // final bosses: a lucky block at the start of phase 1
   sfx.boss();
   playMusic('boss'+(((Math.floor(wave/5)-1)%3+3)%3));   // a different loop per boss
   $('bossname').textContent = boss.name;
@@ -1531,6 +1549,9 @@ function update(dt){
   if(!arena && !boss && state===ST.PLAY){
     luckyTimer -= dt;
     if(luckyTimer<=0 && luckies.length<LUCKY_CAP){ luckyTimer = rand(24,40); spawnLuckyBatch(); }
+  } else if(boss && state===ST.PLAY){
+    bossLuckyT -= dt;                                  // during a boss fight: 2 blocks every 20s for sustain
+    if(bossLuckyT<=0){ bossLuckyT = 20; spawnBossLucky(2); }
   }
   for(let i=luckies.length-1;i>=0;i--){
     const lb=luckies[i];
@@ -2120,11 +2141,11 @@ function updateGimmick(e,dt){
       e.gT-=dt; if(e.gT<=0){ e.gT = (ph>=3?2.4:3.2)*gm;
         mRingGap(e,ph>=3?18:14,118,'#6b8e23',0.30); shake=Math.max(shake,5); }
       break;
-    case 'aerial':                                      // flits up out of reach, rains feathers, harder to pin
-      e.gT-=dt; if(e.gT<=0 && e.mst==='recover' && e.dst==='idle' && !(e.stun>0)){ e.gT = ph>=3?3.0:4.0;
-        e.iv=Math.max(e.iv,0.7); burst(e.x,e.y,'#9fe0ff',16,260);
-        e.x=clamp(P.x+rand(-120,120),WALL+e.r,WORLD.w-WALL-e.r); e.y=clamp(P.y-rand(150,230),WALL+e.r,WORLD.h-WALL-e.r);
-        const off=rand(0,TAU); for(let k=0;k<(ph>=3?12:9);k++) fireEB(e.x,e.y,off+k*TAU/(ph>=3?12:9),120,'#9fe0ff'); }
+    case 'aerial':                                      // flits up out of reach, telegraphs a landing spot, rains feathers
+      e.gT-=dt; if(e.gT<=0 && e.mst==='recover' && e.dst==='idle' && !(e.stun>0) && !(e.warpT>0)){ e.gT = ph>=3?3.0:4.0;
+        e.iv=Math.max(e.iv,0.95); burst(e.x,e.y,'#9fe0ff',16,260);
+        e.wdx=clamp(P.x+rand(-120,120),WALL+e.r,WORLD.w-WALL-e.r); e.wdy=clamp(P.y-rand(150,230),WALL+e.r,WORLD.h-WALL-e.r);
+        e.warpT=0.6; e.warpCol='#9fe0ff'; e.warpFeather=(ph>=3?12:9); }   // teleport handler draws the marker + lands
       break;
     case 'thorns':                                      // slowly plants lingering thorn patches around the field
       e.gT-=dt; if(e.gT<=0){ e.gT = (ph>=3?1.6:ph>=2?2.2:2.8)*gm;
@@ -2222,7 +2243,8 @@ function updateBoss(e,dt){
     const ph = e.hp>e.ph2at ? 1 : e.hp>e.ph3at ? 2 : 3;
     if(ph>e.vph){
       if(ph===3){ startFinalCharge(e); }
-      else { e.vph=ph; bigText('PHASE '+ph+'!','#d2a0ff'); shake=Math.max(shake,12); e.iv=0.6; ebullets=[]; sfx.boss(); if(e.mate) e.mate.iv=0.6; }
+      else { e.vph=ph; bigText('PHASE '+ph+'!','#d2a0ff'); shake=Math.max(shake,12); e.iv=0.6; ebullets=[]; sfx.boss(); if(e.mate) e.mate.iv=0.6;
+        spawnBossLucky(1); }   // final bosses: a lucky block at the start of phase 2
     }
   } else if(e.bars===2 || e.phased || e.spr==='vaca'){
     let ph;
@@ -2296,11 +2318,21 @@ function updateBoss(e,dt){
       fireEB(e.x,e.y,e.da+Math.PI/2,150,'#e0503f'); fireEB(e.x,e.y,e.da-Math.PI/2,150,'#e0503f');
       addZone(e.x,e.y,40,{tele:0.3,life:0.8,dps:14,col:'#3f7d33'}); }
   }
-  // Trippi warp: count down the blink tell, then teleport beside the player and burst
-  if(e.warpT>0){ e.warpT-=dt;
+  // blink/teleport: pick + telegraph the destination, count down, then warp there
+  if(e.warpT>0){
+    if(e.wdx==null){   // commit to a landing spot on the first tick so it can be telegraphed (drawn in render)
+      const a=rand(0,TAU);
+      e.wdx=clamp(P.x+Math.cos(a)*180,WALL+e.r,WORLD.w-WALL-e.r);
+      e.wdy=clamp(P.y+Math.sin(a)*180,WALL+e.r,WORLD.h-WALL-e.r);
+    }
+    e.warpT-=dt;
     if(e.warpT<=0){
-      const a=rand(0,TAU); e.x=clamp(P.x+Math.cos(a)*180,WALL+e.r,WORLD.w-WALL-e.r); e.y=clamp(P.y+Math.sin(a)*180,WALL+e.r,WORLD.h-WALL-e.r);
-      burst(e.x,e.y,'#c77dff',22,260); e.spin=0.7; e.spinCol='#c77dff'; e.iv=0.2; }
+      e.x=e.wdx; e.y=e.wdy; e.wdx=null; e.wdy=null;
+      burst(e.x,e.y,e.warpCol||'#c77dff',22,260); e.iv=Math.max(e.iv,0.2);
+      if(e.warpFeather){ const off=rand(0,TAU), n=e.warpFeather; for(let k=0;k<n;k++) fireEB(e.x,e.y,off+k*TAU/n,120,e.warpCol||'#9fe0ff'); e.warpFeather=0; }
+      else { e.spin=0.7; e.spinCol=e.warpCol||'#c77dff'; }
+      e.warpCol=null;
+    }
   }
   // RICOCHET (Tralalero 2.0 only): rockets across the arena bouncing off the walls, trailing wake
   if(e.wd){
@@ -2605,6 +2637,18 @@ function render(){
       cx.font='900 13px sans-serif'; cx.fillStyle='#fff'; cx.textAlign='center';
       cx.strokeStyle=OUT; cx.lineWidth=3; cx.strokeText(e.name, e.x, e.y-e.r-22); cx.fillText(e.name, e.x, e.y-e.r-22);
     }
+  }
+
+  // --- teleport telegraph: show WHERE a blinking boss will reappear (ghost + pulsing ring) ---
+  for(const e of enemies){
+    if(!(e.isBoss && e.warpT>0 && e.wdx!=null)) continue;
+    const col=e.warpCol||'#c77dff', pulse=0.5+0.5*Math.sin(elapsed*20);
+    cx.save();
+    cx.globalAlpha=0.28; drawSprite(e.spr, e.wdx, e.wdy, e.r*2.4, 0,0,0,false, null);   // faint ghost at the landing spot
+    cx.globalAlpha=0.55+0.4*pulse; cx.strokeStyle=col; cx.lineWidth=4; cx.setLineDash([11,8]); cx.lineDashOffset=-elapsed*130;
+    cx.beginPath(); cx.arc(e.wdx,e.wdy,e.r+10,0,TAU); cx.stroke(); cx.setLineDash([]);
+    cx.lineWidth=2.5; cx.globalAlpha=0.6; cx.strokeStyle='rgba(0,0,0,0.5)'; cx.beginPath(); cx.arc(e.wdx,e.wdy,e.r+12,0,TAU); cx.stroke();
+    cx.globalAlpha=1; cx.restore();
   }
 
   // --- enemy bullets: thick dark rim + dark core = HOSTILE ---

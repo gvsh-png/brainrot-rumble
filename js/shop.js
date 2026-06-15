@@ -3,7 +3,7 @@
 // Loaded after game.js so it shares the globals `gold`, `P`, sprite helpers, sfx, $.
 // Items boost STARTING stats — damage (FLAT +N) / move speed (%) / attack range (%). 4 typed slots:
 // the equipped piece's SLOT picks the on-character silhouette + rarity tint, its STAT picks the bonus.
-// Catalog = 3 stats × 5 rarities × 7 named variants = 105 items (21 per rarity).
+// Catalog = 4 stats × 6 rarities × 7 named variants = 168 items (28 per rarity).
 
 const GEAR_CATS = ['helmet','chest','pants','shoes'];
 const CAT_LABEL = { helmet:'Helmet', chest:'Chestplate', pants:'Pants', shoes:'Shoes' };
@@ -13,25 +13,28 @@ const CAT_NOUN  = { helmet:'Helm', chest:'Plate', pants:'Greaves', shoes:'Boots'
 // prices scale ~3-4x per tier so the next rarity costs "about one world of grinding"
 // (tied to the rarity-banded gear gate — see docs/specs/2026-06-14-worlds-expansion-design.md)
 const RAR = {
-  common:    { name:'COMMON',    color:'#9aa3af', price:30   },
-  uncommon:  { name:'UNCOMMON',  color:'#5fbf52', price:120  },
-  rare:      { name:'RARE',      color:'#4aa3df', price:450  },
-  epic:      { name:'EPIC',      color:'#b06ff0', price:1500 },
-  legendary: { name:'LEGENDARY', color:'#e0a92e', price:4500 },
+  common:    { name:'COMMON',    color:'#9aa3af', price:30    },
+  uncommon:  { name:'UNCOMMON',  color:'#5fbf52', price:120   },
+  rare:      { name:'RARE',      color:'#4aa3df', price:450   },
+  epic:      { name:'EPIC',      color:'#b06ff0', price:1500  },
+  legendary: { name:'LEGENDARY', color:'#e0a92e', price:4500  },
+  mythic:    { name:'MYTHIC',    color:'#ff3b5c', price:13500 },
 };
-const RAR_ORDER = ['common','uncommon','rare','epic','legendary'];
+const RAR_ORDER = ['common','uncommon','rare','epic','legendary','mythic'];
 
 // stat lines: damage adds a FLAT amount; speed/range add a fraction of the starting stat.
 // `flat:true` marks a stat whose vals are absolute numbers (shown "+N") rather than percentages.
 const STAT = {
-  dmg:   { label:'damage',       short:'DMG', icon:'coin',  flat:true, vals:{common:2,uncommon:4,rare:7,epic:12,legendary:20} },
-  speed: { label:'move speed',   short:'SPD', icon:'heart', vals:{common:0.03,uncommon:0.05,rare:0.08,epic:0.12,legendary:0.18} },
-  range: { label:'attack range', short:'RNG', icon:'gem',   vals:{common:0.05,uncommon:0.09,rare:0.14,epic:0.20,legendary:0.30} },
+  dmg:   { label:'damage',       short:'DMG', icon:'coin',  flat:true, vals:{common:2,uncommon:4,rare:7,epic:12,legendary:20,mythic:32} },
+  hp:    { label:'max HP',       short:'HP',  icon:'heart', flat:true, vals:{common:8,uncommon:15,rare:25,epic:40,legendary:65,mythic:100} },
+  speed: { label:'move speed',   short:'SPD', icon:'heart', vals:{common:0.03,uncommon:0.05,rare:0.08,epic:0.12,legendary:0.18,mythic:0.27} },
+  range: { label:'attack range', short:'RNG', icon:'gem',   vals:{common:0.05,uncommon:0.09,rare:0.14,epic:0.20,legendary:0.30,mythic:0.45} },
 };
-const STAT_ORDER = ['dmg','speed','range'];
+const STAT_ORDER = ['dmg','hp','speed','range'];
 // 7 flavour adjectives per stat -> 7 variants per (stat,rarity)
 const ITEM_ADJ = {
   dmg:   ['Brawler','Berserker','Warlord','Crusher','Onslaught','Ravager','Titan'],
+  hp:    ['Stalwart','Guardian','Bulwark','Ironhide','Bastion','Colossus','Immortal'],
   speed: ['Swift','Sprinter','Gale','Dasher','Quicksilver','Zephyr','Tempo'],
   range: ['Hawkeye','Marksman','Farsight','Sniper','Longshot','Eagle','Horizon'],
 };
@@ -55,9 +58,9 @@ function catalogByRarity(r){ return GEAR_CATALOG.filter(id=>itemRar(id)===r); }
 
 // crates: weighted random pulls. cheaper crate = mostly low rarity, pricier = better odds.
 const CRATES = {
-  wood:   { name:'Wooden Crate', price:40,   glow:'#9aa3af', odds:{common:60,uncommon:30,rare:8, epic:2, legendary:0} },
-  silver: { name:'Silver Crate', price:240,  glow:'#bcd0e0', odds:{common:18,uncommon:40,rare:28,epic:11,legendary:3} },
-  gold:   { name:'Gold Crate',   price:1200, glow:'#e0a92e', odds:{common:0, uncommon:16,rare:40,epic:32,legendary:12} },
+  wood:   { name:'Wooden Crate', price:40,   glow:'#9aa3af', odds:{common:60,uncommon:30,rare:8, epic:2, legendary:0, mythic:0} },
+  silver: { name:'Silver Crate', price:240,  glow:'#bcd0e0', odds:{common:18,uncommon:40,rare:28,epic:11,legendary:3, mythic:0} },
+  gold:   { name:'Gold Crate',   price:1200, glow:'#e0a92e', odds:{common:0, uncommon:16,rare:38,epic:31,legendary:11,mythic:4} },
 };
 const CRATE_ORDER = ['wood','silver','gold'];
 
@@ -88,6 +91,7 @@ function equippedStatBonus(stat){
 }
 function equippedStatMult(stat){ return 1 + equippedStatBonus(stat); }   // for percent stats / UI
 function equippedFlatDmg(){   return equippedStatBonus('dmg');   }   // consumed by game.js startGame() (flat +damage)
+function equippedHp(){        return equippedStatBonus('hp');    }   // consumed by game.js startGame() (flat +max HP)
 function equippedSpeedMult(){ return equippedStatMult('speed'); }
 function equippedRangeMult(){ return equippedStatMult('range'); }
 
@@ -138,7 +142,7 @@ let _coinURL='';
 function coinTag(){ if(!_coinURL && SP['coin']) _coinURL=SP['coin'].toDataURL(); return '<img class="coinico" src="'+_coinURL+'" alt="">'; }
 const _ICURL={};   // cached data-URLs for the house-drawn UI icons
 function icURL(n){ if(!_ICURL[n] && SP[n]) _ICURL[n]=SP[n].toDataURL(); return _ICURL[n]||''; }
-const STAT_IC = { dmg:'ic_dmg', speed:'ic_spd', range:'ic_rng' };
+const STAT_IC = { dmg:'ic_dmg', hp:'ic_hp', speed:'ic_spd', range:'ic_rng' };
 function rtagHTML(rar){ return '<span class="rtag r-'+rar+'">'+RAR[rar].name+'</span>'; }
 function statTag(stat){ return '<span class="stag s-'+stat+'">'+STAT[stat].short+'</span>'; }
 
@@ -271,6 +275,7 @@ function renderInventory(){
     '<div class="eqmid"><img class="eqchar" src="'+compositeCharURL()+'" alt="">'+
       '<div class="eqstats">'+
         '<span class="eqstat"><img class="ei" src="'+icURL('ic_dmg')+'">+'+equippedFlatDmg()+'</span>'+
+        '<span class="eqstat"><img class="ei" src="'+icURL('ic_hp')+'">+'+equippedHp()+'</span>'+
         '<span class="eqstat"><img class="ei" src="'+icURL('ic_spd')+'">+'+pct('speed')+'%</span>'+
         '<span class="eqstat"><img class="ei" src="'+icURL('ic_rng')+'">+'+pct('range')+'%</span>'+
       '</div></div>'+
