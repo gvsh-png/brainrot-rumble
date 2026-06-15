@@ -2102,7 +2102,7 @@ const GIMMICK = {
 function updateGimmick(e,dt){
   if(!e.gimmick) return;
   const ph=e.vph||1;
-  const gm = (e.finalPhase||e.partner) ? 1 : 1.5;   // non-final bosses fire their gimmick less often
+  const gm = (e.finalPhase||e.partner) ? 1 : 2.0;   // non-final bosses fire their gimmick much less often
   switch(e.gimmick){
     case 'metronome':                                   // steady off-beat ring on a quickening tempo
       e.gT-=dt; if(e.gT<=0){ e.gT = (ph>=3?1.0:ph>=2?1.3:1.6)*gm;
@@ -2343,7 +2343,7 @@ function updateBoss(e,dt){
     if(e.mst==='recover'){ e.mst='wind'; e.mt=0.5; e.mv=pickMove(e); e.tellCol=MOVE_COL[e.mv]||'#fff'; sfx.warn(); }
     else if(e.mst==='wind'){ e.mst='fire'; e.mt=execMove(e); }
     else { let rec=(e.spr==='vaca'&&e.vph>=3?0.7:1.1);
-      if(!e.finalPhase && !e.partner) rec*=1.7;   // non-final bosses pause longer between attacks
+      if(!e.finalPhase && !e.partner) rec*=2.4;   // non-final bosses pause much longer between attacks
       e.mst='recover'; e.mt=rec*enr; }
   }
 
