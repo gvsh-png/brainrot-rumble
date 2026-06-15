@@ -1549,8 +1549,8 @@ function update(dt){
   if(!arena && !boss && state===ST.PLAY){
     luckyTimer -= dt;
     if(luckyTimer<=0 && luckies.length<LUCKY_CAP){ luckyTimer = rand(24,40); spawnLuckyBatch(); }
-  } else if(boss && state===ST.PLAY){
-    bossLuckyT -= dt;                                  // during a boss fight: 2 blocks every 20s for sustain
+  } else if(boss && boss.finalPhase && state===ST.PLAY){
+    bossLuckyT -= dt;                                  // FINAL bosses only: 2 blocks every 20s for sustain
     if(bossLuckyT<=0){ bossLuckyT = 20; spawnBossLucky(2); }
   }
   for(let i=luckies.length-1;i>=0;i--){
