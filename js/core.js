@@ -25,13 +25,14 @@ const WALL = 46;                 // fence thickness
 const camera = { x:0, y:0 };
 // camera zoom: <1 = zoomed out (see more), >1 = zoomed in
 let zoom = 1;
-const ZMIN = 0.7, ZMAX = 2.2;    // max zoom-out (0.7 = only slightly out, keeps character big) / max zoom-in
+const ZMIN = 0.85, ZMAX = 2.2;   // max zoom-out (0.85 = a small step out) / max zoom-in
 function setZoom(z){ zoom = clamp(z, ZMIN, ZMAX); }
 function zoomBy(d){ setZoom(+(zoom + d).toFixed(3)); }
 function computeCamera(){
+  // always keep the player dead-centre — follow them at every zoom level, never lock to world edges/centre
   const vw = W/zoom, vh = H/zoom;
-  camera.x = WORLD.w<=vw ? (WORLD.w-vw)/2 : clamp(P.x - vw/2, 0, WORLD.w-vw);
-  camera.y = WORLD.h<=vh ? (WORLD.h-vh)/2 : clamp(P.y - vh/2, 0, WORLD.h-vh);
+  camera.x = P.x - vw/2;
+  camera.y = P.y - vh/2;
 }
 
 // ============ GLOBAL GAME-STATE FLAG ============

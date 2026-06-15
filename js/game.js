@@ -694,8 +694,7 @@ function startBossArena(){
   const cyw = clamp(P.y, WALL+ah/2, WORLD.h-WALL-ah/2);
   arena = { x:cxw-aw/2, y:cyw-ah/2, w:aw, h:ah };
   luckies=[];                                // clear lucky blocks: they'd be stranded outside the arena
-  setZoom(clamp(ARENA_ZOOM, ZMIN, ZMAX));   // auto zoom-in (player can still re-zoom)
-  bossPending = ARENA_LEAD;
+  bossPending = ARENA_LEAD;                  // no auto zoom-in on boss arrival — keep the player's current zoom
   const bw=$('bosswarn'); bw.textContent='⚠ BOSS INCOMING ⚠'; bw.classList.remove('hidden');
   sfx.warn();
 }
@@ -745,6 +744,7 @@ function spawnBoss(){
   playMusic('boss'+(((Math.floor(wave/5)-1)%3+3)%3));   // a different loop per boss
   $('bossname').textContent = boss.name;
   $('bossfill').style.width = '100%';
+  $('bossfill').style.background = '';   // reset to the default red (a prior final boss may have left it magenta)
   $('bossfill2').style.width = '100%';
   $('bossbar2').classList.toggle('hidden', boss.bars!==2);
   $('bossbar').classList.remove('hidden');
@@ -1603,7 +1603,16 @@ function update(dt){
   $('xpfill').style.width = (P.xp/P.xpNext)*100+'%';
   { const sec=Math.floor(elapsed); if(sec!==_lastSec){ _lastSec=sec; const tt=$('timetag'); if(tt) tt.textContent=fmtTime(elapsed); } }
   if(boss){
-    if(boss.bars===2){
+    if(boss.finalPhase){
+      // ONE bar that means phases 1+2; on entering phase 3 it REFILLS during the charge-up, then is phase 3's own bar
+      let w;
+      if(boss.charging>0)      w = 1 - boss.charging/FINAL_CHARGE;          // power-up: empty -> full
+      else if(boss.vph>=3)     w = boss.hp/boss.ph3at;                       // phase 3 bar
+      else                     w = (boss.hp-boss.ph3at)/(boss.maxHp-boss.ph3at);  // phases 1+2 bar
+      $('bossfill').style.width = clamp(w,0,1)*100+'%';
+      const fin = boss.charging>0 || boss.vph>=3;                            // magenta once phase 3 has begun
+      $('bossfill').style.background = fin ? 'linear-gradient(#ff7ae0,#c01e9c)' : 'linear-gradient(#ff5a5a,#d63030)';
+    } else if(boss.bars===2){
       $('bossfill').style.width  = clamp((boss.hp-boss.bar2)/boss.bar1,0,1)*100+'%';
       $('bossfill2').style.width = clamp(boss.hp/boss.bar2,0,1)*100+'%';
     } else $('bossfill').style.width = Math.max(0,(boss.hp/boss.maxHp)*100)+'%';
@@ -2198,7 +2207,6 @@ function expandFinalArena(e){
   const naw=Math.min(arena.w*1.5, WORLD.w-2*WALL), nah=Math.min(arena.h*1.5, WORLD.h-2*WALL);
   const ncx=clamp(cx0,WALL+naw/2,WORLD.w-WALL-naw/2), ncy=clamp(cy0,WALL+nah/2,WORLD.h-WALL-nah/2);
   arena={x:ncx-naw/2,y:ncy-nah/2,w:naw,h:nah};
-  setZoom(clamp(ARENA_ZOOM*0.8,ZMIN,ZMAX));   // ease the camera out so the larger arena fits in view
 }
 
 function updateBoss(e,dt){
