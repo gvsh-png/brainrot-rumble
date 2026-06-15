@@ -144,14 +144,15 @@ function showLogin(){ const o=$('login'); if(o) o.classList.remove('hidden'); }
 function hideLogin(){ const o=$('login'); if(o) o.classList.add('hidden'); }
 function loginMsg(t){ const m=$('loginmsg'); if(m){ m.textContent=t; m.classList.remove('hidden'); } }
 function updateAcctUI(){
-  const b=$('acctbtn'); if(!b) return;
-  b.classList.remove('hidden');
+  const un=$('sdrop-username'), si=$('sdrop-acct'); if(!un) return;
   if(authMode==='account' && acctUser){
     const md = acctUser.user_metadata||{};
     const nm = md.full_name || md.name || acctUser.email || 'Account';
-    b.textContent = String(nm).split(' ')[0] + ' ▾';
+    un.textContent = String(nm).split(' ')[0];
+    if(si){ si.textContent='Sign Out'; si.dataset.action='signout'; si.style.background='#d9694a'; si.style.boxShadow='0 4px 0 #a0412c'; }
   } else {
-    b.textContent = 'Guest ▾';
+    un.textContent = 'Guest';
+    if(si){ si.textContent='Sign In'; si.dataset.action='signin'; si.style.background=''; si.style.boxShadow=''; }
   }
 }
 
@@ -165,9 +166,10 @@ function updateAcctUI(){
 
   const g=$('btn-google'); if(g) g.addEventListener('click', doGoogleLogin);
   const gu=$('btn-guest'); if(gu) gu.addEventListener('click', enterGuest);
-  const ab=$('acctbtn'); if(ab) ab.addEventListener('click', ()=>{
-    if(authMode==='account'){ if(confirm('Sign out of your Google account?')) doSignOut(); }
-    else { showLogin(); }   // guest → offer to sign in for cloud saves
+  const si=$('sdrop-acct'); if(si) si.addEventListener('click', ()=>{
+    $('settingsdrop').classList.add('hidden');
+    if(si.dataset.action==='signout'){ if(confirm('Sign out of your Google account?')) doSignOut(); }
+    else { showLogin(); }
   });
 
   if(supaConfigured()){

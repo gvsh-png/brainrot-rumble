@@ -3104,8 +3104,11 @@ function currentTrack(){
   return curTheme.music || 'game';
 }
 function refreshMute(){
-  const mi=$('muteic'); if(mi){ const s=SP[muted?'ic_mute':'ic_snd']; if(s) mi.src=s.toDataURL(); }
-  $('pausemute').textContent = muted ? 'Music: Off' : 'Music: On';
+  const sm=$('sdrop-music');
+  if(sm){ sm.textContent = muted ? 'Music: Off' : 'Music: On'; sm.classList.toggle('off', muted); }
+  const ss=$('sdrop-sfx');
+  if(ss){ ss.textContent = sfxMuted ? 'SFX: Off' : 'SFX: On'; ss.classList.toggle('off', sfxMuted); }
+  const pm=$('pausemute'); if(pm) pm.textContent = muted ? 'Music: Off' : 'Music: On';
   const ps=$('pausesfx'); if(ps) ps.textContent = sfxMuted ? 'SFX: Off' : 'SFX: On';
 }
 function setMusicMuted(v){
@@ -3121,7 +3124,16 @@ function setSfxMuted(v){
   if(!sfxMuted && AC) AC.resume();
   refreshMute();
 }
-$('mutebtn').addEventListener('click', ()=>setMusicMuted(!muted));
+// Settings dropdown toggle
+(function(){
+  const btn=$('settingsbtn'), drop=$('settingsdrop');
+  if(!btn||!drop) return;
+  btn.addEventListener('click', e=>{ e.stopPropagation(); drop.classList.toggle('hidden'); });
+  document.addEventListener('click', ()=>drop.classList.add('hidden'));
+  drop.addEventListener('click', e=>e.stopPropagation());
+})();
+const _dm=$('sdrop-music'); if(_dm) _dm.addEventListener('click',()=>setMusicMuted(!muted));
+const _ds=$('sdrop-sfx'); if(_ds) _ds.addEventListener('click',()=>setSfxMuted(!sfxMuted));
 $('pausemute').addEventListener('click', ()=>setMusicMuted(!muted));
 $('pausesfx').addEventListener('click', ()=>setSfxMuted(!sfxMuted));
 refreshMute();

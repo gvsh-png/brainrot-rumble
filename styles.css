@@ -56,9 +56,36 @@ html,body { width:100%; height:100%; overflow:hidden; background:#6fae3d; font-f
 #btn-google .gicon { display:inline-flex; align-items:center; justify-content:center; width:1.3em; height:1.3em; border-radius:50%;
   background:conic-gradient(#ea4335 0 25%, #fbbc05 0 50%, #34a853 0 75%, #4285f4 0); color:#fff; font-weight:900; font-size:.8em; }
 #loginmsg { font-size:clamp(12px,2vmin,15px); color:#c0392b; font-weight:700; line-height:1.4; }
-.acctbtn { font-size:clamp(10px,1.9vmin,14px); font-weight:800; color:#fff; background:rgba(0,0,0,0.28);
-  border:2px solid rgba(255,255,255,0.45); border-radius:999px; padding:5px 10px; cursor:pointer; white-space:nowrap; }
-.acctbtn:active { transform:translateY(1px); }
+/* Settings dropdown */
+#settingswrap { position:relative; flex:0 0 auto; }
+#settingsdrop {
+  position:absolute; top:calc(100% + 8px); right:0;
+  width:clamp(200px,72vw,260px);
+  background:#fbf3df; border:3px solid #2a1c10; border-radius:16px;
+  padding:clamp(10px,2vmin,16px) clamp(12px,2.4vmin,18px);
+  box-shadow:0 6px 0 rgba(0,0,0,.28);
+  z-index:100; display:flex; flex-direction:column; gap:clamp(10px,2vmin,14px);
+  animation:popIn .18s cubic-bezier(.2,.9,.35,1.1);
+}
+.sdrop-section { display:flex; flex-direction:column; gap:clamp(6px,1.4vmin,10px); }
+.sdrop-head { font-size:clamp(10px,1.8vmin,13px); font-weight:900; color:#8a7a5a; letter-spacing:.06em; text-transform:uppercase; }
+.sdrop-name { font-size:clamp(14px,2.6vmin,18px); font-weight:900; color:#3a2d22; }
+.sdrop-btn {
+  font-size:clamp(13px,2.4vmin,17px); font-weight:900; color:#fff;
+  background:#4aa3df; border:3px solid #2a1c10; border-radius:12px;
+  padding:clamp(8px,1.6vmin,12px) clamp(12px,2.4vmin,18px);
+  box-shadow:0 4px 0 #2b6f9c; cursor:pointer; text-align:center;
+}
+.sdrop-btn:active { transform:translateY(3px); box-shadow:0 1px 0 #2b6f9c; }
+.sdrop-sep { height:2px; background:#e0d4b8; border-radius:2px; }
+.sdrop-row { display:flex; gap:clamp(6px,1.4vmin,10px); }
+.sdrop-toggle {
+  flex:1; font-size:clamp(12px,2.2vmin,15px); font-weight:900; color:#3a2d22;
+  background:#e8e0cc; border:3px solid #2a1c10; border-radius:12px;
+  padding:clamp(8px,1.6vmin,12px) 6px; box-shadow:0 4px 0 rgba(0,0,0,.2); cursor:pointer;
+}
+.sdrop-toggle.off { background:#c8c0b4; color:#7a6a5a; }
+.sdrop-toggle:active { transform:translateY(3px); box-shadow:0 1px 0 rgba(0,0,0,.2); }
 
 /* ===== Main menu — polished mobile-game look ===== */
 #menu { flex-direction:column; justify-content:flex-start; gap:0; padding:0; overflow:hidden;
@@ -84,7 +111,8 @@ html,body { width:100%; height:100%; overflow:hidden; background:#6fae3d; font-f
   background:#5fbf52; border:2px solid #2a1c10; border-radius:50%; color:#fff; font-size:.85em; line-height:1; }
 .iconbtn { flex:0 0 auto; width:clamp(34px,6vmin,46px); height:clamp(34px,6vmin,46px); border-radius:10px; border:3px solid #2a1c10;
   background:#fbf3df; color:#2a1c10; cursor:pointer; box-shadow:0 3px 0 rgba(0,0,0,.3);
-  display:flex; align-items:center; justify-content:center; padding:0; overflow:hidden; }
+  display:flex; align-items:center; justify-content:center; padding:0; overflow:hidden;
+  font-size:clamp(18px,3.4vmin,26px); font-weight:900; line-height:1; }
 .iconbtn img { width:72%; height:72%; object-fit:contain; }
 .iconbtn:active { transform:translateY(2px); box-shadow:0 1px 0 rgba(0,0,0,.3); }
 
