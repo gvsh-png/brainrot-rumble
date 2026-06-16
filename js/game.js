@@ -1205,9 +1205,11 @@ function update(dt){
       const br  = (P.railgun ? 9 : 6) * (P.bulletR||1);
       // always fire the aimed volley at the nearest enemy
       const base = Math.atan2(best.y-P.y, best.x-P.x), spread = 0.16*(P.spread||1);
+      const perpA = base + Math.PI/2;  // perpendicular for positional spread of homing bullets
       for(let i=0;i<P.shots;i++){
         const a = base + (i-(P.shots-1)/2)*spread;
-        bullets.push({x:P.x,y:P.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:br,pierce:P.pierce,hit:new Set(),dist:P.range,bounce:P.bounce||0,homing:P.seeker||0});
+        const po = (P.seeker && P.shots>1) ? (i-(P.shots-1)/2)*15 : 0;  // 15px apart so homing shots are visually distinct
+        bullets.push({x:P.x+Math.cos(perpA)*po,y:P.y+Math.sin(perpA)*po,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:br,pierce:P.pierce,hit:new Set(),dist:P.range,bounce:P.bounce||0,homing:P.seeker||0});
       }
       if(P.radial){                       // Omni-Barrage: 360 ring IN ADDITION (reduced dmg so it stays fair vs crowds)
         const n = clamp(P.shots*2, 8, 20);
@@ -1930,9 +1932,9 @@ function bossMoves(e){
       if(e.vph>=2) return ['BLADE_FAN','KNIFE_VOLLEY','MACHETE_DASH','DOUBLE_DASH'];
       return ['BLADE_FAN','MACHETE_DASH','KNIFE_VOLLEY','BLADE_FAN']; // extra BLADE_FAN weight keeps pressure up
     case 'frullone':                       // B3: centrifuge
-      if(e.vph>=3) return ['BLADE_SPRAY','BLENDER_CHARGE','GRIND_ZONE','VORTEX_PULL'];
-      if(e.vph>=2) return ['BLADE_SPRAY','BLENDER_CHARGE','GRIND_ZONE'];
-      return ['BLADE_SPRAY','BLENDER_CHARGE','GRIND_ZONE'];          // p1 now has 3 moves
+      if(e.vph>=3) return ['BLENDER_CHARGE','GRIND_ZONE','VORTEX_PULL','BLENDER_CHARGE'];
+      if(e.vph>=2) return ['BLENDER_CHARGE','GRIND_ZONE','BLENDER_CHARGE'];
+      return ['BLENDER_CHARGE','GRIND_ZONE','BLENDER_CHARGE'];       // removed meaningless ring spray
     case 'cocofantoboss':                  // B4 FINAL: armoured colossus w/ arena quake gimmick + coconut bullet-hell
       if(e.vph>=3) return ['COCONUT_STORM','QUAKE_RING','STAMPEDE','TREMOR_STOMP','COCONUT_BARRAGE'];
       if(e.vph>=2) return ['STOMP_QUAKE','QUAKE_RING','COCONUT_BARRAGE','TUSK_SWEEP'];
@@ -2044,7 +2046,7 @@ const MOVE_COL = { dash:'#e54d4d', spiral:'#e54d4d', aimed3:'#e23b3b', aimed5:'#
 function pickMove(e){
   let pool=bossMoves(e);
   // bullet-hell injection: a LOT more for final-boss phase 3, a moderate bit for mid-bosses past phase 1
-  if(e.finalPhase && e.vph>=3)        pool = pool.concat('MEGA_STORM','CROSS_STORM','RING_VOLLEY');
+  if(e.finalPhase && e.vph>=3)        pool = pool.concat('MEGA_STORM','RING_VOLLEY');
   else if(!e.finalPhase && !e.partner && e.vph>=2) pool = pool.concat('SPIRAL_LITE','RING_VOLLEY');
   let m; do{ m=pick(pool); }while(pool.length>1 && m===e.lastMv); e.lastMv=m; return m;
 }
@@ -2422,7 +2424,7 @@ const FINAL_SCRIPT = {
           addZone(P.x,P.y,60,{tele:0.7,life:0.5,dps:16,col:'#8d6e63'});      // a coconut lobbed at your feet
           mRingGap(e,12+e.loop*2,120,'#8d6e63',0.34); } },
     },
-    { name:'AFTERSHOCK — STRIKE NOW!', col:'#7ed957', dur:3.0, iv:false },
+    { name:'AFTERSHOCK — STRIKE NOW!', col:'#7ed957', dur:5.0, iv:false },
     { name:'COCONUT MONSOON', col:'#8d6e63', dur:7.5, iv:true, hold:'center',
       enter(e){ e.sCd=0.5; e.sk=0; },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=0.95; e.sk++;
@@ -2431,7 +2433,7 @@ const FINAL_SCRIPT = {
         zoneLine(true, band, gx, 70, '#8d6e63', 9, 0.8);
         mRingGap(e,16+e.loop*2,130,'#a06a4a',0.30); } },
     },
-    { name:'AFTERSHOCK — STRIKE NOW!', col:'#7ed957', dur:3.0, iv:false },
+    { name:'AFTERSHOCK — STRIKE NOW!', col:'#7ed957', dur:5.0, iv:false },
     { name:'STAMPEDE GAUNTLET', col:'#6d4c41', dur:7.0, iv:true,
       enter(e){ e.dst='wind'; e.dwin=0.45; e.da=Math.atan2(P.y-e.y,P.x-e.x); e.kb=true;
         e.landFx={type:'pounce'}; e.dashTrail={kind:'guac',col:'#8d6e63'}; e.dashRepeat=4+e.loop; sfx.warn(); },
@@ -2439,7 +2441,7 @@ const FINAL_SCRIPT = {
         e.dst='wind'; e.dwin=0.4; e.da=Math.atan2(P.y-e.y,P.x-e.x); e.kb=true;
         e.landFx={type:'pounce'}; e.dashTrail={kind:'guac',col:'#8d6e63'}; e.dashRepeat=2; } },
     },
-    { name:'AFTERSHOCK — STRIKE NOW!', col:'#7ed957', dur:3.0, iv:false },
+    { name:'AFTERSHOCK — STRIKE NOW!', col:'#7ed957', dur:5.0, iv:false },
   ],
   // ===== WORLD 4 · ICE ICE BEARLINI — "ZERO ASSOLUTO" : a frost-storm colossus =====
   icebearlini: [
@@ -2449,7 +2451,7 @@ const FINAL_SCRIPT = {
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.2;   // frost drifts settle as slowing patches
         if(arena) for(let k=0;k<2;k++) addZone(rand(arena.x+50,arena.x+arena.w-50),rand(arena.y+50,arena.y+arena.h-50),56,{tele:0.7,life:2.4,dps:8,slow:true,col:'#bfe6ff'}); } },
     },
-    { name:'THAW — STRIKE NOW!', col:'#7ed957', dur:3.0, iv:false },
+    { name:'THAW — STRIKE NOW!', col:'#7ed957', dur:5.0, iv:false },
     { name:'AVALANCHE WALLS', col:'#bfe6ff', dur:8.0, iv:true,
       enter(e){ e.sCd=0.4; e.sk=0; },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=Math.max(1.3,1.8-e.loop*0.15); e.sk++;
@@ -2459,14 +2461,14 @@ const FINAL_SCRIPT = {
         const gapAt= horiz ? rand(a.y+90,a.y+a.h-90) : rand(a.x+90,a.x+a.w-90);
         mWall(side,150+e.loop*15,'#9fd0ff',gapAt,64,14); } },
     },
-    { name:'THAW — STRIKE NOW!', col:'#7ed957', dur:3.0, iv:false },
+    { name:'THAW — STRIKE NOW!', col:'#7ed957', dur:5.0, iv:false },
     { name:'ORANGE SUPERNOVA', col:'#ff8f2e', dur:5.5, iv:true, hold:'center',
       enter(e){ e.sk=0; e.sCd=1.0; burst(e.x,e.y,'#ff8f2e',30,360); shake=Math.max(shake,10); },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0 && e.sk<3){ e.sCd=1.4; e.sk++;   // three huge nested orange shockwaves, each with a gap
         mRing(e,26,200,'#ff8f2e'); mRingGap(e,22,150,'#ffb15a',0.20); mRingGap(e,18,100,'#ff8f2e',0.24);
         shake=Math.max(shake,8); sfx.hit(); } },
     },
-    { name:'THAW — STRIKE NOW!', col:'#7ed957', dur:3.0, iv:false },
+    { name:'THAW — STRIKE NOW!', col:'#7ed957', dur:5.0, iv:false },
   ],
   // ===== WORLD 5 · IL GRAN PAGLIACCIO — "GRAN FINALE" : the ringmaster's three-act spectacle =====
   granpagliaccio: [
@@ -2475,7 +2477,7 @@ const FINAL_SCRIPT = {
         e.stormCol='#ff5ea8'; e.stormCd=0.13; e.stormTwin=true; e.stormRainbow=false; e.sCd=1.1; sfx.warn(); },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.1; mRingGap(e,14,110,'#ffd24a',0.32); } },
     },
-    { name:'INTERMISSION — STRIKE NOW!', col:'#7ed957', dur:3.0, iv:false },
+    { name:'INTERMISSION — STRIKE NOW!', col:'#7ed957', dur:5.0, iv:false },
     { name:'BALLOON BARRAGE', col:'#ff5ea8', dur:7.5, iv:true,
       enter(e){ e.sCd=0.4; e.sk=0; },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=Math.max(1.4,1.9-e.loop*0.15); e.sk++;
@@ -2486,14 +2488,14 @@ const FINAL_SCRIPT = {
         mWall(side,140+e.loop*15,'#ff5ea8',gapAt,68,12);
         if(e.sk%2===0) summonAdds(e,'clownino',1,4); } },
     },
-    { name:'INTERMISSION — STRIKE NOW!', col:'#7ed957', dur:3.0, iv:false },
+    { name:'INTERMISSION — STRIKE NOW!', col:'#7ed957', dur:5.0, iv:false },
     { name:'THE GRAND FINALE', col:'#ffd24a', dur:6.0, iv:true, hold:'center',
       enter(e){ e.sk=0; e.sCd=0.8; burst(e.x,e.y,'#ffd24a',30,360); shake=Math.max(shake,10); summonAdds(e,'clownino',3,6); },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.0; e.sk++;
         mRingGap(e,18,160,'#ff5ea8',0.24); mRingGap(e,14,105,'#ffd24a',0.28);
         shake=Math.max(shake,6); sfx.hit(); } },
     },
-    { name:'INTERMISSION — STRIKE NOW!', col:'#7ed957', dur:3.0, iv:false },
+    { name:'INTERMISSION — STRIKE NOW!', col:'#7ed957', dur:5.0, iv:false },
   ],
 };
 // drive one scripted-finale stage; advances + loops + escalates when the stage timer runs out

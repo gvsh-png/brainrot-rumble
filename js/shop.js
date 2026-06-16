@@ -365,38 +365,69 @@ function renderCharacterTab() {
   const list=$('charlist'); if(!list) return;
   if(typeof CHARACTERS==='undefined') return;
   const worldUnlocked=+(localStorage.getItem('br_unlocked')||0);
-  let html='<div class="banner"><span>MY CHARACTERS</span></div>';
+  const rarRank={common:0,uncommon:1,rare:2,epic:3,legendary:4,mythic:5,world:-1};
+  // Sort into 3 groups
+  const owned=[], worldLocked=[], shopLocked=[];
   for(const char of CHARACTERS){
     const isWorld=char.rarity==='world';
-    const locked=isWorld?(char.worldUnlock>worldUnlocked):!isCharOwned(char.id);
+    const unlocked=isWorld?(char.worldUnlock<=worldUnlocked):isCharOwned(char.id);
+    if(unlocked) owned.push(char);
+    else if(isWorld) worldLocked.push(char);
+    else shopLocked.push(char);
+  }
+  owned.sort((a,b)=>{
+    const aw=a.rarity==='world', bw=b.rarity==='world';
+    if(aw&&bw) return (a.worldUnlock||0)-(b.worldUnlock||0);
+    if(aw) return -1; if(bw) return 1;
+    return (rarRank[b.rarity]||0)-(rarRank[a.rarity]||0);
+  });
+  worldLocked.sort((a,b)=>(a.worldUnlock||0)-(b.worldUnlock||0));
+  shopLocked.sort((a,b)=>(rarRank[b.rarity]||0)-(rarRank[a.rarity]||0));
+
+  function buildCard(char, locked){
+    const isWorld=char.rarity==='world';
     const selected=(typeof activeCharId!=='undefined')&&activeCharId===char.id;
-    const rarClass=isWorld?'r-world':'r-'+char.rarity;
+    const rarClass=isWorld?'r-uncommon':'r-'+char.rarity;
     const thumbId='charport_'+char.id;
     const portHtml='<div class="charport"><canvas id="'+thumbId+'" width="80" height="80"></canvas></div>';
     let selBtn='';
     if(locked&&isWorld){
-      selBtn='<button class="charselbtn locked" disabled>&#128274; World '+(char.worldUnlock+1)+'</button>';
+      selBtn='<button class="charselbtn locked" disabled>World '+(char.worldUnlock+1)+' unlock</button>';
     } else if(locked){
-      selBtn='<button class="charselbtn locked" disabled>&#128274; Get in Shop</button>';
+      selBtn='<button class="charselbtn locked" disabled>Get in Shop</button>';
     } else if(selected){
       selBtn='<button class="charselbtn active" data-selchar="'+char.id+'">SELECTED</button>';
     } else {
       selBtn='<button class="charselbtn" data-selchar="'+char.id+'">SELECT</button>';
     }
     const lockBadge=locked&&isWorld?'<span class="charlockbadge">Beat World '+(char.worldUnlock+1)+'</span>':'';
-    const rarForTag=isWorld?'uncommon':char.rarity;
-    html+='<div class="charcard '+rarClass+(selected?' selected':'')+(locked?' locked':'')+'" id="charcard_'+char.id+'">';
+    let html='<div class="charcard '+rarClass+(selected?' selected':'')+(locked?' locked':'')+'" id="charcard_'+char.id+'">';
     html+=portHtml;
     html+='<div class="charinfo"><div class="charname">'+char.name+'</div>';
     html+='<div class="chardesc">'+char.desc+'</div>';
-    html+='<div class="chartags">'+rtagHTML(rarForTag)+lockBadge+'</div>';
+    html+='<div class="chartags">'+rtagHTML(isWorld?'uncommon':char.rarity)+lockBadge+'</div>';
     html+='</div>';
-    html+=selBtn;
-    html+='</div>';
+    html+=selBtn+'</div>';
+    return html;
+  }
+
+  let html='';
+  if(owned.length){
+    html+='<div class="banner"><span>MY CHARACTERS</span></div>';
+    for(const c of owned) html+=buildCard(c,false);
+  }
+  if(worldLocked.length){
+    html+='<div class="banner"><span>WORLD UNLOCKS</span></div>';
+    for(const c of worldLocked) html+=buildCard(c,true);
+  }
+  if(shopLocked.length){
+    html+='<div class="banner"><span>GET IN SHOP</span></div>';
+    for(const c of shopLocked) html+=buildCard(c,true);
   }
   list.innerHTML=html;
   // Render thumbnails
-  for(const char of CHARACTERS){
+  const allChars=[...owned,...worldLocked,...shopLocked];
+  for(const char of allChars){
     const canvas=document.getElementById('charport_'+char.id);
     if(!canvas) continue;
     const ctx=canvas.getContext('2d');

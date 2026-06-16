@@ -185,7 +185,7 @@ function renderShopCharSection() {
     html+='<div class="weekly-name">'+weekly.name+'</div>';
     html+='<div class="weekly-desc">'+weekly.desc+'</div>';
     html+='<div class="cstags cstags-center"><span class="rtag r-legendary">LEGENDARY</span></div>';
-    if(owned) html+='<div class="scheck">✓ OWNED</div>';
+    if(owned) html+='<div class="scheck">✓</div>';
     else html+='<button class="sbuy charshop-buy'+(poor?' poor':'')+'" data-buychar="'+weekly.id+'" data-price="'+price+'">'+gem+price+'</button>';
     html+='</div>';
   }
@@ -265,20 +265,26 @@ function _showPullResult(result) {
   const orb=document.getElementById('gachaOrb');
   const card=document.getElementById('gachaCard');
   const tap=document.getElementById('gachaTap');
-  let done=false;
+  let phase=0, autoT=null;
 
-  function reveal(){
-    if(done){ ov.classList.add('hidden'); return; }
-    done=true;
-    if(orb) orb.classList.add('gacha-burst');
-    setTimeout(()=>{
-      if(card){ card.classList.remove('hidden'); }
-      if(tap){ tap.classList.remove('hidden'); }
-    },280);
+  function advance(){
+    if(phase===0){
+      phase=1;
+      if(autoT){ clearTimeout(autoT); autoT=null; }
+      if(orb) orb.classList.add('gacha-burst');
+      setTimeout(()=>{
+        if(card) card.classList.remove('hidden');
+        if(tap){ tap.textContent='TAP TO CLOSE'; tap.classList.remove('hidden'); }
+      },280);
+    } else if(phase===1){
+      phase=2;
+      ov.classList.add('hidden');
+    }
   }
 
-  setTimeout(reveal,1600); // auto-reveal after 1.6s
-  scene.addEventListener('click',reveal);
+  // Auto-advance orb → card after 2s if player doesn't tap
+  autoT=setTimeout(advance, 2000);
+  scene.addEventListener('click', advance);
 }
 
 // ---- initRecruitUI: wire buttons after renderShop ----
