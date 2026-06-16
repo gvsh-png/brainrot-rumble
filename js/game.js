@@ -764,7 +764,10 @@ function resetPlayer(){
     petId:(typeof activePetId!=='undefined'?activePetId:null),
     petX:WORLD.w/2-36, petY:WORLD.h/2, petWalk:0,
     phaseShifting:false, phaseShiftT:0,
-    waveKills:0, bonusShots:0
+    waveKills:0, bonusShots:0,
+    // Fortunato flags — must be reset so switching away clears them
+    luckyBullets:false, noCrit:false, luckyXpOnly:false, luckyBlockDmgMul:1, gearDmgMul:1,
+    hasMagnetPet:false
   });
 }
 
