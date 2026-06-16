@@ -324,10 +324,10 @@ const CHARACTERS = [
   {
     id: 'fortunato',
     name: 'Fortunato',
-    desc: 'More lucky blocks, more RNG.',
+    desc: 'More lucky blocks, more RNG. Can one-tap any lucky block.',
     rarity: 'world',
     worldUnlock: 3,
-    baseStats: { maxHp:70, speed:230, fireRate:0.46, dmg:7, gearDmgMul:0.4 },
+    baseStats: { maxHp:70, speed:230, fireRate:0.46, dmg:12, gearDmgMul:1.0 },
     register() {
       P.fortunatoLuckyCap = 5 + Math.floor(Math.random()*4); // 5-8, fixed for the run
       onHook('getLuckyCap', () => P.fortunatoLuckyCap);
