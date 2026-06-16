@@ -1490,9 +1490,17 @@ function update(dt){
           if(P.ricochet>0 && !b.ric){   // Ricochet: fling weaker bolts at nearby foes (don't ricochet a ricochet)
             const R=P.ricochetEvo?220:140, mul=P.ricochetEvo?0.7:0.5; let n=0;
             forEnemiesNear(b.x,b.y,R,(o)=>{ if(n>=P.ricochet||o===e||o.iv>0||o.under||o.lead||b.hit.has(o)) return;
+              if(dist2(b.x,b.y,o.x,o.y)>R*R) return;   // strict range check (forEnemiesNear only filters by grid cell)
               const a=Math.atan2(o.y-b.y,o.x-b.x);
               bullets.push({x:b.x,y:b.y,vx:Math.cos(a)*540,vy:Math.sin(a)*540,r:b.r*0.85,pierce:0,hit:new Set([e]),dist:R+40,dmgMul:(b.dmgMul||1)*mul,ric:true});
               n++; });
+            for(const lb of luckies){   // also bounce to lucky blocks (not in egrid)
+              if(n>=P.ricochet) break;
+              if(b.hit.has(lb)||dist2(b.x,b.y,lb.x,lb.y)>R*R) continue;
+              const a=Math.atan2(lb.y-b.y,lb.x-b.x);
+              bullets.push({x:b.x,y:b.y,vx:Math.cos(a)*540,vy:Math.sin(a)*540,r:b.r*0.85,pierce:0,hit:new Set([e]),dist:R+40,dmgMul:(b.dmgMul||1)*mul,ric:true});
+              n++;
+            }
           }
           if(P.tremor && Math.random() < 0.22+P.tremor*0.05){   // Tremor Rounds: ground shock splashes nearby foes
             const R=34+P.tremor*7, sd=P.dmg*(0.3+P.tremor*0.12)*(P.abyssalMul||1);
