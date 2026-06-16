@@ -59,9 +59,9 @@ function spawnBossLucky(n, heal){   // heal = fixed HP each block drops when pop
     luckies.push({ x,y, r:26, hp, maxHp:hp, t:rand(0,TAU), hitT:0, sq:0, heal:heal||25 });
   }
 }
-function spawnLuckyBatch(n=2){           // up to n blocks (default 2), capped by LUCKY_CAP
+function spawnLuckyBatch(n=2){           // up to n blocks, capped at n
   for(let k=0;k<n;k++){
-    if(luckies.length>=LUCKY_CAP) break;
+    if(luckies.length>=n) break;
     let x,y,tries=0;
     do { x=rand(WALL+80,WORLD.w-WALL-80); y=rand(WALL+80,WORLD.h-WALL-80); tries++; }
     while(dist2(x,y,P.x,P.y) < 360*360 && tries<8);   // not right on top of the player
