@@ -739,6 +739,7 @@ function resetPlayer(){
     // Character / pet system
     charId:(typeof activeCharId!=='undefined'?activeCharId:'gianni'),
     petId:(typeof activePetId!=='undefined'?activePetId:null),
+    petX:WORLD.w/2-36, petY:WORLD.h/2, petWalk:0,
     phaseShifting:false, phaseShiftT:0,
     waveKills:0, bonusShots:0
   });
@@ -1161,6 +1162,15 @@ function update(dt){
   P.x = clamp(P.x, WALL+P.r, WORLD.w-WALL-P.r);
   P.y = clamp(P.y, WALL+P.r, WORLD.h-WALL-P.r);
   if(arena){ P.x=clamp(P.x, arena.x+P.r, arena.x+arena.w-P.r); P.y=clamp(P.y, arena.y+P.r, arena.y+arena.h-P.r); }
+  if(P.petId){
+    const ml2=Math.hypot(mx,my);
+    const fdx = ml2>0.05 ? -mx/ml2 : -Math.cos(P.face);
+    const fdy = ml2>0.05 ? -my/ml2 : -Math.sin(P.face);
+    const ptx = P.x + fdx*38, pty = P.y + fdy*38;
+    P.petX += (ptx-P.petX)*Math.min(1,dt*9);
+    P.petY += (pty-P.petY)*Math.min(1,dt*9);
+    if(ml2>0.05) P.petWalk += dt*10;
+  }
   if(P.inv>0) P.inv-=dt;
   if(P.slowT>0) P.slowT-=dt;
   if(P.dashCd>0){ P.dashCd-=dt; $('dashbtn').classList.toggle('cool', P.dashCd>0); }
@@ -2953,6 +2963,20 @@ function render(){
     cx.fillStyle=bc; cx.beginPath(); cx.arc(b.x,b.y,b.r,0,TAU); cx.fill();
     cx.lineWidth=3.2; cx.strokeStyle=OUT; cx.stroke();                                                            // dark rim = hostile
     cx.fillStyle='rgba(255,255,255,0.55)'; cx.beginPath(); cx.arc(b.x-b.r*0.3,b.y-b.r*0.3,b.r*0.34,0,TAU); cx.fill(); // glossy highlight
+  }
+
+  // --- active pet (trails directly behind player) ---
+  if(state!==ST.MENU && P.petId && typeof PETS!=='undefined'){
+    const _pet=PETS.find(p=>p.id===P.petId);
+    if(_pet&&_pet.draw){
+      const ps=P.r*1.8, pb=Math.sin(P.petWalk)*0.07;
+      const pf=Math.cos(Math.atan2(P.y-P.petY, P.x-P.petX))<0;
+      cx.fillStyle='rgba(40,60,25,0.18)';
+      cx.beginPath(); cx.ellipse(P.petX,P.petY+ps*0.38,ps*0.34,ps*0.12,0,0,TAU); cx.fill();
+      cx.save(); cx.translate(P.petX,P.petY); if(pf) cx.scale(-1,1); cx.rotate(pb);
+      _pet.draw(cx,ps,elapsed);
+      cx.restore();
+    }
   }
 
   // --- player ---
