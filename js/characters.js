@@ -296,12 +296,13 @@ const CHARACTERS = [
     desc: 'More lucky blocks, more RNG.',
     rarity: 'world',
     worldUnlock: 3,
-    baseStats: {},
+    baseStats: { maxHp:70, speed:230, fireRate:0.46 },
     register() {
       onHook('getLuckyCap', () => 4);
       onHook('onLuckySpawn', (lb) => { if(Math.random()<0.10) lb.heavy=true; });
       P.luckyBullets = true;
       P.noCrit = true;
+      P.luckyXpOnly = true;
     },
     draw(ctx, size, t) { _drawFortunato(ctx, size, t); }
   },

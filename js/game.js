@@ -85,7 +85,13 @@ function popLucky(lb){
     floatText(lb.x,lb.y-lb.r-10,'LUCKY!','#ffd23a',18);
     return;
   }
-  if(lb.heavy){  // Fortunato heavy block: big heal + double gold XP orbs
+  if(P.luckyXpOnly){  // Fortunato: lucky blocks only drop 1-5 gold XP orbs, no hearts/magnets
+    const n=1+Math.floor(Math.random()*5);
+    for(let g=0;g<n;g++){ const a=rand(0,TAU), s=rand(100,260); gems.push({x:lb.x,y:lb.y,tier:4,v:ORB[4].v,t:rand(0,6),vx:Math.cos(a)*s,vy:Math.sin(a)*s}); }
+    floatText(lb.x,lb.y-lb.r-10,'+'+n+' XP!','#ffd23a',18);
+    return;
+  }
+  if(lb.heavy){  // heavy block: big heal + double gold XP orbs
     const a=rand(0,TAU), s=rand(40,90);
     gems.push({x:lb.x,y:lb.y,heart:true,big:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s});
     for(let g=0;g<6;g++){ const ag=rand(0,TAU), sg=rand(120,280); gems.push({x:lb.x,y:lb.y,tier:4,v:ORB[4].v,t:rand(0,6),vx:Math.cos(ag)*sg,vy:Math.sin(ag)*sg}); }
