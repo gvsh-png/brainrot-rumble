@@ -430,7 +430,7 @@ let worldIdx = 0;
 // Practice's single "world" — a mutable stand-in whose foes/bosses get overwritten by the
 // customize popup right before each run, and whose theme/map are just Grasslands' (cosmetic only).
 const TRAINING_WORLD = {
-  id:'training', name:'TRAINING GROUNDS', band:0, endless:true,
+  id:'training', name:'TRAINING GROUNDS', band:0, endless:true, waveTarget:20,
   map:{w:2600,h:2600}, theme:WORLDS[0].theme,
   foes:WORLDS[0].foes, bosses:WORLDS[0].bosses,
 };
@@ -3796,10 +3796,9 @@ $('startbtn').addEventListener('click', ()=>{
   }
 
   function setupPracticeDefaults(){
-    if(practiceCfg._foeSet && practiceCfg._bossSet) return;   // already chosen this session
-    practiceCfg._foeSet = new Set(); practiceCfg._bossSet = new Set();
-    for(const g of groupedTables('foes'))   for(const f of g.list) practiceCfg._foeSet.add(f);
-    for(const g of groupedTables('bosses')) for(const b of g.list) practiceCfg._bossSet.add(b);
+    // nothing selected by default — the player opts in explicitly (confirm requires >=1 of each)
+    if(!practiceCfg._foeSet)  practiceCfg._foeSet = new Set();
+    if(!practiceCfg._bossSet) practiceCfg._bossSet = new Set();
   }
 
   function buildPickList(listEl, key, set){
