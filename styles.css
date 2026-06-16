@@ -539,7 +539,8 @@ html,body { width:100%; height:100%; overflow:hidden; background:#6fae3d; font-f
 #gameover:not(.hidden) .panel,
 #pause:not(.hidden) .panel,
 #itempop:not(.hidden) .ipcard,
-#crate:not(.hidden) .cratepanel { animation:popIn .26s cubic-bezier(.2,.9,.35,1.2); }
+#crate:not(.hidden) .cratepanel,
+#world-cleared:not(.hidden) .panel { animation:popIn .26s cubic-bezier(.2,.9,.35,1.2); }
 /* skill-choice cards stagger in */
 #cards .card { animation:cardIn .3s cubic-bezier(.2,.9,.35,1.2) backwards; }
 #cards .card:nth-child(1){ animation-delay:.03s; }

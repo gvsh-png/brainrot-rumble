@@ -421,16 +421,23 @@ function loadWorld(idx){
   buildGround();   // pre-render this world's ground once (avoids per-frame tile loops)
 }
 let cut = null;   // cutscene state
+let _clearData = null;
 function worldCleared(boss){
+  const prevUnlocked = unlockedMax;
   unlockedMax = Math.min(WORLDS.length-1, Math.max(unlockedMax, worldIdx+1));
   localStorage.setItem('br_unlocked', unlockedMax); if(window.markDirty) window.markDirty();
   selWorld = Math.min(WORLDS.length-1, worldIdx+1);
   // One-time 5-gem reward per world cleared
   const gwKey='br_gem_w'+worldIdx;
+  let gemsEarned=0;
   if(!localStorage.getItem(gwKey) && typeof addGems==='function'){
-    addGems(5); localStorage.setItem(gwKey,'1');
+    gemsEarned=5; addGems(5); localStorage.setItem(gwKey,'1');
     bigText('+5 ◆ GEMS','#b06ff0');
   }
+  const newChars = typeof CHARACTERS!=='undefined'
+    ? CHARACTERS.filter(c=>c.rarity==='world' && c.worldUnlock>prevUnlocked && c.worldUnlock<=unlockedMax)
+    : [];
+  _clearData = { worldNum:worldIdx+1, coins:worldCoins, gems:gemsEarned, newChars };
   state = ST.CUTSCENE;
   cut = { t:0, boss:boss, alpha:1, fade:0, name:curWorld().name };
   boss.cut = true; boss.deathScale = 1;
@@ -455,8 +462,19 @@ function cutsceneUpdate(dt){
   if(cut.t > 2.5){ cut=null; toMenuFromClear(); }
 }
 function toMenuFromClear(){
-  quitToMenu();           // existing teardown -> menu (full reset)
-  triggerUnlockReveal();  // defined in a later task; stub for now
+  if(!_clearData){ quitToMenu(); triggerUnlockReveal(); return; }
+  const d=_clearData; _clearData=null;
+  $('wc-title').textContent = 'WORLD '+d.worldNum+' CLEARED!';
+  $('wc-coins').textContent = d.coins;
+  const gemRow=$('wc-gem-row');
+  if(d.gems>0){ $('wc-gems').textContent='+'+d.gems; gemRow.classList.remove('hidden'); }
+  else { gemRow.classList.add('hidden'); }
+  const unlockEl=$('wc-unlock');
+  if(d.newChars.length>0){
+    $('wc-char-name').textContent = d.newChars.map(c=>c.name).join(', ');
+    unlockEl.classList.remove('hidden');
+  } else { unlockEl.classList.add('hidden'); }
+  $('world-cleared').classList.remove('hidden');
 }
 // ---- world-select carousel (menu) ----
 function worldLabel(i){ return 'WORLD '+(i+1)+' · '+(i<=unlockedMax ? WORLDS[i].name : '??? 🔒'); }
@@ -3379,3 +3397,8 @@ $('wprev').addEventListener('click', ()=>{ if(selWorld>0){ selWorld--; refreshWo
 $('wnext').addEventListener('click', ()=>{ if(selWorld<unlockedMax){ selWorld++; refreshWorldSel(); sfx.pick(); } });
 refreshWorldSel();
 $('retrybtn').addEventListener('click', startGame);
+$('wc-continue').addEventListener('click', ()=>{
+  $('world-cleared').classList.add('hidden');
+  quitToMenu();
+  triggerUnlockReveal();
+});
