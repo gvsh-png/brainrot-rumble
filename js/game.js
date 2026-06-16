@@ -782,13 +782,14 @@ function _doStartGame(wi){
   initAudio();
   playMusic(curTheme.music);
   resetPlayer();
-  if(typeof equippedFlatDmg==='function')   P.dmg   += equippedFlatDmg();    // damage gear adds FLAT damage
-  if(typeof equippedHp==='function'){ const h=equippedHp(); P.maxHp += h; P.hp = P.maxHp; }   // HP gear adds FLAT max HP
-  if(typeof equippedSpeedMult==='function') P.speed *= equippedSpeedMult();  // speed/range gear still scale the starting stat
-  if(typeof equippedRangeMult==='function') P.range *= equippedRangeMult();
-  // Character & pet system: re-register hooks each run
+  // Character base stats first — so gear builds on top of the character's foundation
   if(typeof clearHooks==='function') clearHooks();
   if(typeof applyCharBase==='function') applyCharBase(P.charId);
+  // Gear applies on top; gearDmgMul lets characters reduce gear's dmg contribution
+  if(typeof equippedFlatDmg==='function')   P.dmg   += equippedFlatDmg() * (P.gearDmgMul||1);
+  if(typeof equippedHp==='function'){ const h=equippedHp(); P.maxHp += h; P.hp = P.maxHp; }
+  if(typeof equippedSpeedMult==='function') P.speed *= equippedSpeedMult();
+  if(typeof equippedRangeMult==='function') P.range *= equippedRangeMult();
   if(typeof registerActiveChar==='function') registerActiveChar();
   if(typeof registerActivePet==='function') registerActivePet();
   timeScale=1.0;
