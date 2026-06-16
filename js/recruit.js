@@ -232,45 +232,53 @@ function renderPetRecruitSection() {
   html+='<button class="pullbtn'+(poor?' poor':'')+'" id="petpullbtn">'+gem+PET_PULL_COST+' — RECRUIT PET</button>';
   html+='<div class="pitytxt">Pity: '+pity+' / '+PET_PITY_LEG+' (guaranteed legendary) · '+Math.max(0,PET_PITY_EPIC-pity)+' for guaranteed rare</div>';
   html+='</div>';
-  if(ownedPets.length){
-    html+='<div class="banner" style="margin-top:8px"><span>MY PETS</span></div>';
-    html+='<div class="petownedgrid">';
-    for(const pet of PETS){
-      if(!isPetOwned(pet.id)) continue;
-      const eq=(typeof activePetId!=='undefined')&&activePetId===pet.id;
-      html+='<div class="pettile r-'+pet.rarity+(eq?' equipped':'')+'" data-petid="'+pet.id+'" title="'+pet.name+'">';
-      if(eq) html+='<span class="petteq">✓</span>';
-      html+='<canvas class="pettile-canvas" width="56" height="56"></canvas>';
-      html+='<div class="pettile-name">'+pet.name+'</div>';
-      html+='</div>';
-    }
-    html+='</div>'; // petownedgrid
-  } else {
-    html+='<div class="invhint">Recruit a pet to get started!</div>';
-  }
+  html+='<div class="invhint" style="margin-top:4px">Manage pets in the Equipment tab</div>';
   html+='</div>'; // shopsec
   return html;
 }
 
-// ---- Result modal ----
+// ---- Gacha cinematic reveal ----
 function _showPullResult(result) {
   if(!result) return;
   const { pet, duplicate } = result;
   const ov=document.getElementById('itempop'); if(!ov) return;
   const rarLabel=(typeof RAR!=='undefined'&&RAR[pet.rarity])?RAR[pet.rarity].name:pet.rarity.toUpperCase();
-  const thumbURL=_renderPetThumbDataURL(pet.id, 100);
-  ov.innerHTML='<div class="ipcard r-'+pet.rarity+'">'
-    +'<button class="ipx" id="ipclose">✕</button>'
-    +'<div class="ipicon r-'+pet.rarity+'"><img src="'+thumbURL+'" alt="" style="width:80%;height:80%"></div>'
-    +'<div class="ipname">'+pet.name+'</div>'
-    +'<div class="iptags"><span class="rtag r-'+pet.rarity+'">'+rarLabel+'</span></div>'
-    +'<div class="ipstat">'+pet.desc+'</div>'
-    +(duplicate?'<div class="crdup">Duplicate — 3 gems refunded</div>':'<div class="crnew">NEW PET!</div>')
-    +'</div>';
+  const thumbURL=_renderPetThumbDataURL(pet.id,140);
+
+  ov.innerHTML=
+    '<div class="gacha-scene r-'+pet.rarity+'" id="gachaScene">'+
+    '<div class="gacha-bg"></div>'+
+    '<div class="gacha-orb" id="gachaOrb"></div>'+
+    '<div class="gacha-card hidden" id="gachaCard">'+
+      '<div class="gacha-portrait r-'+pet.rarity+'"><img src="'+thumbURL+'" alt=""></div>'+
+      '<div class="gacha-pname">'+pet.name+'</div>'+
+      '<div class="cstags cstags-center"><span class="rtag r-'+pet.rarity+'">'+rarLabel+'</span></div>'+
+      '<div class="gacha-pdesc">'+pet.desc+'</div>'+
+      (duplicate?'<div class="crdup">Duplicate — ◆3 refunded</div>':'<div class="crnew gacha-new">✦ NEW PET ✦</div>')+
+    '</div>'+
+    '<div class="gacha-tap hidden" id="gachaTap">TAP TO CLOSE</div>'+
+    '</div>';
+
   ov.classList.remove('hidden');
-  ov.onclick=(e)=>{ if(e.target===ov) ov.classList.add('hidden'); };
-  const xb=document.getElementById('ipclose');
-  if(xb) xb.onclick=()=>ov.classList.add('hidden');
+
+  const scene=document.getElementById('gachaScene');
+  const orb=document.getElementById('gachaOrb');
+  const card=document.getElementById('gachaCard');
+  const tap=document.getElementById('gachaTap');
+  let done=false;
+
+  function reveal(){
+    if(done){ ov.classList.add('hidden'); return; }
+    done=true;
+    if(orb) orb.classList.add('gacha-burst');
+    setTimeout(()=>{
+      if(card){ card.classList.remove('hidden'); }
+      if(tap){ tap.classList.remove('hidden'); }
+    },280);
+  }
+
+  setTimeout(reveal,1600); // auto-reveal after 1.6s
+  scene.addEventListener('click',reveal);
 }
 
 // ---- initRecruitUI: wire buttons after renderShop ----

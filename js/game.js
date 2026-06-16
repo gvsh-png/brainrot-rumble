@@ -402,6 +402,12 @@ function worldCleared(boss){
   unlockedMax = Math.min(WORLDS.length-1, Math.max(unlockedMax, worldIdx+1));
   localStorage.setItem('br_unlocked', unlockedMax); if(window.markDirty) window.markDirty();
   selWorld = Math.min(WORLDS.length-1, worldIdx+1);
+  // One-time 5-gem reward per world cleared
+  const gwKey='br_gem_w'+worldIdx;
+  if(!localStorage.getItem(gwKey) && typeof addGems==='function'){
+    addGems(5); localStorage.setItem(gwKey,'1');
+    bigText('+5 ◆ GEMS','#b06ff0');
+  }
   state = ST.CUTSCENE;
   cut = { t:0, boss:boss, alpha:1, fade:0, name:curWorld().name };
   boss.cut = true; boss.deathScale = 1;
@@ -1626,7 +1632,6 @@ function update(dt){
         $('bossbar').classList.add('hidden');
         playMusic(curTheme.music); sfx.win();
         bigText('BOSS DOWN','#4aa3df');
-        if(typeof addGems==='function'){ const bg=3+Math.floor(wave/10); addGems(bg); floatText(P.x,P.y-P.r-30,'+'+bg+'◆','#b06ff0',18); }
         const bossNum=Math.max(1,Math.floor(wave/5));          // 1st boss=1, 2nd=2, ...
         const nLarge=8+(bossNum-1)*3, nCoin=2+(bossNum-1);     // coins now scarce; escalate slowly per boss
         for(let g=0; g<nLarge; g++) dropOrb(e.x, e.y, 3, 120, 300);
@@ -1652,7 +1657,6 @@ function update(dt){
   if(!betweenWaves && bossPending<=0 && waveEnemiesLeft===0 && enemies.length===0){
     betweenWaves=true; waveGapT=2.2;
     bigText('WAVE CLEARED','#5fbf52');
-    if(typeof addGems==='function'){ addGems(1); floatText(P.x,P.y-P.r-24,'+1◆','#b06ff0',14); }
     if(typeof fireHook==='function') fireHook('waveEnd');
   }
 
