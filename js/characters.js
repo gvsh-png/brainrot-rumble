@@ -712,7 +712,7 @@ function setActivePet(id) {
   if(id) localStorage.setItem('br_active_pet', id);
   else localStorage.removeItem('br_active_pet');
   if(window.markDirty) window.markDirty();
-  if(typeof refreshEquipTab==='function') refreshEquipTab();
+  if(typeof renderPetsTab==='function') renderPetsTab();
 }
 
 function compositeCharCanvasURL(size) {

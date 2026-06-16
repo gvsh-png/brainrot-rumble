@@ -104,7 +104,7 @@ function rehydrate(){
   if(typeof refreshMenuChar==='function')  refreshMenuChar();
   if(typeof renderShop==='function')       renderShop();
   if(typeof renderInventory==='function')  renderInventory();
-  if(typeof renderPetSection==='function') renderPetSection();
+  if(typeof renderPetsTab==='function')    renderPetsTab();
   if(typeof renderCharacterTab==='function') renderCharacterTab();
   if(typeof updateInvBadge==='function')   updateInvBadge();
   if(typeof refreshGemsUI==='function')    refreshGemsUI();

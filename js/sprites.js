@@ -924,6 +924,12 @@ makeSprite('ic_char', 64, (g,u)=>{
   sh(g,'#f0c890',3.4*u,(g)=>{ g.arc(0,-16*u,13*u,0,TAU); });            // head
   dot(g,-5*u,-18*u,2.8*u,OUT); dot(g,5*u,-18*u,2.8*u,OUT);              // eyes
 });
+makeSprite('ic_pet', 64, (g,u)=>{
+  sh(g,'#e88030',3*u,(g)=>{ g.ellipse(0,10*u,15*u,12*u,0,0,TAU); }); // main pad
+  for(const [tx,ty] of [[-13*u,-4*u],[13*u,-4*u],[-5*u,-16*u],[5*u,-16*u]]){
+    sh(g,'#e88030',2.6*u,(g)=>{ g.arc(tx,ty,6*u,0,TAU); }); // toe pads
+  }
+});
 function _spk(g,u){ sh(g,'#fbf3df',3*u,(g)=>{ g.moveTo(-20*u,-9*u); g.lineTo(-7*u,-9*u); g.lineTo(7*u,-22*u); g.lineTo(7*u,22*u); g.lineTo(-7*u,9*u); g.lineTo(-20*u,9*u); g.closePath(); }); }
 makeSprite('ic_snd', 64, (g,u)=>{
   g.translate(-7*u,0);   // content spans -20..33 -> shift left so it sits centred in the canvas

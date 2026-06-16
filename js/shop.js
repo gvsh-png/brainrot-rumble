@@ -358,7 +358,7 @@ function openCrateOdds(key){
   $('ipclose').onclick=closeItemPop;
 }
 
-function afterEquipChange(){ if(typeof sfx!=='undefined') sfx.pick(); refreshMenuChar(); renderInventory(); renderPetSection(); }
+function afterEquipChange(){ if(typeof sfx!=='undefined') sfx.pick(); refreshMenuChar(); renderInventory(); renderPetsTab(); }
 
 // ---- Character tab ----
 function renderCharacterTab() {
@@ -471,13 +471,96 @@ function renderPetSection() {
   });
 }
 
+// ---- Pets tab ----
+function renderPetsTab(){
+  const wrap=$('petsTabContent'); if(!wrap) return;
+  if(typeof PETS==='undefined'){ wrap.innerHTML=''; return; }
+  const curId=typeof activePetId!=='undefined'?activePetId:null;
+  const curPet=curId?PETS.find(p=>p.id===curId):null;
+  const ownedPets=PETS.filter(p=>isPetOwned(p.id));
+  let html='';
+
+  // ---- active pet hero ----
+  html+='<div class="banner"><span>ACTIVE PET</span></div>';
+  if(curPet){
+    html+='<div class="pethero r-'+curPet.rarity+'">';
+    html+='<div class="pethero-port"><canvas id="petHeroCnv" width="110" height="110"></canvas></div>';
+    html+='<div class="pethero-info">';
+    html+='<div class="pethero-name">'+curPet.name+'</div>';
+    html+='<div class="pethero-tags">'+rtagHTML(curPet.rarity)+'</div>';
+    html+='<div class="pethero-desc">'+curPet.desc+'</div>';
+    html+='<button class="ipbtn un pethero-unequip" id="petUnequipBtn">UNEQUIP</button>';
+    html+='</div></div>';
+  } else {
+    html+='<div class="petno-active"><div class="petno-icon">🐾</div><div>No pet active.</div><div class="petno-hint">Select one from your collection below.</div></div>';
+  }
+
+  // ---- owned pets grid ----
+  html+='<div class="banner" style="margin-top:4px"><span>MY PETS</span></div>';
+  if(ownedPets.length){
+    html+='<div class="petgrid petgrid-tab">';
+    for(const pet of PETS){
+      if(!isPetOwned(pet.id)) continue;
+      const eq=curId===pet.id;
+      html+='<div class="pettile r-'+pet.rarity+(eq?' equipped':'')+'" data-petpop="'+pet.id+'">';
+      if(eq) html+='<span class="petteq">✓</span>';
+      html+='<canvas width="52" height="52" class="pettile-cnv"></canvas>';
+      html+='<div class="pettile-name">'+pet.name+'</div>';
+      html+='</div>';
+    }
+    html+='</div>';
+  } else {
+    html+='<div class="invhint">No pets yet — recruit them in the Shop!</div>';
+  }
+
+  wrap.innerHTML=html;
+
+  // draw hero canvas
+  if(curPet&&curPet.draw){
+    const hc=document.getElementById('petHeroCnv');
+    if(hc){ const g=hc.getContext('2d'); g.save(); g.translate(55,55); curPet.draw(g,110,0); g.restore(); }
+  }
+  // draw grid canvases + wire click → popup
+  wrap.querySelectorAll('.pettile[data-petpop]').forEach(tile=>{
+    const pet=PETS.find(p=>p.id===tile.dataset.petpop);
+    const cnv=tile.querySelector('.pettile-cnv');
+    if(cnv&&pet&&pet.draw){ const g=cnv.getContext('2d'); g.save(); g.translate(26,26); pet.draw(g,52,0); g.restore(); }
+    tile.addEventListener('click',()=>{ if(typeof sfx!=='undefined') sfx.pick(); openPetPop(pet.id); });
+  });
+  // unequip button
+  const ub=$('petUnequipBtn');
+  if(ub) ub.addEventListener('click',()=>{ setActivePet(null); if(typeof sfx!=='undefined') sfx.pick(); });
+}
+
+function openPetPop(petId){
+  const ov=$('itempop'); if(!ov) return;
+  const pet=PETS.find(p=>p.id===petId); if(!pet) return;
+  const eq=(typeof activePetId!=='undefined')&&activePetId===petId;
+  ov.innerHTML=
+    '<div class="ipcard r-'+pet.rarity+'">'+
+    '<button class="ipx" id="ppopx">✕</button>'+
+    '<div class="ipicon r-'+pet.rarity+'" id="ppopport"><canvas width="90" height="90" style="width:78%;height:78%"></canvas></div>'+
+    '<div class="ipname">'+pet.name+'</div>'+
+    '<div class="iptags">'+rtagHTML(pet.rarity)+'</div>'+
+    '<div class="ipstat" style="font-size:clamp(12px,2.2vmin,17px);color:#b8c8e0;font-weight:700;text-align:center;line-height:1.4">'+pet.desc+'</div>'+
+    '<button class="ipbtn'+(eq?' un':'')+'" id="ppopequip">'+(eq?'UNEQUIP':'EQUIP')+'</button>'+
+    '</div>';
+  ov.classList.remove('hidden');
+  ov.onclick=(e)=>{ if(e.target===ov) closeItemPop(); };
+  $('ppopx').onclick=closeItemPop;
+  const cnv=ov.querySelector('#ppopport canvas');
+  if(cnv&&pet.draw){ const g=cnv.getContext('2d'); g.save(); g.translate(45,45); pet.draw(g,90,0); g.restore(); }
+  $('ppopequip').onclick=()=>{ setActivePet(eq?null:petId); if(typeof sfx!=='undefined') sfx.evolve(); closeItemPop(); };
+}
+
 // ---- tab switching ----
 function showTab(name){
-  for(const t of ['battle','shop','inventory','character']){ const p=$('tab-'+t); if(p) p.classList.toggle('hidden', t!==name); }
+  for(const t of ['battle','shop','inventory','character','pets']){ const p=$('tab-'+t); if(p) p.classList.toggle('hidden', t!==name); }
   document.querySelectorAll('#tabbar .tabbtn').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
   const menu=$('menu'); if(menu) menu.setAttribute('data-tab', name);   // per-tab background tint
   if(name==='shop') renderShop();
-  if(name==='inventory'){ gearSeen=new Set(gearOwned); saveSeen(); updateInvBadge(); renderInventory(); renderPetSection(); }   // mark all seen -> clear badge
+  if(name==='pets') renderPetsTab();
+  if(name==='inventory'){ gearSeen=new Set(gearOwned); saveSeen(); updateInvBadge(); renderInventory(); }   // mark all seen -> clear badge
   if(name==='character') renderCharacterTab();
 }
 document.querySelectorAll('#tabbar .tabbtn').forEach(b=>b.addEventListener('click',()=>{ showTab(b.dataset.tab); if(typeof sfx!=='undefined') sfx.pick(); }));
@@ -487,10 +570,9 @@ const _crclaim=$('crclaim'); if(_crclaim) _crclaim.addEventListener('click', clo
 refreshMenuChar();
 renderShop();
 renderInventory();
-renderPetSection();
 saveSeen(); updateInvBadge();   // persist the first-run seed + show any pending "new items" badge
 const _initTab = (location.hash||'').slice(1);
-showTab(['battle','shop','inventory','character'].indexOf(_initTab)>=0 ? _initTab : 'battle');
+showTab(['battle','shop','inventory','character','pets'].indexOf(_initTab)>=0 ? _initTab : 'battle');
 
 // ---- asset prewarm + loading screen ----
 // All sprites are procedural canvases built at script-load. Warm the GPU upload of every sprite
