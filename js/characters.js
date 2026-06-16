@@ -445,7 +445,7 @@ const CHARACTERS = [
     name: 'Il Cecchino',
     desc: '3x damage, 5x fire rate cooldown, 60 HP, 1.5x gear damage. Cannot get splitting shots.',
     rarity: 'world',
-    worldUnlock: 4,
+    worldUnlock: 3,
     baseStats: { dmg:30, fireRate:1.6, maxHp:60, range:480, gearDmgMul:1.5 },
     register() {
       P.bannedCards = (P.bannedCards||[]).concat(['shots']);
