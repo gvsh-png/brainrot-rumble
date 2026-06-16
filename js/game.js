@@ -3087,6 +3087,8 @@ function drawDebris(g,gx0,gy0,gx1,gy1){
 // Pre-render the whole-world ground (tiles + tufts + debris) to one offscreen canvas, ONCE per theme.
 // Per frame the renderer just blits this instead of re-looping every tile — a big win in DIRT DEPTHS.
 let groundCanvas=null, groundFor=null;
+let infiniteGroundCanvas=null, infiniteGroundFor=null;
+const INFINITE_GROUND_SPAN = TILE * 12;   // 960px: repeats checker + tuft offset cleanly
 function buildGround(){
   if(!groundCanvas){ groundCanvas=document.createElement('canvas'); }
   groundCanvas.width=WORLD.w; groundCanvas.height=WORLD.h;
@@ -3108,6 +3110,36 @@ function buildGround(){
   if(curTheme.debris) drawDebris(g, 0,0, WORLD.w, WORLD.h);
   groundFor=curTheme;
 }
+function buildInfiniteGround(){
+  if(!infiniteGroundCanvas){ infiniteGroundCanvas=document.createElement('canvas'); }
+  const span = INFINITE_GROUND_SPAN;
+  infiniteGroundCanvas.width=span; infiniteGroundCanvas.height=span;
+  const g=infiniteGroundCanvas.getContext('2d');
+  for(let gy=0; gy<span; gy+=TILE){
+    for(let gx=0; gx<span; gx+=TILE){
+      g.fillStyle=((((gx/TILE)|0)+((gy/TILE)|0))&1)?curTheme.tile1:curTheme.tile2;
+      g.fillRect(gx,gy,TILE,TILE);
+    }
+  }
+  g.fillStyle=curTheme.tuft;
+  for(let gy=0; gy<span; gy+=TILE){
+    for(let gx=0; gx<span; gx+=TILE){
+      const h=((gx*31+gy*17)%97)/97;
+      if(h<0.3){ g.fillRect((gx+((gx>>>3)%60))+10,(gy+((gy>>>2)%60))+12,3,7); }
+    }
+  }
+  infiniteGroundFor=curTheme;
+}
+function renderInfiniteGround(vx0,vy0,vx1,vy1){
+  if(!infiniteGroundCanvas || infiniteGroundFor!==curTheme) buildInfiniteGround();
+  const span = INFINITE_GROUND_SPAN;
+  const gx0=Math.floor(vx0/span)*span, gy0=Math.floor(vy0/span)*span;
+  for(let gy=gy0; gy<=vy1; gy+=span){
+    for(let gx=gx0; gx<=vx1; gx+=span){
+      cx.drawImage(infiniteGroundCanvas, gx, gy);
+    }
+  }
+}
 
 function render(){
   cx.save();
@@ -3123,21 +3155,7 @@ function render(){
   cx.fillStyle=curTheme.void;
   cx.fillRect(vx0-40, vy0-40, vw+80, vh+80);
   if(gameMode==='challenger'){
-    // Infinite tiling ground — draw only visible tiles per-frame (no canvas limit)
-    const gx0=Math.floor(vx0/TILE)*TILE, gy0=Math.floor(vy0/TILE)*TILE;
-    for(let gy=gy0; gy<=vy1+TILE; gy+=TILE){
-      for(let gx=gx0; gx<=vx1+TILE; gx+=TILE){
-        cx.fillStyle=((((gx/TILE)|0)+((gy/TILE)|0))&1)?curTheme.tile1:curTheme.tile2;
-        cx.fillRect(gx,gy,TILE,TILE);
-      }
-    }
-    cx.fillStyle=curTheme.tuft;
-    for(let gy=gy0; gy<=vy1+TILE; gy+=TILE){
-      for(let gx=gx0; gx<=vx1+TILE; gx+=TILE){
-        const h=((gx*31+gy*17)%97)/97;
-        if(h<0.3){ cx.fillRect((gx+((gx>>>3)%60))+10,(gy+((gy>>>2)%60))+12,3,7); }
-      }
-    }
+    renderInfiniteGround(vx0-40, vy0-40, vx1+40, vy1+40);
   } else {
     if(!groundCanvas || groundFor!==curTheme) buildGround();
     const sx0=clamp(vx0-2,0,WORLD.w), sy0=clamp(vy0-2,0,WORLD.h);
