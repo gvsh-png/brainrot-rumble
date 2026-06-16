@@ -446,16 +446,16 @@ const PETS = [
   {
     id: 'scudetto',
     name: 'Scudetto',
-    desc: 'Every 5s: fires a shockwave ring that damages all nearby enemies (80% dmg).',
+    desc: 'Every 8s: fires a shockwave ring that pushes back nearby enemies (30% dmg).',
     rarity: 'rare',
     register() {
-      let cd=5;
+      let cd=8;
       onHook('petTick', (dt) => {
         if(typeof P==='undefined') return;
         cd-=dt;
         if(cd<=0){
-          cd=5;
-          if(typeof novaBlast==='function') novaBlast(P.x,P.y,220,P.dmg*0.8);
+          cd=8;
+          if(typeof novaBlast==='function') novaBlast(P.x,P.y,150,P.dmg*0.3);
           if(typeof floatText==='function') floatText(P.x,P.y-44,'SHIELD PULSE','#6be8ff',14);
         }
       });
@@ -541,12 +541,12 @@ const PETS = [
   {
     id: 'anima_gemella',
     name: 'Anima Gemella',
-    desc: 'After each dash: shockwave blasts all enemies within 500px for 100% dmg.',
+    desc: 'After each dash: shockwave hits nearby enemies (280px, 50% dmg).',
     rarity: 'legendary',
     register() {
       onHook('onDash', () => {
         if(typeof P==='undefined') return;
-        if(typeof novaBlast==='function') novaBlast(P.x,P.y,500,P.dmg*1.0);
+        if(typeof novaBlast==='function') novaBlast(P.x,P.y,280,P.dmg*0.5);
         if(typeof floatText==='function') floatText(P.x,P.y-50,'SOUL DASH!','#ff97ff',18);
       });
     },
