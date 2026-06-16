@@ -3,7 +3,7 @@
 let shake = 0, hitFlash = 0, hitstop = 0, tPrev = 0, elapsed = 0;
 
 const P = {}; // player
-let bullets=[], ebullets=[], enemies=[], gems=[], parts=[], texts=[], zones=[], holes=[], luckies=[];
+let bullets=[], ebullets=[], petBullets=[], enemies=[], gems=[], parts=[], texts=[], zones=[], holes=[], luckies=[];
 let timeScale=1.0;
 let _vis=[];   // reused per-frame scratch list of visible enemies (depth sort) — avoids GC churn
 let wave=1, kills=0, spawnTimer=0, waveEnemiesLeft=0, betweenWaves=false, boss=null;
@@ -435,7 +435,7 @@ function worldCleared(boss){
   cut = { t:0, boss:boss, alpha:1, fade:0, name:curWorld().name };
   boss.cut = true; boss.deathScale = 1;
   enemies.length=0; enemies.push(boss);   // keep only the dying boss on screen
-  ebullets=[]; bullets=[]; zones=[];
+  ebullets=[]; bullets=[]; petBullets=[]; zones=[];
   hitstop=0.25; shake=Math.max(shake,16);
   stopMusic(); sfx.win();
   bigText('WORLD CLEARED', '#ffd24a');
@@ -796,7 +796,7 @@ function _doStartGame(wi){
   if(typeof registerActiveChar==='function') registerActiveChar();
   if(typeof registerActivePet==='function') registerActivePet();
   timeScale=1.0;
-  bullets=[]; ebullets=[]; enemies=[]; gems=[]; parts=[]; texts=[]; zones=[]; holes=[]; luckies=[];
+  bullets=[]; ebullets=[]; petBullets=[]; enemies=[]; gems=[]; parts=[]; texts=[]; zones=[]; holes=[]; luckies=[];
   wave=1; kills=0; elapsed=0; boss=null; waveGapT=0; arena=null; bossPending=0;
   luckyTimer=rand(18,30);
   worldCoins=0;
@@ -1513,6 +1513,23 @@ function update(dt){
         }
       }
     }
+  }
+
+  // --- pet bullets (visual projectiles, deal damage on arrival) ---
+  for(let i=petBullets.length-1;i>=0;i--){
+    const pb=petBullets[i];
+    const dx=pb.tx-pb.x, dy=pb.ty-pb.y, dist=Math.hypot(dx,dy);
+    if(dist<12){
+      if(pb.target && pb.target.hp>0 && pb.target.iv<=0){
+        pb.target.hp-=pb.dmg; pb.target.hitT=Math.max(pb.target.hitT||0,0.1);
+        if(typeof floatText==='function') floatText(pb.target.x,pb.target.y-(pb.target.r||16)-4,Math.round(pb.dmg),'#6be8ff',13);
+        burst(pb.x,pb.y,'#6be8ff',5,60);
+      }
+      petBullets.splice(i,1); continue;
+    }
+    const spd=620, scale=spd*dt/dist;
+    pb.x+=dx*scale; pb.y+=dy*scale;
+    pb.tx=pb.target.x; pb.ty=pb.target.y;   // track moving target
   }
 
   // --- spawn during wave ---
@@ -2921,6 +2938,13 @@ function render(){
     cx.fillStyle=bhi; cx.beginPath(); cx.arc(b.x-b.r*0.3,b.y-b.r*0.3,b.r*0.4,0,TAU); cx.fill();
   }
 
+  // --- pet bullets: small cyan dot ---
+  for(const pb of petBullets){
+    if(pb.x<vx0-20||pb.x>vx1+20||pb.y<vy0-20||pb.y>vy1+20) continue;
+    cx.fillStyle='#fff'; cx.beginPath(); cx.arc(pb.x,pb.y,6,0,TAU); cx.fill();
+    cx.fillStyle='#6be8ff'; cx.beginPath(); cx.arc(pb.x,pb.y,4,0,TAU); cx.fill();
+  }
+
   // --- orbs ---
   if(P.orbs>0 && state!==ST.MENU){
     for(let i=0;i<P.orbs;i++){
@@ -3303,7 +3327,7 @@ function resumeGame(){ if(state!==ST.PAUSE) return; state=ST.PLAY; $('pause').cl
 function togglePause(){ if(state===ST.PLAY) pauseGame(); else if(state===ST.PAUSE) resumeGame(); }
 function quitToMenu(){
   state=ST.MENU; arena=null; bossPending=0; boss=null;
-  bullets=[]; ebullets=[]; enemies=[]; gems=[]; parts=[]; texts=[]; zones=[]; holes=[]; luckies=[];
+  bullets=[]; ebullets=[]; petBullets=[]; enemies=[]; gems=[]; parts=[]; texts=[]; zones=[]; holes=[]; luckies=[];
   resetPlayer(); computeCamera();
   $('pause').classList.add('hidden');
   $('hud').classList.add('hidden');

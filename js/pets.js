@@ -451,10 +451,8 @@ const PETS = [
     register() {
       onHook('playerShoot', (target) => {
         if(typeof P==='undefined'||!target||target.hp<=0) return;
-        const dmg = P.dmg * 0.25;
-        target.hp -= dmg;
-        target.hitT = Math.max(target.hitT||0, 0.1);
-        if(typeof floatText==='function') floatText(target.x, target.y-target.r-4, Math.round(dmg), '#6be8ff', 13);
+        if(typeof petBullets!=='undefined')
+          petBullets.push({x:P.x, y:P.y, tx:target.x, ty:target.y, target, dmg:P.dmg*0.25});
       });
     },
     draw(ctx, size, t) { _drawScudetto(ctx, size, t); }
