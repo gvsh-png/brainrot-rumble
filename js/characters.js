@@ -443,7 +443,7 @@ const CHARACTERS = [
   {
     id: 'il_cecchino',
     name: 'Il Cecchino',
-    desc: '3x damage, 5x fire rate cooldown, 60 HP, 1.5x gear damage. Cannot get splitting shots.',
+    desc: 'Sniper, low firerate, high damage.',
     rarity: 'world',
     worldUnlock: 3,
     baseStats: { dmg:30, fireRate:1.6, maxHp:60, range:480, gearDmgMul:1.5 },
