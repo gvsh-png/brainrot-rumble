@@ -63,30 +63,118 @@ const CRATES = {
   gold:   { name:'Gold Crate',   price:1200, glow:'#e0a92e', odds:{common:0, uncommon:5, rare:25,epic:38,legendary:23,mythic:9} },
 };
 const CRATE_ORDER = ['wood','silver','gold'];
+const GEAR_UID_KEY = 'br_gear_uid_seq';
+const SELL_RATE = 0.4;
+const FUSE_BASE = 30;
+const FUSE_STEP = 10;
+const FUSE_CAP = 100;
 
 // ---- persistent state (one-time wipe when the item-id scheme changed to stat-based) ----
 if(!localStorage.getItem('br_gear_reset_v2')){
   localStorage.removeItem('br_items_owned'); localStorage.removeItem('br_gear_equipped');
   localStorage.setItem('br_gear_reset_v2','1');
 }
-let gearOwned = new Set(JSON.parse(localStorage.getItem('br_items_owned')||'[]'));
-let gearEquip = Object.assign({helmet:null,chest:null,pants:null,shoes:null},
-                              JSON.parse(localStorage.getItem('br_gear_equipped')||'{}'));
+function makeGearUid(){ return 'g'+Date.now().toString(36)+(Math.random()*1e8>>>0).toString(36); }
+function isGearInstance(v){ return !!v && typeof v==='object' && typeof v.itemId==='string'; }
+function normalizeOwned(raw){
+  let next = 1;
+  try{ next = Math.max(1, +(localStorage.getItem(GEAR_UID_KEY)||1)); }catch(_){}
+  let dirty = false;
+  const list = Array.isArray(raw) ? raw.map(entry=>{
+    if(typeof entry==='string'){
+      dirty = true;
+      return { uid:'g'+(next++).toString(36), itemId:entry };
+    }
+    if(isGearInstance(entry)){
+      if(!entry.uid){ dirty = true; return { uid:'g'+(next++).toString(36), itemId:entry.itemId }; }
+      return { uid:String(entry.uid), itemId:entry.itemId };
+    }
+    dirty = true;
+    return null;
+  }).filter(Boolean) : [];
+  localStorage.setItem(GEAR_UID_KEY, String(next));
+  return { list, dirty };
+}
+function normalizeSeen(raw, owned){
+  const ownedIds = new Set(owned.map(x=>x.uid));
+  const seen = Array.isArray(raw) ? raw.map(String).filter(id=>ownedIds.has(id)) : [];
+  return { list:[...new Set(seen)], dirty:seen.length !== new Set(seen).size || seen.length !== (Array.isArray(raw)?raw.length:0) };
+}
+function normalizeEquip(raw, owned){
+  const byUid = new Map(owned.map(x=>[x.uid, x]));
+  const byItem = new Map();
+  for(const inst of owned) if(!byItem.has(inst.itemId)) byItem.set(inst.itemId, inst.uid);
+  const out = { helmet:null, chest:null, pants:null, shoes:null };
+  let dirty = false;
+  for(const cat of GEAR_CATS){
+    const value = raw && raw[cat]!=null ? raw[cat] : null;
+    if(value==null) continue;
+    if(byUid.has(value)){ out[cat]=String(value); continue; }
+    if(typeof value==='string' && byItem.has(value)){ out[cat]=byItem.get(value); dirty = true; continue; }
+    dirty = true;
+  }
+  return { map:out, dirty };
+}
+let _gearUidSeq = Math.max(1, +(localStorage.getItem(GEAR_UID_KEY)||1));
+function nextGearUid(){ const uid='g'+(_gearUidSeq++).toString(36); localStorage.setItem(GEAR_UID_KEY, String(_gearUidSeq)); return uid; }
+const _ownedRaw = JSON.parse(localStorage.getItem('br_items_owned')||'[]');
+const _ownedNorm = normalizeOwned(_ownedRaw);
+let gearOwned = _ownedNorm.list;
+const _equipRaw = JSON.parse(localStorage.getItem('br_gear_equipped')||'{}');
+const _equipNorm = normalizeEquip(_equipRaw, gearOwned);
+let gearEquip = _equipNorm.map;
 // items already viewed in the Inventory tab — anything owned-but-unseen drives the red tab badge.
 // First run (no key): seed with current owned so existing gear doesn't badge.
-let gearSeen = localStorage.getItem('br_gear_seen')!=null
-  ? new Set(JSON.parse(localStorage.getItem('br_gear_seen'))) : new Set(gearOwned);
-function saveOwned(){ localStorage.setItem('br_items_owned', JSON.stringify([...gearOwned])); if(window.markDirty) window.markDirty(); }
+const _seenRaw = localStorage.getItem('br_gear_seen')!=null
+  ? JSON.parse(localStorage.getItem('br_gear_seen')) : gearOwned.map(x=>x.uid);
+const _seenNorm = normalizeSeen(_seenRaw, gearOwned);
+let gearSeen = new Set(_seenNorm.list);
+if(_ownedNorm.dirty) localStorage.setItem('br_items_owned', JSON.stringify(gearOwned));
+if(_equipNorm.dirty) localStorage.setItem('br_gear_equipped', JSON.stringify(gearEquip));
+if(_seenNorm.dirty) localStorage.setItem('br_gear_seen', JSON.stringify([...gearSeen]));
+function saveOwned(){ localStorage.setItem('br_items_owned', JSON.stringify(gearOwned)); if(window.markDirty) window.markDirty(); }
 function saveEquip(){ localStorage.setItem('br_gear_equipped', JSON.stringify(gearEquip)); if(window.markDirty) window.markDirty(); }
 function saveSeen(){  localStorage.setItem('br_gear_seen',   JSON.stringify([...gearSeen])); if(window.markDirty) window.markDirty(); }
-function unseenCount(){ let n=0; for(const id of gearOwned) if(!gearSeen.has(id)) n++; return n; }
+function gearInstanceItem(uid){ const inst=gearOwned.find(x=>x.uid===uid); return inst?inst.itemId:null; }
+function ownedGearList(){ return gearOwned.slice(); }
+function hasItemId(itemId){ return gearOwned.some(x=>x.itemId===itemId); }
+function addGearInstance(itemId){
+  const inst = { uid:nextGearUid(), itemId };
+  gearOwned.push(inst);
+  saveOwned();
+  updateInvBadge();
+  return inst;
+}
+function removeGearInstance(uid){
+  const idx = gearOwned.findIndex(x=>x.uid===uid);
+  if(idx<0) return null;
+  const [removed] = gearOwned.splice(idx,1);
+  for(const cat of GEAR_CATS) if(gearEquip[cat]===uid) gearEquip[cat]=null;
+  gearSeen.delete(uid);
+  saveOwned(); saveEquip(); saveSeen();
+  updateInvBadge();
+  return removed;
+}
+function sellValue(itemId){ return Math.round(itemPrice(itemId)*SELL_RATE); }
+function sellGearInstance(uid){
+  const itemId = gearInstanceItem(uid);
+  if(!itemId) return false;
+  removeGearInstance(uid);
+  gold += sellValue(itemId);
+  saveGold();
+  if(window.markDirty) window.markDirty();
+  refreshGoldUI();
+  afterEquipChange();
+  return true;
+}
+function unseenCount(){ let n=0; for(const inst of gearOwned) if(!gearSeen.has(inst.uid)) n++; return n; }
 function updateInvBadge(){ const b=$('invbadge'); if(!b) return; const n=unseenCount();
   b.textContent = n>99?'99+':n; b.classList.toggle('hidden', n<=0); }
 
 // ---- equipped bonuses (summed across the 4 slots) ----
 // percent stats (speed/range) return a starting-stat multiplier; flat stats (dmg) return a raw sum.
 function equippedStatBonus(stat){
-  let b=0; for(const c of GEAR_CATS){ const id=gearEquip[c]; if(id && itemStat(id)===stat) b+=itemBonus(id); }
+  let b=0; for(const c of GEAR_CATS){ const uid=gearEquip[c], id=uid&&gearInstanceItem(uid); if(id && itemStat(id)===stat) b+=itemBonus(id); }
   return b;
 }
 function equippedStatMult(stat){ return 1 + equippedStatBonus(stat); }   // for percent stats / UI
@@ -119,7 +207,7 @@ function gearIconURL(id){
 
 // ---- draw equipped gear over the in-game player (called from game.js draw loop) ----
 function drawPlayerGear(x,y,size,rot,flip){
-  for(const c of GEAR_CATS){ const id=gearEquip[c]; if(id) drawSprite('gear_'+c, x,y,size,rot,0,0,flip, RAR[itemRar(id)].color); }
+  for(const c of GEAR_CATS){ const uid=gearEquip[c], id=uid&&gearInstanceItem(uid); if(id) drawSprite('gear_'+c, x,y,size,rot,0,0,flip, RAR[itemRar(id)].color); }
 }
 // ---- composite the player sprite + equipped gear into a data-URL (menu + equipment screens) ----
 function compositeCharURL(){
@@ -129,7 +217,7 @@ function compositeCharURL(){
   const c = document.createElement('canvas'); c.width=nom; c.height=nom;
   const g = c.getContext('2d');
   g.drawImage(base, (nom-base.width)/2, (nom-base.height)/2);
-  for(const cat of GEAR_CATS){ const id=gearEquip[cat]; if(!id) continue;
+  for(const cat of GEAR_CATS){ const uid=gearEquip[cat], id=uid&&gearInstanceItem(uid); if(!id) continue;
     const spr = (typeof tintedSprite==='function' && tintedSprite('gear_'+cat, RAR[itemRar(id)].color)) || SP['gear_'+cat];
     if(spr) g.drawImage(spr, (nom-spr.width)/2, (nom-spr.height)/2);
   }
@@ -150,11 +238,10 @@ function rtagHTML(rar){ return '<span class="rtag r-'+rar+'">'+RAR[rar].name+'</
 function statTag(stat){ return '<span class="stag s-'+stat+'">'+STAT[stat].short+'</span>'; }
 
 // ============ PURCHASING ============
-function ownItem(id){ gearOwned.add(id); saveOwned(); updateInvBadge(); }   // badge the Inventory tab
 function buyItem(id, price){
-  if(gearOwned.has(id) || gold<price) return false;
+  if(hasItemId(id) || gold<price) return false;
   gold-=price; saveGold();
-  ownItem(id);
+  addGearInstance(id);
   if(typeof sfx!=='undefined') sfx.coin();
   refreshGoldUI(); renderShop(); renderInventory();
   return true;
@@ -163,7 +250,7 @@ function buyItem(id, price){
 // ============ SHOP RENDER ============
 // vertical ribboned card used in the Daily Shop grid
 function shopCardHTML(id, price){
-  const rar=itemRar(id), owned=gearOwned.has(id);
+  const rar=itemRar(id), owned=hasItemId(id);
   const off = Math.round((1 - price/itemPrice(id))*100);
   const ribbon = off>0 ? '<div class="sribbon'+(off>=40?' big':'')+'">-'+off+'%</div>' : '';
   const action = owned ? '<div class="scheck">✓</div>'
@@ -216,11 +303,12 @@ function openCrate(key){
   gold-=cr.price; saveGold(); refreshGoldUI();
   if(typeof sfx!=='undefined') sfx.pick();
   const won = rollCrateItem(key);
-  const dup = gearOwned.has(won);
-  if(dup){ const refund=Math.round(itemPrice(won)*0.4); gold+=refund; saveGold(); if(window.markDirty) window.markDirty(); }
-  else ownItem(won);
+  const dup = hasItemId(won);
 
   const ov=$('crate'); if(!ov){ // headless / no overlay: just resolve instantly
+    if(dup) gold+=sellValue(won);
+    else addGearInstance(won);
+    saveGold();
     refreshGoldUI(); renderShop(); renderInventory(); return won;
   }
   // build a CS:GO-style reel that decelerates onto the won item
@@ -239,13 +327,24 @@ function openCrate(key){
     strip.style.transform='translateX('+target+'px)';
   });});
   setTimeout(()=>{
-    if(typeof sfx!=='undefined'){ dup?sfx.pick():sfx.evolve(); }
+    if(typeof sfx!=='undefined'){ sfx.evolve(); }
     const res=$('crresult');
     res.className='crresult r-'+itemRar(won);
     res.innerHTML='<img src="'+gearIconURL(won)+'"><div><div class="crwname">'+itemName(won)+'</div>'+
       rtagHTML(itemRar(won))+statTag(itemStat(won))+'<div class="gbonus">'+itemBonusTxt(won)+'</div>'+
-      (dup?'<div class="crdup">duplicate · +'+Math.round(itemPrice(won)*0.4)+' refunded</div>':'<div class="crnew">NEW!</div>')+'</div>';
-    res.classList.remove('hidden'); $('crclaim').classList.remove('hidden');
+      (dup
+        ? '<div class="crdup">duplicate found</div><div class="cractrow"><button class="cract keep" id="crkeep">KEEP</button><button class="cract sell" id="crsell">SELL +'+sellValue(won)+'</button></div>'
+        : '<div class="crnew">NEW!</div>')+'</div>';
+    res.classList.remove('hidden');
+    const claim=$('crclaim');
+    if(dup){
+      claim.classList.add('hidden');
+      $('crkeep').onclick=()=>{ addGearInstance(won); if(typeof sfx!=='undefined') sfx.pick(); closeCrate(); };
+      $('crsell').onclick=()=>{ gold+=sellValue(won); saveGold(); if(window.markDirty) window.markDirty(); refreshGoldUI(); if(typeof sfx!=='undefined') sfx.coin(); closeCrate(); };
+    } else {
+      addGearInstance(won);
+      claim.classList.remove('hidden');
+    }
   }, 3800);
   return won;
 }
@@ -254,25 +353,33 @@ function closeCrate(){ const ov=$('crate'); if(ov) ov.classList.add('hidden'); r
 // ============ EQUIPMENT ============
 let invSort='rarity';
 const SORT_LABEL = { rarity:'Rarity', stat:'Stat', slot:'Slot' };
+let fuseSelectMode=false;
+let fuseSelected = new Set();
 const rarRank = id => RAR_ORDER.indexOf(itemRar(id));     // higher = rarer
+function fuseChance(count){ return Math.min(FUSE_CAP, FUSE_BASE + FUSE_STEP*Math.max(0, count-2)); }
+function nextRarity(rar){ const i=RAR_ORDER.indexOf(rar); return (i>=0 && i<RAR_ORDER.length-1) ? RAR_ORDER[i+1] : null; }
 function sortedOwned(){
-  const list = GEAR_CATALOG.filter(id=>gearOwned.has(id));
-  if(invSort==='stat') return list.sort((a,b)=> STAT_ORDER.indexOf(itemStat(a))-STAT_ORDER.indexOf(itemStat(b)) || rarRank(b)-rarRank(a));
-  if(invSort==='slot') return list.sort((a,b)=> GEAR_CATS.indexOf(itemCat(a))-GEAR_CATS.indexOf(itemCat(b)) || rarRank(b)-rarRank(a));
-  return list.sort((a,b)=> rarRank(b)-rarRank(a) || itemBonus(b)-itemBonus(a));   // by rarity (default)
+  const list = ownedGearList();
+  const sortCmp = (a,b)=>{
+    const ida=a.itemId, idb=b.itemId;
+    if(invSort==='stat') return STAT_ORDER.indexOf(itemStat(ida))-STAT_ORDER.indexOf(itemStat(idb)) || rarRank(idb)-rarRank(ida) || itemBonus(idb)-itemBonus(ida);
+    if(invSort==='slot') return GEAR_CATS.indexOf(itemCat(ida))-GEAR_CATS.indexOf(itemCat(idb)) || rarRank(idb)-rarRank(ida) || itemBonus(idb)-itemBonus(ida);
+    return rarRank(idb)-rarRank(ida) || itemBonus(idb)-itemBonus(ida);
+  };
+  return list.sort(sortCmp);
 }
-function equipToggle(id){ const cat=itemCat(id); gearEquip[cat]=(gearEquip[cat]===id?null:id); saveEquip(); afterEquipChange(); }
+function equipToggle(uid){ const id=gearInstanceItem(uid); if(!id) return; const cat=itemCat(id); gearEquip[cat]=(gearEquip[cat]===uid?null:uid); saveEquip(); afterEquipChange(); }
 function autoEquipBest(){   // fill every slot with its rarest owned piece — one-tap loadout
   for(const cat of GEAR_CATS){
-    const best = GEAR_CATALOG.filter(id=>gearOwned.has(id) && itemCat(id)===cat)
-      .sort((a,b)=> rarRank(b)-rarRank(a) || itemBonus(b)-itemBonus(a))[0];
-    if(best) gearEquip[cat]=best;
+    const best = gearOwned.filter(inst=>itemCat(inst.itemId)===cat)
+      .sort((a,b)=> rarRank(b.itemId)-rarRank(a.itemId) || itemBonus(b.itemId)-itemBonus(a.itemId))[0];
+    if(best) gearEquip[cat]=best.uid;
   }
   saveEquip(); if(typeof sfx!=='undefined') sfx.evolve(); afterEquipChange();
 }
 
 function eqSlotHTML(cat){
-  const id=gearEquip[cat];
+  const uid=gearEquip[cat], id=uid&&gearInstanceItem(uid);
   if(id) return '<div class="eqslot r-'+itemRar(id)+'" data-cat="'+cat+'"><span class="eqlv">'+STAT[itemStat(id)].short+'</span>'+
     '<img src="'+gearIconURL(id)+'"><span class="eqpct">'+itemBonusShort(id)+'</span></div>';
   return '<div class="eqslot" data-cat="'+cat+'"><span class="eqlv">'+CAT_LABEL[cat]+'</span><span class="eqempty">+</span></div>';
@@ -291,34 +398,43 @@ function renderInventory(){
       '</div></div>'+
     '<div class="eqside right">'+eqSlotHTML('pants')+eqSlotHTML('shoes')+'</div>';
   stage.querySelectorAll('.eqslot[data-cat]').forEach(el=>el.addEventListener('click',()=>{
-    const id=gearEquip[el.dataset.cat]; if(id) openItemPop(id); }));
+    const uid=gearEquip[el.dataset.cat]; if(uid) openItemPop(uid); }));
 
   // controls: sort chips + one-tap auto-equip
   const ctl=$('eqcontrols');
   if(ctl){
     ctl.innerHTML = '<span class="sortlbl">Sort</span>'+
       ['rarity','stat','slot'].map(s=>'<button class="chip2'+(invSort===s?' on':'')+'" data-sort="'+s+'">'+SORT_LABEL[s]+'</button>').join('')+
-      '<button class="chip2 auto" id="autoeq"><img class="cic" src="'+icURL('ic_bolt')+'">Auto-Equip</button>';
+      '<button class="chip2 fuseaction'+(fuseSelectMode?' on':'')+'" id="fusemode"><img class="cic" src="'+icURL('ic_crate')+'">Fuse</button>'+
+      '<button class="chip2 auto" id="autoeq"><img class="cic" src="'+icURL('ic_bolt')+'">Auto-Equip</button>'+
+      renderFuseStatus();
     ctl.querySelectorAll('[data-sort]').forEach(b=>b.addEventListener('click',()=>{ invSort=b.dataset.sort; if(typeof sfx!=='undefined') sfx.pick(); renderInventory(); }));
     const ae=$('autoeq'); if(ae) ae.addEventListener('click', autoEquipBest);
+    const fm=$('fusemode'); if(fm) fm.addEventListener('click',()=>{ fuseSelectMode=!fuseSelectMode; if(!fuseSelectMode) fuseSelected.clear(); if(typeof sfx!=='undefined') sfx.pick(); renderInventory(); });
+    const fb=$('fusebtn'); if(fb) fb.addEventListener('click', openFuseConfirm);
+    const fc=$('fuseclear'); if(fc) fc.addEventListener('click',()=>{ fuseSelected.clear(); renderInventory(); });
   }
 
   const list=sortedOwned();
   if(!list.length){ owned.innerHTML='<div class="invhint">Open a Case or buy gear in the Shop to fill your slots.</div>'; return; }
   let html='';
-  for(const id of list){ const equipped=gearEquip[itemCat(id)]===id;
-    html += '<div class="itile r-'+itemRar(id)+(equipped?' equipped':'')+'" data-id="'+id+'" title="'+itemName(id)+'">'+
+  for(const inst of list){ const id=inst.itemId, selected=fuseSelected.has(inst.uid), equipped=gearEquip[itemCat(id)]===inst.uid;
+    html += '<div class="itile r-'+itemRar(id)+(equipped?' equipped':'')+(selected?' selected':'')+(fuseSelectMode?' fusemode':'')+'" data-uid="'+inst.uid+'" title="'+itemName(id)+'">'+
       (equipped?'<span class="ieq">✓</span>':'')+'<span class="ilv">'+STAT[itemStat(id)].short+'</span>'+
       '<img src="'+gearIconURL(id)+'"><span class="ipct">'+itemBonusShort(id)+'</span></div>';
   }
   owned.innerHTML=html;
-  owned.querySelectorAll('.itile[data-id]').forEach(el=>el.addEventListener('click',()=>openItemPop(el.dataset.id)));
+  owned.querySelectorAll('.itile[data-uid]').forEach(el=>el.addEventListener('click',()=>{
+    if(fuseSelectMode){ toggleFuseSelection(el.dataset.uid); return; }
+    openItemPop(el.dataset.uid);
+  }));
 }
 
 // ---- item detail popup: see full stats, equip/unequip ----
-function openItemPop(id){
+function openItemPop(uid){
   const ov=$('itempop'); if(!ov) return;
-  const cat=itemCat(id), rar=itemRar(id), equipped=gearEquip[cat]===id;
+  const id=gearInstanceItem(uid); if(!id) return;
+  const cat=itemCat(id), rar=itemRar(id), equipped=gearEquip[cat]===uid;
   ov.innerHTML =
     '<div class="ipcard r-'+rar+'">'+
       '<button class="ipx" id="ipclose">✕</button>'+
@@ -327,14 +443,113 @@ function openItemPop(id){
       '<div class="iptags">'+rtagHTML(rar)+statTag(itemStat(id))+'</div>'+
       '<div class="ipstat">'+itemBonusTxt(id)+'</div>'+
       '<div class="ipslot">Slot · '+CAT_LABEL[cat]+'</div>'+
-      '<button class="ipbtn'+(equipped?' un':'')+'" id="ipequip">'+(equipped?'UNEQUIP':'EQUIP')+'</button>'+
+      '<div class="ipactions">'+
+        '<button class="ipbtn'+(equipped?' un':'')+'" id="ipequip">'+(equipped?'UNEQUIP':'EQUIP')+'</button>'+
+        '<button class="ipbtn sell" id="ipsell">SELL +'+sellValue(id)+'</button>'+
+      '</div>'+
     '</div>';
   ov.classList.remove('hidden');
   ov.onclick=(e)=>{ if(e.target===ov) closeItemPop(); };
   $('ipclose').onclick=closeItemPop;
-  $('ipequip').onclick=()=>{ equipToggle(id); closeItemPop(); };
+  $('ipequip').onclick=()=>{ equipToggle(uid); closeItemPop(); };
+  $('ipsell').onclick=()=>openSellConfirm(uid);
 }
 function closeItemPop(){ const ov=$('itempop'); if(ov) ov.classList.add('hidden'); }
+function renderFuseStatus(){
+  if(!fuseSelectMode) return '';
+  const count=fuseSelected.size;
+  if(!count) return '<span class="fusehint">Fuse mode: pick 2+ same-rarity items.</span>';
+  const ids=[...fuseSelected].map(gearInstanceItem).filter(Boolean);
+  const rar=ids[0] ? itemRar(ids[0]) : null;
+  const invalid = !ids.length || ids.some(id=>itemRar(id)!==rar) || !nextRarity(rar);
+  const chance = ids.length>=2 && !invalid ? fuseChance(ids.length) : 0;
+  return '<div class="fusebar">'+
+    '<span class="fusemeta">'+count+' selected'+(rar?' · '+RAR[rar].name:'')+(chance?' · '+chance+'%':'')+'</span>'+
+    '<button class="chip2" id="fuseclear">Clear</button>'+
+    '<button class="chip2 fusego'+((count<2||invalid)?' disabled':'')+'" id="fusebtn"'+((count<2||invalid)?' disabled':'')+'>Fuse</button>'+
+  '</div>';
+}
+function toggleFuseSelection(uid){
+  const id=gearInstanceItem(uid); if(!id) return;
+  if(fuseSelected.has(uid)){ fuseSelected.delete(uid); renderInventory(); return; }
+  const current=[...fuseSelected].map(gearInstanceItem).filter(Boolean);
+  if(current.length){
+    const rar=itemRar(current[0]);
+    if(itemRar(id)!==rar){ if(typeof sfx!=='undefined') sfx.hit && sfx.hit(); return; }
+  }
+  fuseSelected.add(uid);
+  if(typeof sfx!=='undefined') sfx.pick();
+  renderInventory();
+}
+function openConfirmCard(title, body, yesText, onYes, tone){
+  const ov=$('itempop'); if(!ov) return;
+  ov.innerHTML =
+    '<div class="ipcard'+(tone?' '+tone:'')+'">'+
+      '<button class="ipx" id="ipclose">✕</button>'+
+      '<div class="ipname">'+title+'</div>'+
+      '<div class="ipcopy">'+body+'</div>'+
+      '<div class="ipconfirm">'+
+        '<button class="ipbtn cancel" id="ipno">NO</button>'+
+        '<button class="ipbtn'+(tone==='warn'?' warn':'')+'" id="ipyes">'+yesText+'</button>'+
+      '</div>'+
+    '</div>';
+  ov.classList.remove('hidden');
+  ov.onclick=(e)=>{ if(e.target===ov) closeItemPop(); };
+  $('ipclose').onclick=closeItemPop;
+  $('ipno').onclick=closeItemPop;
+  $('ipyes').onclick=()=>{ closeItemPop(); onYes(); };
+}
+function openSellConfirm(uid){
+  const id=gearInstanceItem(uid); if(!id) return;
+  openConfirmCard('SELL ITEM', 'Sell '+itemName(id)+' for '+sellValue(id)+' coins?', 'YES', ()=>{
+    sellGearInstance(uid);
+  }, 'warn');
+}
+function fuseGearInstances(uids){
+  const ids = uids.map(gearInstanceItem).filter(Boolean);
+  if(ids.length<2) return null;
+  const rar = itemRar(ids[0]);
+  if(ids.some(id=>itemRar(id)!==rar)) return null;
+  const next = nextRarity(rar);
+  if(!next) return null;
+  const success = Math.random()*100 < fuseChance(ids.length);
+  for(const uid of uids) removeGearInstance(uid);
+  const pool = catalogByRarity(success ? next : rar);
+  const won = pool[Math.floor(Math.random()*pool.length)];
+  const inst = addGearInstance(won);
+  return { success, itemId:won, instance:inst, rarity:success?next:rar };
+}
+function openFuseConfirm(){
+  const ids=[...fuseSelected];
+  const itemIds=ids.map(gearInstanceItem).filter(Boolean);
+  if(itemIds.length<2) return;
+  const rar=itemRar(itemIds[0]), next=nextRarity(rar);
+  if(itemIds.some(id=>itemRar(id)!==rar) || !next) return;
+  openConfirmCard('FUSE ITEMS', 'Consume '+itemIds.length+' '+RAR[rar].name+' items for '+fuseChance(itemIds.length)+'% '+RAR[next].name+' chance?', 'FUSE', ()=>{
+    const result = fuseGearInstances(ids);
+    fuseSelected.clear();
+    fuseSelectMode=false;
+    renderInventory();
+    if(result) openFuseResult(result);
+  });
+}
+function openFuseResult(result){
+  const ov=$('itempop'); if(!ov) return;
+  const id=result.itemId, rar=itemRar(id);
+  ov.innerHTML =
+    '<div class="ipcard r-'+rar+'">'+
+      '<button class="ipx" id="ipclose">✕</button>'+
+      '<div class="ipicon r-'+rar+'"><img src="'+gearIconURL(id)+'"></div>'+
+      '<div class="ipname">'+(result.success?'FUSE SUCCESS':'FUSE FAILED')+'</div>'+
+      '<div class="iptags">'+rtagHTML(rar)+statTag(itemStat(id))+'</div>'+
+      '<div class="ipstat">'+itemName(id)+'</div>'+
+      '<div class="ipslot">'+itemBonusTxt(id)+'</div>'+
+      '<button class="ipbtn" id="ipclaim">OK</button>'+
+    '</div>';
+  ov.classList.remove('hidden');
+  $('ipclose').onclick=closeItemPop;
+  $('ipclaim').onclick=closeItemPop;
+}
 
 // crate drop-chance popup (info button on each case)
 function openCrateOdds(key){
@@ -360,7 +575,7 @@ function openCrateOdds(key){
   $('ipclose').onclick=closeItemPop;
 }
 
-function afterEquipChange(){ if(typeof sfx!=='undefined') sfx.pick(); refreshMenuChar(); renderInventory(); renderPetsTab(); }
+function afterEquipChange(){ if(typeof sfx!=='undefined') sfx.pick(); refreshMenuChar(); renderInventory(); renderPetSection(); renderPetsTab(); }
 
 // ---- Character tab ----
 function renderCharacterTab() {
@@ -594,7 +809,7 @@ function showTab(name){
   const menu=$('menu'); if(menu) menu.setAttribute('data-tab', name);   // per-tab background tint
   if(name==='shop') renderShop();
   if(name==='pets') renderPetsTab();
-  if(name==='inventory'){ gearSeen=new Set(gearOwned); saveSeen(); updateInvBadge(); renderInventory(); }   // mark all seen -> clear badge
+  if(name==='inventory'){ gearSeen=new Set(gearOwned.map(x=>x.uid)); saveSeen(); updateInvBadge(); renderInventory(); renderPetSection(); }   // mark all seen -> clear badge
   if(name==='character') renderCharacterTab();
 }
 document.querySelectorAll('#tabbar .tabbtn').forEach(b=>b.addEventListener('click',()=>{ showTab(b.dataset.tab); if(typeof sfx!=='undefined') sfx.pick(); }));

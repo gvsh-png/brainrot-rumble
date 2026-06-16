@@ -95,9 +95,32 @@ function rehydrate(){
     gold = +(localStorage.getItem('br_gold')||0);
     unlockedMax = +(localStorage.getItem('br_unlocked')||0);
     if(typeof selWorld!=='undefined' && selWorld>unlockedMax) selWorld=unlockedMax;
-    gearOwned = new Set(JSON.parse(localStorage.getItem('br_items_owned')||'[]'));
-    gearEquip = Object.assign({helmet:null,chest:null,pants:null,shoes:null}, JSON.parse(localStorage.getItem('br_gear_equipped')||'{}'));
-    gearSeen  = new Set(JSON.parse(localStorage.getItem('br_gear_seen')||'[]'));
+    const ownedRaw = JSON.parse(localStorage.getItem('br_items_owned')||'[]');
+    if(typeof normalizeOwned==='function'){
+      const ownedNorm = normalizeOwned(ownedRaw);
+      gearOwned = ownedNorm.list;
+      if(ownedNorm.dirty) localStorage.setItem('br_items_owned', JSON.stringify(gearOwned));
+      const equipRaw = JSON.parse(localStorage.getItem('br_gear_equipped')||'{}');
+      if(typeof normalizeEquip==='function'){
+        const equipNorm = normalizeEquip(equipRaw, gearOwned);
+        gearEquip = equipNorm.map;
+        if(equipNorm.dirty) localStorage.setItem('br_gear_equipped', JSON.stringify(gearEquip));
+      } else {
+        gearEquip = Object.assign({helmet:null,chest:null,pants:null,shoes:null}, equipRaw);
+      }
+      const seenRaw = JSON.parse(localStorage.getItem('br_gear_seen')||'[]');
+      if(typeof normalizeSeen==='function'){
+        const seenNorm = normalizeSeen(seenRaw, gearOwned);
+        gearSeen = new Set(seenNorm.list);
+        if(seenNorm.dirty) localStorage.setItem('br_gear_seen', JSON.stringify([...gearSeen]));
+      } else {
+        gearSeen = new Set(seenRaw);
+      }
+    } else {
+      gearOwned = ownedRaw;
+      gearEquip = Object.assign({helmet:null,chest:null,pants:null,shoes:null}, JSON.parse(localStorage.getItem('br_gear_equipped')||'{}'));
+      gearSeen  = new Set(JSON.parse(localStorage.getItem('br_gear_seen')||'[]'));
+    }
   }catch(e){ console.warn('rehydrate failed',e); }
   if(typeof refreshTopbar==='function')    refreshTopbar();
   if(typeof refreshWorldSel==='function')  refreshWorldSel();

@@ -646,7 +646,9 @@ function compositeCharCanvasURL(size) {
   // Overlay gear if available
   if(typeof GEAR_CATS!=='undefined' && typeof gearEquip!=='undefined'){
     for(const cat of GEAR_CATS){
-      const id=gearEquip[cat]; if(!id) continue;
+      const uid=gearEquip[cat];
+      const id=(uid && typeof gearInstanceItem==='function') ? gearInstanceItem(uid) : uid;
+      if(!id) continue;
       if(typeof tintedSprite==='function' && typeof RAR!=='undefined'){
         const spr = tintedSprite('gear_'+cat, RAR[typeof itemRar==='function'?itemRar(id):'common'].color);
         if(spr) g.drawImage(spr,0,0,size,size);
