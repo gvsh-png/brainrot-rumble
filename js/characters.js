@@ -293,17 +293,13 @@ const CHARACTERS = [
   {
     id: 'fortunato',
     name: 'Fortunato',
-    desc: 'Lucky blocks spawn 4 per wave. 30% chance each pop also drops a bonus upgrade card.',
+    desc: 'Lucky blocks spawn 4 per wave. 10% chance each block is a heavy block (+50 HP & double XP on pop).',
     rarity: 'world',
     worldUnlock: 3,
     baseStats: {},
     register() {
       onHook('getLuckyCap', () => 4);
-      onHook('onLuckyPop', () => {
-        if(Math.random()<0.30){
-          if(typeof offerBonusCard==='function') offerBonusCard();
-        }
-      });
+      onHook('onLuckySpawn', (lb) => { if(Math.random()<0.10) lb.heavy=true; });
     },
     draw(ctx, size, t) { _drawFortunato(ctx, size, t); }
   },

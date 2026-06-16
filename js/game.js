@@ -66,7 +66,9 @@ function spawnLuckyBatch(n=2){           // up to n blocks (default 2), capped b
     do { x=rand(WALL+80,WORLD.w-WALL-80); y=rand(WALL+80,WORLD.h-WALL-80); tries++; }
     while(dist2(x,y,P.x,P.y) < 360*360 && tries<8);   // not right on top of the player
     const hp = 6*HP_MULT*(1+(wave-1)*0.12);
-    luckies.push({ x,y, r:26, hp, maxHp:hp, t:rand(0,TAU), hitT:0, sq:0 });
+    const lb = { x,y, r:26, hp, maxHp:hp, t:rand(0,TAU), hitT:0, sq:0 };
+    if(typeof fireHook==='function') fireHook('onLuckySpawn', lb);
+    luckies.push(lb);
   }
 }
 function damageLucky(lb,dmg,fx,fy,crit){
@@ -80,6 +82,13 @@ function popLucky(lb){
   if(lb.heal){   // boss-fight block: drops a fixed-heal heart only (no magnet/gold/50-heart)
     const a=rand(0,TAU), s=rand(40,90); gems.push({x:lb.x,y:lb.y,heart:true,heal:lb.heal,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s});
     floatText(lb.x,lb.y-lb.r-10,'LUCKY!','#ffd23a',18);
+    return;
+  }
+  if(lb.heavy){  // Fortunato heavy block: big heal + double gold XP orbs
+    const a=rand(0,TAU), s=rand(40,90);
+    gems.push({x:lb.x,y:lb.y,heart:true,big:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s});
+    for(let g=0;g<6;g++){ const ag=rand(0,TAU), sg=rand(120,280); gems.push({x:lb.x,y:lb.y,tier:4,v:ORB[4].v,t:rand(0,6),vx:Math.cos(ag)*sg,vy:Math.sin(ag)*sg}); }
+    floatText(lb.x,lb.y-lb.r-10,'HEAVY LUCKY!','#ff9c1a',22);
     return;
   }
   const roll = (Math.random()*3)|0;
@@ -2852,7 +2861,7 @@ function render(){
     cx.fillStyle='rgba(40,60,25,0.28)'; cx.beginPath(); cx.ellipse(lb.x,lb.y+lb.r*0.9,lb.r*0.8,lb.r*0.3,0,0,TAU); cx.fill();
     cx.globalAlpha=0.5; cx.strokeStyle='#ffe88a'; cx.lineWidth=2; cx.setLineDash([6,6]);   // faint glow ring marks it as a target
     cx.beginPath(); cx.arc(lb.x,lb.y+bob,lb.r+8,0,TAU); cx.stroke(); cx.setLineDash([]); cx.globalAlpha=1;
-    drawSprite('luckyblock', lb.x, lb.y+bob, lb.r*2.6, wob, lb.sq, lb.hitT, false, null);
+    drawSprite('luckyblock', lb.x, lb.y+bob, lb.r*(lb.heavy?3.4:2.6), wob, lb.sq, lb.hitT, false, null);
     if(lb.hp<lb.maxHp){
       const w=lb.r*1.9;
       cx.fillStyle='rgba(0,0,0,0.45)'; cx.fillRect(lb.x-w/2,lb.y-lb.r-12,w,5);
