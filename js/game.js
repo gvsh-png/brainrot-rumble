@@ -451,7 +451,7 @@ function cutsceneUpdate(dt){
   cut.alpha = Math.max(0, 1 - (cut.t-1.0)/0.8);           // boss fades out 1.0..1.8s
   if(cut.t > 1.6) cut.fade = Math.min(1, (cut.t-1.6)/0.7); // screen fades to theme color
   for(let i=parts.length-1;i>=0;i--){ const p=parts[i]; p.t=(p.t||0)+dt; p.x+=(p.vx||0)*dt; p.y+=(p.vy||0)*dt; p.life-=dt; if(p.life<=0) parts.splice(i,1); }
-  for(let i=texts.length-1;i>=0;i--){ const tx=texts[i]; tx.t=(tx.t||0)+dt; tx.y+=(tx.vy||0)*dt; tx.life-=dt; if(tx.life<=0) texts.splice(i,1); }
+  for(let i=texts.length-1;i>=0;i--){ const tx=texts[i]; tx.t=(tx.t||0)+dt; tx.x+=(tx.vx||0)*dt; tx.y+=(tx.vy||0)*dt; tx.life-=dt; if(tx.life<=0) texts.splice(i,1); }
   if(cut.t > 2.5){ cut=null; toMenuFromClear(); }
 }
 function toMenuFromClear(){
@@ -1522,7 +1522,7 @@ function update(dt){
     if(dist<12){
       if(pb.target && pb.target.hp>0 && pb.target.iv<=0){
         pb.target.hp-=pb.dmg; pb.target.hitT=Math.max(pb.target.hitT||0,0.1);
-        if(typeof floatText==='function') floatText(pb.target.x+(Math.random()-0.5)*44,pb.target.y-(pb.target.r||16)-4-Math.random()*18,Math.round(pb.dmg),'#6be8ff',13);
+        texts.push({x:pb.target.x,y:pb.target.y-(pb.target.r||16)-4,str:String(Math.round(pb.dmg)),color:'#6be8ff',size:13,life:0.9,max:0.9,vy:-55,vx:(Math.random()-0.5)*120});
         burst(pb.x,pb.y,'#6be8ff',5,60);
       }
       petBullets.splice(i,1); continue;
@@ -1810,7 +1810,7 @@ function update(dt){
     if(p.life<=0) parts.splice(i,1);
   }
   for(let i=texts.length-1;i>=0;i--){
-    const t=texts[i]; t.y+=t.vy*dt; t.life-=dt;
+    const t=texts[i]; t.x+=(t.vx||0)*dt; t.y+=t.vy*dt; t.life-=dt;
     if(t.life<=0) texts.splice(i,1);
   }
 
@@ -1855,9 +1855,9 @@ function damageEnemy(e,dmg,fx,fy,crit){
   if(P.freeze && !e.isBoss) e.frz=1.2;
   if(P.chillHit && !e.isBoss && e.frz<=0) e.chillT = Math.max(e.chillT||0, 0.8 + 0.25*P.chillHit);   // Permafrost: chill-on-hit
   sfx.hit();
-  const _fx=e.x+(Math.random()-0.5)*44, _fy=e.y-e.r-4-Math.random()*18;
-  floatText(_fx,_fy, (crit?'':'')+Math.round(dmg), crit?'#ffd23a':'#fff', crit?18:13);
-  if(crit) floatText(_fx,_fy-16,'CRIT','#ffd23a',15);
+  const _dvx=(Math.random()-0.5)*120;
+  texts.push({x:e.x,y:e.y-e.r-4,str:(crit?'':'')+Math.round(dmg),color:crit?'#ffd23a':'#fff',size:crit?18:13,life:0.9,max:0.9,vy:-55,vx:_dvx});
+  if(crit) texts.push({x:e.x,y:e.y-e.r-20,str:'CRIT',color:'#ffd23a',size:15,life:0.9,max:0.9,vy:-55,vx:_dvx});
 }
 
 function fireEB(x,y,a,sp,color,opts){
