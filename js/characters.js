@@ -329,8 +329,19 @@ const CHARACTERS = [
     worldUnlock: 3,
     baseStats: { maxHp:70, speed:230, fireRate:0.46, dmg:7, gearDmgMul:0.4 },
     register() {
-      onHook('getLuckyCap', () => 4+Math.floor(Math.random()*5)); // 4-8
-      onHook('onLuckySpawn', (lb) => { if(Math.random()<0.10) lb.heavy=true; });
+      P.fortunatoLuckyCap = 5 + Math.floor(Math.random()*4); // 5-8, fixed for the run
+      onHook('getLuckyCap', () => P.fortunatoLuckyCap);
+      onHook('onLuckySpawn', (lb) => { if(Math.random()<0.25) lb.heavy=true; }); // 25% heavy chance (was 10%)
+      // respawn blocks mid-wave every 5s if below cap
+      let respawnCd = 0;
+      onHook('petTick', (dt) => {
+        if(typeof betweenWaves==='undefined'||betweenWaves||boss) return;
+        respawnCd -= dt;
+        if(respawnCd <= 0 && typeof luckies!=='undefined' && luckies.length < P.fortunatoLuckyCap){
+          respawnCd = 5;
+          if(typeof spawnLuckyBatch==='function') spawnLuckyBatch(P.fortunatoLuckyCap);
+        }
+      });
       P.luckyBullets = true;
       P.noCrit = true;
       P.luckyXpOnly = true;

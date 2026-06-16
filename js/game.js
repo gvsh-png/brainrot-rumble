@@ -790,7 +790,8 @@ function resetPlayer(){
     // Fortunato flags — must be reset so switching away clears them
     luckyBullets:false, noCrit:false, luckyXpOnly:false, luckyBlockDmgMul:1, gearDmgMul:1,
     hasMagnetPet:false,
-    bannedCards:null
+    bannedCards:null,
+    fortunatoLuckyCap:5
   });
 }
 
