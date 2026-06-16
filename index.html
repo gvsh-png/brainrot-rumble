@@ -62,6 +62,7 @@
     <div id="topbadge"><span id="topLvl">1</span></div>
     <div id="topxp"><div id="topxpfill"></div></div>
     <div class="respill"><img id="goldicon" draggable="false" alt=""><span id="goldtxt">0</span><b class="resplus">+</b></div>
+    <div class="respill gempill"><span class="gemico-el">◆</span><span id="gemtxt">0</span></div>
     <button id="settingsbtn" class="iconbtn" type="button" aria-label="Settings">☰</button>
   </div>
 
@@ -112,10 +113,16 @@
 
     <!-- EQUIPMENT -->
     <div id="tab-inventory" class="tabpanel hidden">
+      <div id="petSection"></div>
       <div id="eqstage"></div>
       <div class="banner"><span>MY EQUIPMENT</span></div>
       <div id="eqcontrols"></div>
       <div id="invowned" class="ggrid"></div>
+    </div>
+
+    <!-- CHARACTER -->
+    <div id="tab-character" class="tabpanel hidden">
+      <div id="charlist"></div>
     </div>
   </div>
 
@@ -123,7 +130,8 @@
   <div id="tabbar">
     <button class="tabbtn" type="button" data-tab="shop"><img class="tabico" data-ic="ic_shop" alt=""><span class="tablbl">Shop</span><span class="tabbadge hidden" id="shopbadge">!</span></button>
     <button class="tabbtn center active" type="button" data-tab="battle"><img class="tabico" data-ic="ic_battle" alt=""><span class="tablbl">Battle</span></button>
-    <button class="tabbtn" type="button" data-tab="inventory"><img class="tabico" data-ic="ic_bag" alt=""><span class="tablbl">Bag</span><span class="tabbadge hidden" id="invbadge">0</span></button>
+    <button class="tabbtn" type="button" data-tab="character"><span class="tablbl">Character</span></button>
+    <button class="tabbtn" type="button" data-tab="inventory"><img class="tabico" data-ic="ic_bag" alt=""><span class="tablbl">Equipment</span><span class="tabbadge hidden" id="invbadge">0</span></button>
   </div>
 </div>
 
@@ -186,6 +194,12 @@
 <!-- Supabase (UMD build exposes the global `supabase` with createClient) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-config.js"></script>
+
+<!-- Character/pet/recruit systems: load before core so their globals are available to game.js and shop.js -->
+<script src="js/hooks.js"></script>
+<script src="js/characters.js"></script>
+<script src="js/pets.js"></script>
+<script src="js/recruit.js"></script>
 
 <!-- Game scripts: classic (non-module) so they share globals and run from file:// too.
      Load order matters: core defines shared helpers/state used by the rest. -->

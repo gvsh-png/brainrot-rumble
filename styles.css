@@ -517,3 +517,95 @@ html,body { width:100%; height:100%; overflow:hidden; background:#6fae3d; font-f
 .tabbtn { transition:background .18s ease, color .18s ease; }
 .startbtn, .sbuy, .ipbtn, .chip2, .bigbtn { transition:transform .06s ease, box-shadow .06s ease, filter .12s ease; }
 @media (prefers-reduced-motion: reduce){ *{ animation-duration:.01ms !important; } }
+
+/* ===== Gem pill ===== */
+#menu[data-tab="character"] { background:radial-gradient(125% 80% at 50% 8%, #5cce78 0%, #39a052 55%, #2a7a3e 100%); }
+.gempill { background:#2d1650; border-color:#5a2e8a; }
+.gemico-el { color:#b06ff0; font-size:1.2em; line-height:1; }
+
+/* ===== Character tab ===== */
+#tab-character { display:flex; flex-direction:column; gap:clamp(8px,1.8vmin,16px);
+  overflow-y:auto; -webkit-overflow-scrolling:touch; padding:clamp(2px,0.8vmin,10px) 0 clamp(10px,2vmin,18px); }
+#tab-character, #tab-character * { touch-action:pan-y; }
+#charlist { display:flex; flex-direction:column; gap:clamp(8px,1.8vmin,14px); width:100%; }
+
+/* Character selection card */
+.charcard { display:flex; align-items:center; gap:clamp(10px,2vmin,16px);
+  background:#e9eef5; border:4px solid #b9c4d2; border-radius:16px;
+  padding:clamp(10px,2vmin,14px) clamp(10px,2vmin,14px);
+  box-shadow:0 4px 0 rgba(0,0,0,.22); position:relative; overflow:hidden; }
+.charcard.selected { border-color:#ffd24a; box-shadow:0 0 0 3px #ffd24a, 0 4px 0 rgba(0,0,0,.22); background:#fef9e8; }
+.charcard.locked { opacity:0.7; }
+.charcard.r-rare { border-color:#4aa3df; }
+.charcard.r-epic { border-color:#b06ff0; }
+.charcard.r-legendary { border-color:#e0a92e; }
+.charcard.r-world { border-color:#5fbf52; }
+.charport { width:clamp(64px,12vmin,90px); height:clamp(64px,12vmin,90px); border-radius:14px;
+  border:3px solid #2a3550; background:linear-gradient(#5a6b86,#46566f);
+  flex:0 0 auto; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.charport canvas { width:100%; height:100%; }
+.charinfo { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
+.charinfo .charname { font-weight:900; font-size:clamp(14px,2.6vmin,20px); color:#26313f; line-height:1.1; }
+.charinfo .chardesc { font-size:clamp(10px,1.8vmin,14px); color:#5a6b7a; font-weight:700; line-height:1.3; }
+.charinfo .chartags { display:flex; gap:5px; flex-wrap:wrap; margin-top:2px; }
+.charlockbadge { font-size:clamp(10px,1.8vmin,13px); color:#8a7a5a; font-weight:800; background:#f3e8c8; border:2px solid #c8a860; border-radius:8px; padding:2px 8px; }
+.charselbtn { flex:0 0 auto; font-size:clamp(12px,2.1vmin,16px); font-weight:900; padding:clamp(8px,1.6vmin,12px) clamp(12px,2.4vmin,18px);
+  border:3px solid #2a1c10; border-radius:12px; background:#4aa3df; color:#fff; box-shadow:0 4px 0 #2b6f9c; cursor:pointer; }
+.charselbtn.active { background:#5fbf52; box-shadow:0 4px 0 #3f8a36; }
+.charselbtn:active { transform:translateY(3px); box-shadow:0 1px 0 #2b6f9c; }
+.charselbtn.active:active { box-shadow:0 1px 0 #3f8a36; }
+.charselbtn.locked { background:#b0b8c4; box-shadow:0 4px 0 #7a8290; color:#555; cursor:default; }
+
+/* ===== Pet section in Equipment tab ===== */
+.petsechdr { display:flex; align-items:center; justify-content:space-between; width:100%; }
+.petsec .banner { margin:0; }
+.petslotrow { display:flex; align-items:center; gap:clamp(10px,2vmin,16px); padding:clamp(8px,1.6vmin,12px); background:rgba(0,0,0,.12); border-radius:14px; border:3px solid rgba(0,0,0,.2); }
+.petslotlbl { color:#fff; font-weight:900; font-size:clamp(12px,2vmin,16px); text-shadow:0 1px 0 rgba(0,0,0,.3); flex:1; }
+.petslot { width:clamp(60px,11vmin,80px); height:clamp(60px,11vmin,80px); border-radius:14px; border:3px solid #2a3550;
+  background:linear-gradient(#5a6b86,#46566f); display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 3px 0 rgba(0,0,0,.3); }
+.petslot.has-pet { border-color:#b06ff0; background:linear-gradient(#6a4090,#4a2870); }
+.petslot canvas { width:82%; height:82%; }
+.petslot .petslot-lbl { font-size:clamp(9px,1.6vmin,12px); color:rgba(255,255,255,.6); font-weight:900; margin-top:2px; }
+.petgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:clamp(6px,1.4vmin,10px); width:100%; }
+.pettile { aspect-ratio:1; border-radius:13px; border:3px solid #2a3550; background:linear-gradient(#5a6b86,#46566f);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 3px 0 rgba(0,0,0,.28); position:relative; }
+.pettile canvas { width:68%; height:68%; }
+.pettile .pettile-name { font-size:clamp(7px,1.3vmin,10px); color:#fff; font-weight:900; text-align:center; line-height:1.1; margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:90%; }
+.pettile.r-common { border-color:#9aa3af; }
+.pettile.r-rare { border-color:#4aa3df; }
+.pettile.r-epic { border-color:#b06ff0; }
+.pettile.r-legendary { border-color:#e0a92e; box-shadow:0 0 8px rgba(224,169,46,.5); }
+.pettile.equipped { box-shadow:0 0 0 3px #ffd24a, 0 3px 0 rgba(0,0,0,.28); }
+.pettile .petteq { position:absolute; top:-3px; left:-3px; width:clamp(14px,2.6vmin,18px); height:clamp(14px,2.6vmin,18px);
+  background:#5fbf52; border:2px solid #fff; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-size:clamp(8px,1.4vmin,11px); color:#fff; font-weight:900; }
+
+/* ===== Shop recruit sections ===== */
+.charshopcard { min-height:auto; flex-direction:row; align-items:center; gap:clamp(8px,1.6vmin,12px); padding:clamp(8px,1.6vmin,12px); }
+.charshopcard .charport-sm { width:clamp(54px,10vmin,72px); height:clamp(54px,10vmin,72px); border-radius:11px;
+  border:3px solid #2a3550; background:linear-gradient(#5a6b86,#46566f); flex:0 0 auto;
+  display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.charshopcard .charport-sm canvas { width:100%; height:100%; }
+.charshopcard .csinfo { flex:1; min-width:0; }
+.charshopcard .csname { font-weight:900; font-size:clamp(13px,2.4vmin,18px); color:#26313f; }
+.charshopcard .csdesc { font-size:clamp(9px,1.6vmin,13px); color:#5a6b7a; font-weight:700; line-height:1.2; margin-top:2px; }
+.charshopcard .cstags { display:flex; gap:4px; margin-top:3px; flex-wrap:wrap; }
+.gemshopcost { display:flex; align-items:center; gap:4px; font-weight:900; font-size:clamp(12px,2.2vmin,17px); color:#7a3ab8; }
+.gemshopcost .gemico-sm { color:#b06ff0; font-size:1.1em; }
+.weeklycard { border-color:#e0a92e; box-shadow:0 0 10px rgba(224,169,46,.35); background:#fef8e8; }
+.weeklycard .charport-sm { border-color:#e0a92e; }
+.weeklybadge { background:linear-gradient(#e0a92e,#c47f12); color:#fff; font-size:clamp(9px,1.6vmin,13px); font-weight:900; padding:2px 8px; border-radius:8px; border:2px solid #2a1c10; -webkit-text-stroke:.3px #2a1c10; }
+.shoptimer { font-size:clamp(10px,1.7vmin,13px); color:#8a7a5a; font-weight:800; }
+.gemico-sm { color:#b06ff0; }
+
+/* Pet recruit pull area */
+.pullzone { display:flex; flex-direction:column; align-items:center; gap:clamp(8px,1.6vmin,12px);
+  background:#1c1230; border-radius:16px; border:4px solid #5a2e8a; padding:clamp(14px,2.8vmin,20px); }
+.pullbtn { font-size:clamp(18px,3.6vmin,28px); font-weight:900; color:#fff;
+  background:linear-gradient(#b06ff0,#7a3ab8); border:4px solid #2a1c10; border-radius:16px;
+  padding:clamp(12px,2.4vmin,18px) clamp(28px,6vmin,50px); box-shadow:0 6px 0 #4a1f78;
+  cursor:pointer; display:flex; align-items:center; gap:10px; }
+.pullbtn:active { transform:translateY(4px); box-shadow:0 2px 0 #4a1f78; }
+.pullbtn.poor { background:linear-gradient(#888,#666); box-shadow:0 6px 0 #444; }
+.pitytxt { color:#c0a0e0; font-size:clamp(11px,1.9vmin,15px); font-weight:800; text-align:center; }
+.petownedgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:clamp(6px,1.2vmin,10px); width:100%; }

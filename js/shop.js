@@ -123,6 +123,7 @@ function drawPlayerGear(x,y,size,rot,flip){
 }
 // ---- composite the player sprite + equipped gear into a data-URL (menu + equipment screens) ----
 function compositeCharURL(){
+  if(typeof compositeCharCanvasURL==='function') return compositeCharCanvasURL(200);
   const base = SP['player']; if(!base) return '';
   const c = document.createElement('canvas'); c.width=base.width; c.height=base.height;
   const g = c.getContext('2d'); g.drawImage(base,0,0);
@@ -188,11 +189,16 @@ function renderShop(){
       '<button class="sbuy cratebuy'+(poor?' poor':'')+'" data-crate="'+key+'">'+coinTag()+cr.price+'</button></div>';
   }
   html += '</div>';
+  // ---- CHARACTER SHOP ----
+  html += (typeof renderShopCharSection==='function') ? renderShopCharSection() : '';
+  // ---- PET RECRUIT ----
+  html += (typeof renderPetRecruitSection==='function') ? renderPetRecruitSection() : '';
   grid.innerHTML = html;
 
   grid.querySelectorAll('button.sbuy[data-id]').forEach(b=>b.addEventListener('click',()=>buyItem(b.dataset.id, +b.dataset.price)));
   grid.querySelectorAll('button[data-crate]').forEach(b=>b.addEventListener('click',()=>openCrate(b.dataset.crate)));
   grid.querySelectorAll('button[data-crinfo]').forEach(b=>b.addEventListener('click',(e)=>{ e.stopPropagation(); openCrateOdds(b.dataset.crinfo); }));
+  if(typeof initRecruitUI==='function') initRecruitUI(grid);
 }
 
 // ============ CASES (animated reveal) ============
@@ -352,15 +358,127 @@ function openCrateOdds(key){
   $('ipclose').onclick=closeItemPop;
 }
 
-function afterEquipChange(){ if(typeof sfx!=='undefined') sfx.pick(); refreshMenuChar(); renderInventory(); }
+function afterEquipChange(){ if(typeof sfx!=='undefined') sfx.pick(); refreshMenuChar(); renderInventory(); renderPetSection(); }
+
+// ---- Character tab ----
+function renderCharacterTab() {
+  const list=$('charlist'); if(!list) return;
+  if(typeof CHARACTERS==='undefined') return;
+  const worldUnlocked=+(localStorage.getItem('br_unlocked')||0);
+  let html='<div class="banner"><span>MY CHARACTERS</span></div>';
+  for(const char of CHARACTERS){
+    const isWorld=char.rarity==='world';
+    const locked=isWorld?(char.worldUnlock>worldUnlocked):!isCharOwned(char.id);
+    const selected=(typeof activeCharId!=='undefined')&&activeCharId===char.id;
+    const rarClass=isWorld?'r-world':'r-'+char.rarity;
+    const thumbId='charport_'+char.id;
+    const portHtml='<div class="charport"><canvas id="'+thumbId+'" width="80" height="80"></canvas></div>';
+    let selBtn='';
+    if(locked&&isWorld){
+      selBtn='<button class="charselbtn locked" disabled>&#128274; World '+(char.worldUnlock+1)+'</button>';
+    } else if(locked){
+      selBtn='<button class="charselbtn locked" disabled>&#128274; Get in Shop</button>';
+    } else if(selected){
+      selBtn='<button class="charselbtn active" data-selchar="'+char.id+'">SELECTED</button>';
+    } else {
+      selBtn='<button class="charselbtn" data-selchar="'+char.id+'">SELECT</button>';
+    }
+    const lockBadge=locked&&isWorld?'<span class="charlockbadge">Beat World '+(char.worldUnlock+1)+'</span>':'';
+    const rarForTag=isWorld?'uncommon':char.rarity;
+    html+='<div class="charcard '+rarClass+(selected?' selected':'')+(locked?' locked':'')+'" id="charcard_'+char.id+'">';
+    html+=portHtml;
+    html+='<div class="charinfo"><div class="charname">'+char.name+'</div>';
+    html+='<div class="chardesc">'+char.desc+'</div>';
+    html+='<div class="chartags">'+rtagHTML(rarForTag)+lockBadge+'</div>';
+    html+='</div>';
+    html+=selBtn;
+    html+='</div>';
+  }
+  list.innerHTML=html;
+  // Render thumbnails
+  for(const char of CHARACTERS){
+    const canvas=document.getElementById('charport_'+char.id);
+    if(!canvas) continue;
+    const ctx=canvas.getContext('2d');
+    ctx.clearRect(0,0,80,80);
+    if(typeof renderCharThumb==='function') renderCharThumb(ctx, char.id, 80);
+  }
+  // Select handlers
+  list.querySelectorAll('[data-selchar]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      if(typeof setActiveChar==='function') setActiveChar(btn.dataset.selchar);
+      if(typeof sfx!=='undefined') sfx.pick();
+      renderCharacterTab();
+      renderInventory();
+    });
+  });
+}
+
+// ---- Pet section in Equipment tab ----
+function renderPetSection() {
+  const sec=$('petSection'); if(!sec) return;
+  const ownedPets=typeof PETS!=='undefined'?PETS.filter(p=>isPetOwned(p.id)):[];
+  const curPet=(typeof activePetId!=='undefined')&&activePetId?PETS.find(p=>p.id===activePetId):null;
+  let html='';
+  if(typeof PETS==='undefined'){ sec.innerHTML=''; return; }
+  html+='<div class="petslotrow">';
+  html+='<div class="petslotlbl">ACTIVE PET</div>';
+  html+='<div class="petslot'+(curPet?' has-pet':'')+'" id="activePetSlot">';
+  if(curPet){
+    html+='<canvas width="56" height="56" id="activePetCanvas"></canvas>';
+    html+='<div class="petslot-lbl">'+curPet.name+'</div>';
+  } else {
+    html+='<div class="petslot-lbl">None</div>';
+  }
+  html+='</div>';
+  html+='</div>';
+  if(ownedPets.length){
+    html+='<div class="petgrid">';
+    for(const pet of PETS){
+      if(!isPetOwned(pet.id)) continue;
+      const eq=curPet&&curPet.id===pet.id;
+      html+='<div class="pettile r-'+pet.rarity+(eq?' equipped':'')+'" data-petid="'+pet.id+'" title="'+pet.desc+'">';
+      if(eq) html+='<span class="petteq">✓</span>';
+      html+='<canvas width="44" height="44" class="pettile-cnv"></canvas>';
+      html+='<div class="pettile-name">'+pet.name+'</div>';
+      html+='</div>';
+    }
+    html+='</div>';
+  }
+  sec.innerHTML=html;
+  // Render active pet canvas
+  if(curPet){
+    const c=document.getElementById('activePetCanvas');
+    if(c&&curPet.draw){
+      const g=c.getContext('2d');
+      g.save(); g.translate(28,28); curPet.draw(g,56,0); g.restore();
+    }
+  }
+  // Render pet tile canvases
+  sec.querySelectorAll('.pettile[data-petid]').forEach(tile=>{
+    const pet=PETS.find(p=>p.id===tile.dataset.petid);
+    const canvas=tile.querySelector('.pettile-cnv');
+    if(canvas&&pet&&pet.draw){
+      const g=canvas.getContext('2d');
+      g.save(); g.translate(22,22); pet.draw(g,44,0); g.restore();
+    }
+    tile.addEventListener('click',()=>{
+      const cur=(typeof activePetId!=='undefined')?activePetId:null;
+      if(typeof setActivePet==='function') setActivePet(cur===pet.id?null:pet.id);
+      if(typeof sfx!=='undefined') sfx.pick();
+      renderPetSection();
+    });
+  });
+}
 
 // ---- tab switching ----
 function showTab(name){
-  for(const t of ['battle','shop','inventory']){ const p=$('tab-'+t); if(p) p.classList.toggle('hidden', t!==name); }
+  for(const t of ['battle','shop','inventory','character']){ const p=$('tab-'+t); if(p) p.classList.toggle('hidden', t!==name); }
   document.querySelectorAll('#tabbar .tabbtn').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
   const menu=$('menu'); if(menu) menu.setAttribute('data-tab', name);   // per-tab background tint
   if(name==='shop') renderShop();
-  if(name==='inventory'){ gearSeen=new Set(gearOwned); saveSeen(); updateInvBadge(); renderInventory(); }   // mark all seen -> clear badge
+  if(name==='inventory'){ gearSeen=new Set(gearOwned); saveSeen(); updateInvBadge(); renderInventory(); renderPetSection(); }   // mark all seen -> clear badge
+  if(name==='character') renderCharacterTab();
 }
 document.querySelectorAll('#tabbar .tabbtn').forEach(b=>b.addEventListener('click',()=>{ showTab(b.dataset.tab); if(typeof sfx!=='undefined') sfx.pick(); }));
 const _crclaim=$('crclaim'); if(_crclaim) _crclaim.addEventListener('click', closeCrate);
@@ -369,9 +487,10 @@ const _crclaim=$('crclaim'); if(_crclaim) _crclaim.addEventListener('click', clo
 refreshMenuChar();
 renderShop();
 renderInventory();
+renderPetSection();
 saveSeen(); updateInvBadge();   // persist the first-run seed + show any pending "new items" badge
 const _initTab = (location.hash||'').slice(1);
-showTab(['battle','shop','inventory'].indexOf(_initTab)>=0 ? _initTab : 'battle');
+showTab(['battle','shop','inventory','character'].indexOf(_initTab)>=0 ? _initTab : 'battle');
 
 // ---- asset prewarm + loading screen ----
 // All sprites are procedural canvases built at script-load. Warm the GPU upload of every sprite

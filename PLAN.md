@@ -297,3 +297,265 @@ Designed for survivors auto-combat **+** dense bullet hell; several interact wit
 Pick lesser-known OG cast (8 enemies + 4 bosses) → **research each look** → draw the sprites in house
 style → wire `FOES_W#` / `BOSSES_W#` + theme/map into `WORLDS` → give bosses **original move sets** →
 add the world's **new cards** → **balance** → verify headlessly → PR.
+
+---
+
+## 12. PLAYER CHARACTERS, PETS & GEM SYSTEM
+
+> Status: **design only** — nothing implemented yet.
+> All new files load before `game.js`: `hooks.js → characters.js → pets.js → recruit.js → game.js → shop.js`
+
+---
+
+### 12.1 Gem Currency
+
+Gems are the **dedicated recruitment currency** — completely separate from gold and coins.
+Gold and coins are never spent on characters or pets.
+
+**Earn sources:**
+- Beat a world for the first time → **+10 gems**
+- Beat a boss for the first time → **+2 gems**
+- Daily login bonus → **+1 gem**
+- Lucky block rare reward (new 4th slot, low chance) → **+3 gems**
+
+**Storage:** mirrors the existing gold pattern exactly.
+```js
+// br_gems        raw value
+// br_gems_sig    FNV-hash integrity check (same _saveHash() function)
+function addGems(n)    { gems+=n; saveGems(); updateGemsHUD(); }
+function spendGems(n)  { if(gems<n) return false; gems-=n; saveGems(); updateGemsHUD(); return true; }
+```
+
+---
+
+### 12.2 Player Characters
+
+One character is **active per run**, selected from the Character Shop before starting.
+`P.charId` is saved in localStorage and loaded into `resetPlayer()`.
+
+#### World-Progression Characters *(earned by beating worlds — never purchasable)*
+
+| Character | Passive | Unlock |
+|---|---|---|
+| **Gianni** | None — baseline stats | Start |
+| **Fortunato** | `LUCKY_CAP` 2 → 4 per wave; 30% chance lucky block pop also drops a bonus upgrade card | Beat World 3 |
+| **Il Professore** | XP orb pickup radius ×2; starts each wave with 20% of level XP filled; draws 4 cards at level-up instead of 3 | Beat World 7 |
+| **Fantasma** | Dash replaced with **Phase Shift** (see §12.2.1) | Beat World 9 |
+| **Il Campione** | 12% chance each enemy drops a mini lucky block on death; each boss killed permanently adds +2 base damage (persists in localStorage across runs) | Beat World 10 |
+
+#### Gacha Shop Characters *(purchasable from rotating Character Shop — see §12.4)*
+
+| Character | Rarity | Passive |
+|---|---|---|
+| **Bombardella** | Rare | +40% base dmg, −35 max HP (65 HP); every 10 kills in a wave grants +1 temp projectile for that wave |
+| **Sorella Veloce** | Rare | +35% move speed; dash has 2 charges (recharge 30% slower); killing within 0.5s of a dash gives +15% dmg for 3s (stacks ×3) |
+| **Zio Schermo** | Epic | Starts each wave with a shield that absorbs 1 hit; shield recharges 8s after breaking; 15% permanent armor |
+| **Doppione** | Epic | Every upgrade card picked creates a ghost copy at 40% value (doesn't count toward card level caps) |
+| **La Strega** | Legendary | 10% of enemy projectiles convert to XP orbs mid-flight; curse aura — enemies within 80px deal 20% less damage |
+
+#### 12.2.1 Fantasma — Phase Shift
+
+Replaces the dash entirely:
+- Player turns semi-transparent (40% opacity) and becomes **invincible for 0.8 seconds**
+- **Time slows to 30% speed** for the duration
+- Player **cannot move** during the shift — purely defensive
+- Same cooldown slot as dash (`P.dashMax`)
+
+**Implementation — two changes to `game.js`:**
+
+1. Add `let timeScale = 1.0;` at top of file.
+2. In `loop()`, compute `rawDt` first (hitstop handled on rawDt), decrement phase shift timer on rawDt, then multiply: `const dt = rawDt * timeScale;` before calling `update(dt)`.
+3. In `tryDash()`, branch at the top:
+```js
+if(P.charId === 'fantasma'){
+  P.dashCd = P.dashMax;
+  P.phaseShifting = true; P.phaseShiftT = 0.8; P.inv = 0.8;
+  timeScale = 0.3; sfx.dash(); return;
+}
+```
+4. In `render()`, set `cx.globalAlpha = 0.35` before `drawCharacter()` when `P.phaseShifting`, restore after.
+
+---
+
+### 12.3 Character Visual System
+
+Each character has a **custom vector look** drawn with canvas primitives. Same proportions and bounding box as the default player (`P.r * 2.6` ≈ 47px). Shadow, HP bar, blink, and shield rings are unchanged — only the character body changes.
+
+**One change in `game.js`:**
+```js
+// Replace:
+drawSprite('player', P.x, P.y, P.r*2.6, bob, 0, 0, flip);
+// With:
+drawCharacter(P.charId, P.x, P.y, P.r*2.6, bob, flip);
+```
+
+**Dispatcher in `characters.js`:**
+```js
+function drawCharacter(charId, x, y, size, bob, flip){
+  const char = CHARACTERS.find(c=>c.id===charId);
+  if(!char?.draw){ drawSprite('player',x,y,size,bob,0,0,flip); return; }
+  cx.save();
+  cx.translate(x,y); if(flip) cx.scale(-1,1); cx.rotate(bob);
+  char.draw(cx, size);   // draws at local origin (0,0), facing right
+  cx.restore();
+}
+```
+
+Each character config object has a `draw(cx, size)` method using canvas paths. The same function is reused to render **80×80 thumbnails** in the Character Shop (drawn onto an offscreen canvas).
+
+#### Visual Designs *(flat cel-shaded, dark outline, 1–2 shade tones — matching existing art style)*
+
+| Character | Visual Description |
+|---|---|
+| **Gianni** | Existing `SP['player']` sprite — no draw() method, falls back to drawSprite |
+| **Fortunato** | Gold skin, tiny top hat with `?` on it, star sparkle floating at side (pulsing via `elapsed`), green waistcoat body |
+| **Bombardella** | Red-tinted skin, 3 spike triangles for hair, angry brow lines, rough polygon body (torn shirt silhouette) |
+| **Sorella Veloce** | Cyan skin, slightly oval head (wide), hair swept back, 2–3 horizontal speed-line streaks trailing behind, narrow lean body |
+| **Zio Schermo** | Gunmetal grey, bulky — head sits lower with less neck gap, wider squat body, honeycomb hex pattern stroked on back, thick dark visor across eyes |
+| **Doppione** | Split vertically: left half white, right half black; eyes point outward from center line; two-tone body |
+| **La Strega** | Purple skin, tall pointed witch hat with star, bezier-arc cape wings from shoulders, thin horizontal cat-slit pupils |
+| **Il Professore** | Beige skin, flat mortarboard cap with tassel, two small stroked circles for glasses, tie on body, small pulsing XP orb floating top-right (animated via `elapsed`) |
+| **Fantasma** | Pale blue, 85% opacity baseline; bottom fades into 3 animated sine-wave ghost tails (using `elapsed`); hollow stroked eyes, no fill |
+| **Il Campione** | Gold skin, 3-point crown on head with gem, laurel wreath arc behind head, medal circle with star on chest |
+
+---
+
+### 12.4 Character Shop *(new tab, separate from existing daily gear shop)*
+
+A **rotating direct-purchase** shop — no gacha pulls. Players see exactly what's available and buy directly with gems.
+
+| Slot | Count | Rarity | Resets | Cost |
+|---|---|---|---|---|
+| Daily slots | 3 | Common / Rare | Midnight UTC | 20 / 50 gems |
+| Weekly slot | 1 | Legendary | Monday midnight UTC | 150 gems |
+
+**Rotation is deterministic and seeded by date** — all players see the same characters on the same day:
+```js
+function dailySeed(){ const d=new Date(); return d.getUTCFullYear()*10000+(d.getUTCMonth()+1)*100+d.getUTCDate(); }
+function weeklySeed(){ /* ISO week number × year */ }
+```
+
+- **Daily pool:** all non-legendary gacha characters (Common + Rare). World-locked characters show as grayed-out with unlock requirement until condition is met.
+- **Weekly pool:** all Legendary gacha characters only — same world-gate rule.
+- Already-owned characters show a checkmark and no buy button. Their slot is replaced by the next in the seeded sequence so 3 slots always show something purchasable.
+- World-progression characters (Fortunato, Il Professore, Fantasma, Il Campione) **never appear** in the shop — earned only by beating worlds.
+
+**Shop tab UI layout:**
+```
+[ Character Shop ]
+  ┌──────────────────────────────────────┐
+  │  WEEKLY  ★  [Legendary Name]  150💎  │  ← resets in X days
+  ├──────────────────────────────────────┤
+  │  DAILY                               │
+  │  [Common Name]   20💎                │
+  │  [Rare Name]     50💎                │
+  │  [Rare Name]     50💎   🔒 World 5  │
+  │                        resets in Xh  │
+  └──────────────────────────────────────┘
+```
+
+---
+
+### 12.5 Pets
+
+One pet equipped at a time (`P.petId`). Effects are registered as hooks (see §12.7) — no scattered if-checks in game logic.
+
+**All pets obtained via Pet Recruit gacha (§12.6).**
+
+| Pet | Rarity | Trigger | Effect |
+|---|---|---|---|
+| **Gattino** *(Heart Cat)* | Common | `waveStart` | Drops a 25 HP heart pickup near player |
+| **Uccellino** *(Spark Bird)* | Common | `waveStart` every 5 waves | Drops a small XP orb cluster near player |
+| **Orbino** *(XP Sprite)* | Rare | `waveEnd` | Converts 15% of XP gained that wave into a bonus XP burst |
+| **Scudetto** *(Shield Turtle)* | Rare | Continuous | Orbits player, blocks 1 projectile every 8s |
+| **Calamita** *(Magnet Cat)* | Rare | `waveStart` | Activates magnet pull for first 4 seconds of wave |
+| **Draghetto** *(Mini Dragon)* | Epic | `petTick` (every 3s) | Attacks nearest enemy for 15% of player's current base damage |
+| **Stellina** *(Lucky Star)* | Epic | `onHpZero` (once per run) | Spawns 1 emergency lucky block mid-wave when HP drops to 0 (saves player); also adds a 4th lucky block reward: XP burst worth half a level |
+| **Anima Gemella** *(Soul Twin)* | Legendary | `onDash` | After player dashes, pet dashes through nearest 3 enemies dealing 40% of base damage |
+
+**Pet Recruit rarity weights:**
+
+| Rarity | Weight | Pity guarantee |
+|---|---|---|
+| Common | 55% | — |
+| Rare | 35% | Guaranteed Rare if 10 pulls without one |
+| Epic | 9% | — |
+| Legendary | 1% | Guaranteed Legendary at pull 50 |
+
+**Duplicate:** +3 gems refund.
+
+---
+
+### 12.6 Pet Recruit *(gacha — separate from Character Shop)*
+
+- **Cost:** 5 gems per pull
+- Pool: all pets, filtered by rarity weights above
+- Pity counters saved in localStorage as `br_pet_pity`
+- Owned pets still appear in pulls but give gem refund on duplicate
+
+```js
+function recruitPet(){
+  return doPull(PETS, PET_WEIGHTS, 'br_pet_pity', 10, 50, 5);
+}
+```
+
+Generic `doPull()` handles weight sampling, pity checks, ownership grant, and duplicate refund. Adding new pets to the pool requires only adding to the `PETS` config array.
+
+---
+
+### 12.7 Hook System *(the scalability foundation)*
+
+A tiny event bus in `hooks.js` (~20 lines). Every character passive and pet effect registers as a listener — no scattered `if(P.charId==='x')` checks in core game logic.
+
+```js
+const HOOKS = {};
+function onHook(name, fn)     { (HOOKS[name]=HOOKS[name]||[]).push(fn); }
+function fireHook(name,...args){ (HOOKS[name]||[]).forEach(fn=>fn(...args)); }
+function clearHooks()          { Object.keys(HOOKS).forEach(k=>delete HOOKS[k]); }
+```
+
+**Hook points fired in `game.js`:**
+
+| Hook | Where fired | Notes |
+|---|---|---|
+| `waveStart` | `startWave()` | — |
+| `waveEnd` | wave-cleared detection | — |
+| `onKill` | enemy death handler | passes `enemy` object |
+| `onDash` | `tryDash()` | — |
+| `onLevelUp` | `gainXp()` level-up branch | — |
+| `onLuckyPop` | `popLucky()` | passes `block` |
+| `getLuckyCap` | `startWave()` before `spawnLuckyBatch` | **reducer**: `Math.max(2, ...fireHook('getLuckyCap'))` |
+| `onHpZero` | damage handler, before death | — |
+| `petTick` | every `update(dt)` frame | passes `dt` |
+
+**Game start / reset flow:**
+```
+_doStartGame()
+  → resetPlayer()           existing
+  → applyCharBase(P.charId) applies character stat overrides to P
+  → clearHooks()            wipes leftover listeners
+  → registerActiveChar()    character binds its hooks
+  → registerActivePet()     pet binds its hooks
+```
+
+**Scalability rules:**
+- Add a new character → add one object to `CHARACTERS` array in `characters.js`. Zero changes to `game.js`.
+- Add a new pet → add one object to `PETS` array in `pets.js`. Zero changes to `game.js`.
+- Add a new effect type → add one `fireHook()` call at the relevant point in `game.js`; any future character/pet can listen to it.
+- Rotate shop → automatic; pool is a filtered view of the config array seeded by date.
+
+---
+
+### 12.8 New Files Summary
+
+| File | Purpose |
+|---|---|
+| `js/hooks.js` | `onHook`, `fireHook`, `clearHooks` — ~20 lines |
+| `js/characters.js` | `CHARACTERS` config array, `applyCharBase()`, `registerActiveChar()`, `drawCharacter()`, all `draw()` methods |
+| `js/pets.js` | `PETS` config array, `registerActivePet()` |
+| `js/recruit.js` | Gem currency, `recruitPet()`, `doPull()`, Character Shop rotation logic, ownership tracking, pity counters, shop UI |
+
+**Existing file changes:**
+- `game.js` — add `timeScale`, modify `loop()`, modify `tryDash()` (Fantasma branch), add `fireHook()` calls at hook points, replace `drawSprite('player',...)` with `drawCharacter()`, add `applyCharBase()` + `clearHooks()` + `registerActiveChar/Pet()` calls in start sequence, add `P.charId`/`P.petId`/`P.phaseShifting`/`P.phaseShiftT` to `resetPlayer()`
+- `shop.js` — add Character Shop tab and Pet Recruit tab to shop UI
+- `index.html` — add `<script>` tags for the 4 new files in correct load order
