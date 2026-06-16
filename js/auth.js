@@ -29,7 +29,7 @@
 const SUPA_URL  = (typeof window!=='undefined' && window.SUPA_URL)  || 'PASTE_SUPABASE_URL';
 const SUPA_ANON = (typeof window!=='undefined' && window.SUPA_ANON) || 'PASTE_SUPABASE_ANON_KEY';
 
-const EMPTY_PROFILE = () => ({ gold:0, unlocked:0, owned:[], equipped:{}, seen:[], gems:0, chars:[], pets:[], petPity:0, activeChar:'gianni', activePet:null });
+const EMPTY_PROFILE = () => ({ gold:0, unlocked:0, chalUnlocked:0, owned:[], equipped:{}, seen:[], gems:0, chars:[], pets:[], petPity:0, activeChar:'gianni', activePet:null });
 
 let sb = null;                // supabase client
 let authMode = null;          // 'guest' | 'account'
@@ -48,6 +48,7 @@ function currentBlob(){
   return {
     gold:       +(localStorage.getItem('br_gold')||0),
     unlocked:   +(localStorage.getItem('br_unlocked')||0),
+    chalUnlocked: +(localStorage.getItem('br_ch_unlocked')||0),
     owned:      JSON.parse(localStorage.getItem('br_items_owned')||'[]'),
     equipped:   JSON.parse(localStorage.getItem('br_gear_equipped')||'{}'),
     seen:       JSON.parse(localStorage.getItem('br_gear_seen')||'[]'),
@@ -67,6 +68,7 @@ function applyProfile(b){
   if(typeof _saveHash==='function') localStorage.setItem('br_gold_sig', _saveHash(restoredGold));
   // world progress
   localStorage.setItem('br_unlocked',      b.unlocked!=null? b.unlocked : 0);
+  localStorage.setItem('br_ch_unlocked',   b.chalUnlocked!=null? b.chalUnlocked : 0);
   // gear
   localStorage.setItem('br_items_owned',   JSON.stringify(b.owned||[]));
   localStorage.setItem('br_gear_equipped', JSON.stringify(b.equipped||{}));
@@ -95,6 +97,11 @@ function rehydrate(){
     gold = +(localStorage.getItem('br_gold')||0);
     unlockedMax = +(localStorage.getItem('br_unlocked')||0);
     if(typeof selWorld!=='undefined' && selWorld>unlockedMax) selWorld=unlockedMax;
+    if(typeof chalUnlocked!=='undefined'){
+      chalUnlocked = unlockedMax >= 3
+        ? Math.max(0, Math.min(10, +(localStorage.getItem('br_ch_unlocked')||0)))
+        : -1;
+    }
     const ownedRaw = JSON.parse(localStorage.getItem('br_items_owned')||'[]');
     if(typeof normalizeOwned==='function'){
       const ownedNorm = normalizeOwned(ownedRaw);
