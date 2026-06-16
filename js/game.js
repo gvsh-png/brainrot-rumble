@@ -767,7 +767,8 @@ function resetPlayer(){
     waveKills:0, bonusShots:0,
     // Fortunato flags — must be reset so switching away clears them
     luckyBullets:false, noCrit:false, luckyXpOnly:false, luckyBlockDmgMul:1, gearDmgMul:1,
-    hasMagnetPet:false
+    hasMagnetPet:false,
+    bannedCards:null
   });
 }
 
@@ -1023,6 +1024,7 @@ function openLevelUp(){
   for(const u of UPGRADES){
     if((u.minWorld||0) > worldIdx) continue;                      // world-locked ability (e.g. World 2/3 only)
     if(u.req && !u.req.every(id => (P.up[id]||0) > 0)) continue;   // synergy card still locked
+    if(P.bannedCards && P.bannedCards.includes(u.id)) continue;   // character-specific card ban
     const m = nextMove(u); if(m) cands.push({u,m});
   }
   // weighted draw of 3 distinct by rarity (rarer = lower weight); evolve-ready cards stay prioritised

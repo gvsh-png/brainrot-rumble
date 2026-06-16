@@ -278,6 +278,37 @@ function _drawIlCampione(ctx, size, t) {
   }
 }
 
+function _drawIlCecchino(ctx, size, t) {
+  t = t||0;
+  const lw=Math.max(1.5,size*0.038);
+  // Humanoid base: dark camo pants, dark green jacket, dark arms, tan skin
+  _humanBase(ctx, size, '#2a3820', '#3a5030', '#4a6040', '#d4a870');
+  _eyes(ctx, size);
+  // Boonie hat brim
+  _fillE(ctx,size,'#4a5828', 0,-size*0.35, size*0.22,size*0.05);
+  // Hat crown
+  _fillR(ctx,size,'#4a5828', -size*0.13,-size*0.52,size*0.26,size*0.18,size*0.04);
+  // Camo spots on hat
+  ctx.fillStyle='#2a3010';
+  for(const [hx,hy,hr] of [[-size*0.06,-size*0.45,size*0.03],[size*0.04,-size*0.49,size*0.025],[0,-size*0.40,size*0.02]]){
+    ctx.beginPath(); ctx.ellipse(hx,hy,hr,hr*0.7,0,0,Math.PI*2); ctx.fill();
+  }
+  // Rifle (long barrel extending from right arm)
+  ctx.save();
+  ctx.strokeStyle='#1a1a1a'; ctx.lineWidth=Math.max(2,size*0.045); ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(size*0.18,-size*0.01); ctx.lineTo(size*0.55,-size*0.22); ctx.stroke();
+  // Barrel tip
+  ctx.lineWidth=Math.max(1.5,size*0.03);
+  ctx.beginPath(); ctx.moveTo(size*0.50,-size*0.20); ctx.lineTo(size*0.57,-size*0.23); ctx.stroke();
+  // Scope
+  ctx.fillStyle='#2a2a2a'; ctx.strokeStyle='#1a1a1a'; ctx.lineWidth=Math.max(1,size*0.025);
+  ctx.beginPath(); ctx.rect(size*0.28,-size*0.17,size*0.12,size*0.04); ctx.fill(); ctx.stroke();
+  // Scope lens glint (animated)
+  ctx.fillStyle='rgba(100,200,255,'+(0.5+0.3*Math.sin(t*3))+')';
+  ctx.beginPath(); ctx.arc(size*0.34,-size*0.15,size*0.018,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
 // ============ CHARACTERS ARRAY ============
 const CHARACTERS = [
   {
@@ -408,6 +439,19 @@ const CHARACTERS = [
       });
     },
     draw(ctx, size, t) { _drawFantasma(ctx, size, t); }
+  },
+  {
+    id: 'il_cecchino',
+    name: 'Il Cecchino',
+    desc: '3x damage, 5x fire rate cooldown, 60 HP. Cannot get splitting shots.',
+    rarity: 'rare',
+    worldUnlock: null,
+    baseStats: { dmg:30, fireRate:1.6, maxHp:60, range:480 },
+    register() {
+      P.bannedCards = (P.bannedCards||[]).concat(['shots']);
+      onHook('onLevelUp', () => { if(typeof P!=='undefined') P.shots=1; });
+    },
+    draw(ctx, size, t) { _drawIlCecchino(ctx, size, t); }
   },
   {
     id: 'il_campione',
