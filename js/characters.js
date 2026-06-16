@@ -448,9 +448,9 @@ const CHARACTERS = [
   {
     id: 'il_saggio',
     name: 'Il Saggio',
-    desc: 'No card choices — every level up: +5% fire rate, +5% damage instead.',
+    desc: 'Level up no longer grants cards, only power ups.',
     rarity: 'challenger',
-    chalWorldUnlock: 2,   // unlocked by beating Challenger World 2
+    chalWorldUnlock: 4,   // unlocked by beating Challenger World 4
     baseStats: {},
     register() {
       P.noCards = true;
