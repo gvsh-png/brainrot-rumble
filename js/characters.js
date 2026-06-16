@@ -391,17 +391,15 @@ const CHARACTERS = [
   {
     id: 'fantasma',
     name: 'Fantasma',
-    desc: 'Dash replaced with Phase Shift: invincible 0.8s, slows time to 30%.',
+    desc: 'Infinite piercing, translucent shots. Enemies ignore him until he\'s close or shoots them.',
     rarity: 'world',
     worldUnlock: 9,
-    baseStats: {},
+    baseStats: { pierce:999 },
     register() {
-      onHook('onDash', () => {
-        if(typeof P==='undefined') return;
-        P.phaseShift=true;
-        P.phaseT=0.80;
-        if(typeof setTimeScale==='function') setTimeScale(0.30);
-      });
+      if(typeof P!=='undefined'){
+        P.ghostBullets = true;
+        P.stealthAggro = true;
+      }
     },
     draw(ctx, size, t) { _drawFantasma(ctx, size, t); }
   },

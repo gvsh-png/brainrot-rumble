@@ -58,6 +58,7 @@ function saveGold(){ localStorage.setItem('br_gold', gold); localStorage.setItem
 // boss arena: the field locks to a small bounded square a few seconds before the boss arrives
 let arena=null, bossPending=0;
 const ARENA_SIZE=1000, ARENA_LEAD=4, ARENA_ZOOM=1.3;
+const STEALTH_RADIUS=260;   // Fantasma: enemies only notice him within this range (or once shot)
 const CHAL_ARENA_MUL=1.6;                          // challenger boss arenas are roomier than story mode
 const FINAL_ARENA_GROW=1.5, CHAL_FINAL_ARENA_GROW=2.2;   // phase-3 arena growth factor; challenger gets an even bigger blowout
 const FINAL_CHARGE=2.6;   // seconds a final boss spends invincible & still before its phase-3 onslaught
@@ -847,8 +848,6 @@ function resetPlayer(){
     charId:(typeof activeCharId!=='undefined'?activeCharId:'gianni'),
     petId:(typeof activePetId!=='undefined'?activePetId:null),
     petX:WORLD.w/2-36, petY:WORLD.h/2, petWalk:0,
-    phaseShifting:false, phaseShiftT:0,
-    waveKills:0, bonusShots:0,
     // Fortunato flags — must be reset so switching away clears them
     luckyBullets:false, noCrit:false, luckyXpOnly:false, luckyBlockDmgMul:1, gearDmgMul:1,
     hasMagnetPet:false,
@@ -856,7 +855,7 @@ function resetPlayer(){
     fortunatoLuckyCap:5,
     trueDmg:false,
     soldierStill:false, soldierBullets:false,
-    noCards:false, whiteBullets:false
+    noCards:false, whiteBullets:false, stealthAggro:false, ghostBullets:false
   });
 }
 
@@ -1274,12 +1273,6 @@ function gameOver(){
 function tryDash(){
   if(state!==ST.PLAY || P.dashCd>0) return;
   if(typeof fireHook==='function') fireHook('onDash');
-  if(P.charId==='fantasma'){
-    P.dashCd=P.dashMax; P.phaseShifting=true; P.phaseShiftT=0.8; P.inv=0.8;
-    timeScale=0.3; sfx.dash();
-    if(navigator.vibrate) navigator.vibrate(20);
-    return;
-  }
   let mx=joy.dx, my=joy.dy;
   if(keys['w']||keys['arrowup']) my-=1;
   if(keys['s']||keys['arrowdown']) my+=1;
@@ -1806,7 +1799,13 @@ function update(dt){
         else if(e.dst==='dash'){ e.ddur-=dt; dashing=true; e.x+=Math.cos(e.da)*460*dt; e.y+=Math.sin(e.da)*460*dt; if(e.ddur<=0){ e.dst='idle'; e.dcd=rand(2.6,4.6); } }
         else { e.dcd-=dt; if(e.dcd<=0 && e.iv<=0 && dist2(e.x,e.y,P.x,P.y)<380*380){ e.dst='wind'; e.dwin=0.5; e.da=Math.atan2(P.y-e.y,P.x-e.x); dashing=true; } }
       }
-      if(!dashing && e.iv<=0){
+      // Fantasma's stealth: enemies stay put (and hold fire) unless he's close or they've been shot recently
+      let awake=true;
+      if(P.stealthAggro && !e.isBoss){
+        e.aggroT=Math.max(0,(e.aggroT||0)-dt);
+        awake = e.aggroT>0 || dist2(e.x,e.y,P.x,P.y) <= STEALTH_RADIUS*STEALTH_RADIUS;
+      }
+      if(!dashing && e.iv<=0 && awake){
         const fs = e.frz>0 ? 0.2 : (e.chillT>0 ? 0.55 : 1);     // frozen (0.2x) / Permafrost chill (0.55x)
         const toP = Math.atan2(P.y-e.y, P.x-e.x);
         const d2  = dist2(e.x,e.y,P.x,P.y);
@@ -1825,7 +1824,7 @@ function update(dt){
       separate(e);   // resolve overlaps with nearby foes so the pack spreads + flows around
       e.x = clamp(e.x, WALL, WORLD.w-WALL); e.y = clamp(e.y, WALL, WORLD.h-WALL);
       if(arena){ e.x=clamp(e.x, arena.x+e.r, arena.x+arena.w-e.r); e.y=clamp(e.y, arena.y+e.r, arena.y+arena.h-e.r); }
-      if(wave>=3 && e.iv<=0){
+      if(wave>=3 && e.iv<=0 && awake){
         if(e.shoot && (!e.range || dist2(e.x,e.y,P.x,P.y) <= e.range*e.range)){
           e.shootCd -= dt;
           if(e.shootCd<=0){
@@ -2140,6 +2139,7 @@ function damageEnemy(e,dmg,fx,fy,crit){
     floatText(e.x,e.y-e.r-20,'JACKPOT!','#ffd24a',16);
   }
   e.hp -= dmg; e.hitT=0.12; e.sq=1;
+  if(P.stealthAggro && !e.isBoss) e.aggroT=Math.max(e.aggroT||0,3);   // getting shot wakes the enemy up
   if(P.freeze && !e.isBoss) e.frz=1.2;
   if(P.chillHit && !e.isBoss && e.frz<=0) e.chillT = Math.max(e.chillT||0, 0.8 + 0.25*P.chillHit);   // Permafrost: chill-on-hit
   sfx.hit();
@@ -3250,6 +3250,7 @@ function render(){
   // --- player bullets: bright gold with a white halo = YOURS ---
   const bcore = P.railgun ? '#5fe6ff' : P.soldierBullets ? '#1a1a22' : P.whiteBullets ? '#ffffff' : '#ffd21f';
   const bhi   = P.railgun ? '#dafcff' : P.soldierBullets ? '#44444e' : P.whiteBullets ? '#bcdcff' : '#fff6bf';
+  if(P.ghostBullets) cx.globalAlpha=0.6;   // Fantasma: slightly translucent shots
   for(const b of bullets){
     if(b.x<vx0-30||b.x>vx1+30||b.y<vy0-30||b.y>vy1+30) continue;
     if(b.boom){ drawBoomerangCroc(b); continue; }
@@ -3263,6 +3264,7 @@ function render(){
     cx.fillStyle=bcore; cx.beginPath(); cx.arc(b.x,b.y,b.r,0,TAU); cx.fill();
     cx.fillStyle=bhi; cx.beginPath(); cx.arc(b.x-b.r*0.3,b.y-b.r*0.3,b.r*0.4,0,TAU); cx.fill();
   }
+  if(P.ghostBullets) cx.globalAlpha=1;
 
   // --- pet bullets: small cyan dot ---
   for(const pb of petBullets){
@@ -3390,7 +3392,6 @@ function render(){
     if(!blink){
       const bob=Math.sin(P.walk)*0.06;
       const flip = Math.cos(P.face)<0;
-      if(P.phaseShifting) cx.globalAlpha=0.35;
       if(typeof drawCharacter==='function') drawCharacter(P.charId||'gianni', P.x, P.y, P.r*2.6, bob, flip);
       else drawSprite('player', P.x, P.y, P.r*2.6, bob, 0, 0, flip);
       cx.globalAlpha=1;
@@ -3607,7 +3608,6 @@ function loop(t){
   tPrev = t;
   if(hitstop>0){ hitstop-=dt; dt=0; }
   if(state===ST.PLAY){
-    if(P.phaseShifting){ P.phaseShiftT-=dt; if(P.phaseShiftT<=0){ P.phaseShifting=false; timeScale=1.0; } }
     update(dt*timeScale);
   } else if(state===ST.MENU) menuUpdate(dt);
   else if(state===ST.CUTSCENE) cutsceneUpdate(dt);
