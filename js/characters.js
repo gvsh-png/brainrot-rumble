@@ -201,6 +201,22 @@ function _drawSoldier(ctx, size, t) {
   ctx.beginPath(); ctx.moveTo( size*0.16,-size*0.22); ctx.lineTo( size*0.16,-size*0.11); ctx.stroke();
 }
 
+function _drawIlSaggio(ctx, size, t) {
+  t = t||0;
+  const lw=Math.max(1.5,size*0.038);
+  // Humanoid base: navy robe-legs, navy body, navy arms, pale skin
+  _humanBase(ctx, size, '#1a2640', '#243a66', '#243a66', '#e0c0a0');
+  _eyes(ctx, size);
+  // Round glasses
+  ctx.strokeStyle='#2a1c10'; ctx.lineWidth=Math.max(1.2,size*0.03);
+  for(const sx of [-0.075,0.075]){ ctx.beginPath(); ctx.arc(size*sx,-size*0.24,size*0.055,0,Math.PI*2); ctx.stroke(); }
+  ctx.beginPath(); ctx.moveTo(size*-0.02,-size*0.24); ctx.lineTo(size*0.02,-size*0.24); ctx.stroke();
+  // Gold trim sash
+  _fillR(ctx,size,'#e0b03a',-size*0.16,-size*0.02,size*0.32,size*0.06,size*0.02);
+  // Held book
+  _fillR(ctx,size,'#a02828',size*0.14,size*0.04,size*0.13,size*0.10,size*0.015);
+}
+
 function _drawLaStrega(ctx, size, t) {
   t = t||0;
   const lw=Math.max(1.5,size*0.038);
@@ -505,6 +521,19 @@ const CHARACTERS = [
       });
     },
     draw(ctx, size, t) { _drawSoldier(ctx, size, t); }
+  },
+  {
+    id: 'il_saggio',
+    name: 'Il Saggio',
+    desc: 'No card choices — every level up: +5% fire rate, +5% damage instead.',
+    rarity: 'challenger',
+    chalWorldUnlock: 2,   // unlocked by beating Challenger World 2
+    baseStats: {},
+    register() {
+      P.noCards = true;
+      onHook('onLevelUp', () => { P.fireRate *= 0.95; P.dmg *= 1.05; });
+    },
+    draw(ctx, size, t) { _drawIlSaggio(ctx, size, t); }
   },
   {
     id: 'il_campione',

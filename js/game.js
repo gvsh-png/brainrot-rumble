@@ -821,7 +821,8 @@ function resetPlayer(){
     bannedCards:null,
     fortunatoLuckyCap:5,
     trueDmg:false,
-    soldierStill:false, soldierBullets:false
+    soldierStill:false, soldierBullets:false,
+    noCards:false
   });
 }
 
@@ -1145,7 +1146,8 @@ function gainXp(n){
     P.lv++;
     P.xpNext = Math.floor(4 + P.lv*2.6 + P.lv*P.lv*0.4);
     if(typeof fireHook==='function') fireHook('onLevelUp');
-    openLevelUp();
+    if(P.noCards){ sfx.level(); floatText(P.x,P.y-40,'LEVEL '+P.lv,'#9fe0ff',16); }   // stat-only level up, no card picker
+    else openLevelUp();
   }
   const lb=$('lvbadge'); if(lb) lb.textContent = P.lv;
 }
