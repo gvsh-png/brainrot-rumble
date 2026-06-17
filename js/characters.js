@@ -154,32 +154,6 @@ function _drawIlSaggio(ctx, size, t) {
   ctx.beginPath(); ctx.arc(size*0.18,size*0.02+Math.sin(t*2.6)*size*0.03,size*0.025,0,Math.PI*2); ctx.fill();
 }
 
-function _drawLaStrega(ctx, size, t) {
-  t = t||0;
-  const lw=Math.max(1.5,size*0.038);
-  // Cape wings drawn first (behind body)
-  const capeCol='#1a0830';
-  for(const side of [-1,1]){
-    ctx.save(); ctx.rotate(Math.sin(t*1.8+side)*0.05);
-    ctx.beginPath();
-    ctx.moveTo(side*size*0.16,size*0.10);
-    ctx.bezierCurveTo(side*size*0.48,-size*0.04,side*size*0.52,-size*0.17,side*size*0.24,-size*0.27);
-    ctx.bezierCurveTo(side*size*0.15,-size*0.22,side*size*0.08,-size*0.08,0,-size*0.04);
-    ctx.closePath(); ctx.fillStyle=capeCol; ctx.fill(); ctx.strokeStyle='#2a1c10'; ctx.lineWidth=lw; ctx.stroke();
-    ctx.restore();
-  }
-  // Humanoid base: dark purple robe-legs, purple body, purple arms, pale purple skin
-  _humanBase(ctx, size, '#2a1040', '#7030a0', '#a060c8', '#c87ace');
-  // Thin slit pupils
-  ctx.fillStyle='#2a1c10';
-  for(const sx of [-0.07,0.07]){ ctx.beginPath(); ctx.ellipse(size*sx,-size*0.24,size*0.045,size*0.015,0,0,Math.PI*2); ctx.fill(); }
-  // Pointed hat cone
-  ctx.beginPath(); ctx.moveTo(0,-size*0.54); ctx.lineTo(-size*0.17,-size*0.30); ctx.lineTo(size*0.17,-size*0.30); ctx.closePath();
-  ctx.fillStyle=capeCol; ctx.fill(); ctx.strokeStyle='#2a1c10'; ctx.lineWidth=lw; ctx.stroke();
-  // Hat brim
-  _fillE(ctx,size,capeCol, 0,-size*0.30, size*0.22,size*0.05);
-}
-
 function _drawIlProfessore(ctx, size, t) {
   t = t||0;
   const lw=Math.max(1.5,size*0.038);
@@ -342,20 +316,6 @@ const CHARACTERS = [
     draw(ctx, size, t) { _drawZioSchermo(ctx, size, t); }
   },
   {
-    id: 'la_strega',
-    name: 'La Strega',
-    desc: '10% of enemy projectiles become XP orbs. Enemies within 80px deal 20% less damage.',
-    rarity: 'legendary',
-    worldUnlock: null,
-    baseStats: {},
-    register() {
-      onHook('onEnemyShoot', () => {
-        if(Math.random()<0.10 && typeof convertBulletToOrb==='function') convertBulletToOrb();
-      });
-    },
-    draw(ctx, size, t) { _drawLaStrega(ctx, size, t); }
-  },
-  {
     id: 'il_professore',
     name: 'Il Professore',
     desc: 'XP range x2. Start each wave 20% full. Draw 4 cards at level-up.',
@@ -374,8 +334,8 @@ const CHARACTERS = [
     id: 'fantasma',
     name: 'Fantasma',
     desc: 'Infinite piercing, translucent shots. Enemies ignore him until he\'s close or shoots them.',
-    rarity: 'world',
-    worldUnlock: 9,
+    rarity: 'legendary',
+    worldUnlock: null,
     baseStats: { pierce:999 },
     register() {
       if(typeof P!=='undefined'){

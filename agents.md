@@ -189,9 +189,8 @@ _stroke(ctx, size)  // apply the standard dark outline to whatever path is open
 | `sorella_veloce` | Sorella Veloce | rare | +35% speed, double dash |
 | `zio_schermo` | Zio Schermo | epic | Wave-start shield, +15% armor |
 | `doppione` | Doppione | epic | 40% ghost copy of every card pick |
-| `la_strega` | La Strega | legendary | 10% bullets → XP, nearby dmg reduction |
 | `il_professore` | Il Professore | world (7) | 2× XP range, 20% XP pre-fill per wave |
-| `fantasma` | Fantasma | world (9) | Phase shift dash (invincible, slows time) |
+| `fantasma` | Fantasma | legendary (shop only) | Infinite piercing, translucent shots, stealth aggro |
 | `il_cecchino` | Il Cecchino | world (3) | 3× dmg, 5× fire delay, 60 HP, 1.5× gear dmg, no split shots |
 | `il_campione` | Il Campione | world (10) | 12% kills → mini lucky block, boss kills → +2 dmg |
 
