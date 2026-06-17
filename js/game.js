@@ -1,6 +1,7 @@
 'use strict';
 // ============ GAME STATE ============
 let shake = 0, hitFlash = 0, hitstop = 0, tPrev = 0, elapsed = 0;
+let deathShakeOn = localStorage.getItem('br_deathshake')!=='0';   // screen shake on enemy kill (off = boss telegraphs/hits still shake)
 
 const P = {}; // player
 let bullets=[], ebullets=[], petBullets=[], enemies=[], gems=[], parts=[], texts=[], zones=[], holes=[], luckies=[];
@@ -2081,7 +2082,7 @@ function update(dt){
       kills++; setKillHUD();
       if(typeof fireHook==='function') fireHook('onKill', e);
       sfx.hit();
-      shake=Math.max(shake,e.isBoss?16:5); hitstop=Math.max(hitstop,e.isBoss?0.08:0.03);
+      if(deathShakeOn) shake=Math.max(shake,e.isBoss?16:5); hitstop=Math.max(hitstop,e.isBoss?0.08:0.03);
       burst(e.x,e.y,'#ff9f3a',e.isBoss?60:14,e.isBoss?420:200);
       if(P.aftershock && Math.random() < 0.12+P.aftershock*0.06){   // Aftershock: kills erupt a quake that damages nearby foes
         const R=70+P.aftershock*10, qd=P.dmg*(2+P.aftershock)*(P.abyssalMul||1);
@@ -4014,6 +4015,10 @@ function setSfxMuted(v){
   if(!sfxMuted && AC) AC.resume();
   refreshMute();
 }
+function setDeathShake(v){
+  deathShakeOn = v; localStorage.setItem('br_deathshake', deathShakeOn?'1':'0');
+  const dsb=$('sdrop-deathshake'); if(dsb){ dsb.textContent='Death Shake: '+(deathShakeOn?'On':'Off'); dsb.classList.toggle('off', !deathShakeOn); }
+}
 // Settings modal toggle
 (function(){
   const btn=$('settingsbtn'), drop=$('settingsdrop'), closeBtn=$('sdrop-close');
@@ -4026,9 +4031,11 @@ function setSfxMuted(v){
 })();
 const _dm=$('sdrop-music'); if(_dm) _dm.addEventListener('click',()=>setMusicMuted(!muted));
 const _ds=$('sdrop-sfx'); if(_ds) _ds.addEventListener('click',()=>setSfxMuted(!sfxMuted));
+const _dds=$('sdrop-deathshake'); if(_dds) _dds.addEventListener('click',()=>setDeathShake(!deathShakeOn));
 $('pausemute').addEventListener('click', ()=>setMusicMuted(!muted));
 $('pausesfx').addEventListener('click', ()=>setSfxMuted(!sfxMuted));
 refreshMute();
+setDeathShake(deathShakeOn);
 
 // ---- pause / resume / quit ----
 function pauseGame(){ if(state!==ST.PLAY) return; state=ST.PAUSE; $('pause').classList.remove('hidden'); }

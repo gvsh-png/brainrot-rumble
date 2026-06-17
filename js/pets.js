@@ -460,13 +460,18 @@ const PETS = [
   {
     id: 'calamita',
     name: 'Calamita',
-    desc: 'At wave start: vacuums all pickups toward you for 3s.',
+    desc: 'At wave start (every 60s in Challenger): vacuums all pickups toward you for 3s.',
     rarity: 'rare',
     register() {
       if(typeof P!=='undefined') P.hasMagnetPet=true;
-      let pullT=0;
+      let pullT=0, timerAcc=0;
       onHook('waveStart', () => { pullT=3; });
       onHook('petTick', (dt) => {
+        // Challenger/practice-timer modes never fire waveStart, so pulse on a 60s clock instead.
+        if(typeof timerMode==='function' && timerMode()){
+          timerAcc+=dt;
+          if(timerAcc>=60){ timerAcc=0; pullT=3; }
+        }
         if(pullT<=0||typeof gems==='undefined') return;
         pullT-=dt;
         for(const g of gems) g.vac=true;
