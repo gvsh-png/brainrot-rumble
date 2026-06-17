@@ -2,6 +2,11 @@
 // ============ CHARACTERS: selection, drawing, hooks ============
 // Loads before game.js. All draw functions render at (0,0) with ctx already translated.
 
+// ---- gear visibility: hidden by default on any non-default character, can be forced back on ----
+let gearForceVisible = localStorage.getItem('br_gear_force_visible')==='1';
+function gearShouldShow(charId){ return (charId||'gianni')==='gianni' || gearForceVisible; }
+function setGearForceVisible(v){ gearForceVisible=!!v; localStorage.setItem('br_gear_force_visible', gearForceVisible?'1':'0'); }
+
 // ---- shared drawing helpers ----
 function _stroke(ctx, size) {
   ctx.strokeStyle='#2a1c10';
@@ -594,8 +599,8 @@ function compositeCharCanvasURL(size) {
   const g = c.getContext('2d');
   // Draw character portrait centered
   renderCharThumb(g, activeCharId, size);
-  // Overlay gear if available
-  if(typeof GEAR_CATS!=='undefined' && typeof gearEquip!=='undefined'){
+  // Overlay gear if available (hidden by default on non-default characters)
+  if(gearShouldShow(activeCharId) && typeof GEAR_CATS!=='undefined' && typeof gearEquip!=='undefined'){
     for(const cat of GEAR_CATS){
       const uid=gearEquip[cat];
       const id=(uid && typeof gearInstanceItem==='function') ? gearInstanceItem(uid) : uid;

@@ -1805,21 +1805,28 @@ function update(dt){
         e.aggroT=Math.max(0,(e.aggroT||0)-dt);
         awake = e.aggroT>0 || dist2(e.x,e.y,P.x,P.y) <= STEALTH_RADIUS*STEALTH_RADIUS;
       }
-      if(!dashing && e.iv<=0 && awake){
+      if(!dashing && e.iv<=0){
         const fs = e.frz>0 ? 0.2 : (e.chillT>0 ? 0.55 : 1);     // frozen (0.2x) / Permafrost chill (0.55x)
-        const toP = Math.atan2(P.y-e.y, P.x-e.x);
-        const d2  = dist2(e.x,e.y,P.x,P.y);
-        const rng = e.range||0;           // 0 = melee: always chase
-        let a = toP + Math.sin(e.t*e.wob)*0.4;
-        let move = true;
-        if(rng>0){
-          if(d2 > rng*rng){ /* out of range: approach (move already true) */ }
-          else if(d2 < (rng*0.55)*(rng*0.55)){ move=true; a = toP+Math.PI + Math.sin(e.t*e.wob)*0.4; } // too close: back off
-          else if(e.shoot && e.shoot.move){ a = toP + Math.PI/2; } // in range + mobile: strafe
-          else { move=false; }                                  // in range + stationary: hold
+        if(awake){
+          const toP = Math.atan2(P.y-e.y, P.x-e.x);
+          const d2  = dist2(e.x,e.y,P.x,P.y);
+          const rng = e.range||0;           // 0 = melee: always chase
+          let a = toP + Math.sin(e.t*e.wob)*0.4;
+          let move = true;
+          if(rng>0){
+            if(d2 > rng*rng){ /* out of range: approach (move already true) */ }
+            else if(d2 < (rng*0.55)*(rng*0.55)){ move=true; a = toP+Math.PI + Math.sin(e.t*e.wob)*0.4; } // too close: back off
+            else if(e.shoot && e.shoot.move){ a = toP + Math.PI/2; } // in range + mobile: strafe
+            else { move=false; }                                  // in range + stationary: hold
+          }
+          if(move){ e.x += Math.cos(a)*e.sp*fs*dt; e.y += Math.sin(a)*e.sp*fs*dt; }
+          e.face = Math.cos(toP)>=0 ? 1 : -1;
+        } else {
+          // asleep to Fantasma: slow drifting wander instead of chasing
+          const wa = e.t*0.6 + e.wob*7;
+          e.x += Math.cos(wa)*e.sp*0.3*fs*dt; e.y += Math.sin(wa)*e.sp*0.3*fs*dt;
+          e.face = Math.cos(wa)>=0 ? 1 : -1;
         }
-        if(move){ e.x += Math.cos(a)*e.sp*fs*dt; e.y += Math.sin(a)*e.sp*fs*dt; }
-        e.face = Math.cos(toP)>=0 ? 1 : -1;
       }
       separate(e);   // resolve overlaps with nearby foes so the pack spreads + flows around
       e.x = clamp(e.x, WALL, WORLD.w-WALL); e.y = clamp(e.y, WALL, WORLD.h-WALL);
@@ -3395,7 +3402,7 @@ function render(){
       if(typeof drawCharacter==='function') drawCharacter(P.charId||'gianni', P.x, P.y, P.r*2.6, bob, flip);
       else drawSprite('player', P.x, P.y, P.r*2.6, bob, 0, 0, flip);
       cx.globalAlpha=1;
-      if(typeof drawPlayerGear==='function') drawPlayerGear(P.x, P.y, P.r*2.6, bob, flip);   // equipped gear overlay
+      if(typeof drawPlayerGear==='function' && gearShouldShow(P.charId)) drawPlayerGear(P.x, P.y, P.r*2.6, bob, flip);   // equipped gear overlay (hidden by default on non-default characters)
     }
     // Phoenix burn aura
     if(P.burnAura>0){
