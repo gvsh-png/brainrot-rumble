@@ -3100,7 +3100,7 @@ function drawSprite(name, x, y, size, rot, sq, hitT, flip, tint){
   const dsz = img._nom ? size * img.width / img._nom : size;
   const drawImg = (tint && tintedSprite(name,tint)) || img;
   cx.drawImage(drawImg, -dsz/2, -dsz/2, dsz, dsz);
-  if(hitT>0){ cx.globalAlpha=Math.min(1,hitT/0.12); cx.drawImage(SPW[name], -dsz/2, -dsz/2, dsz, dsz); cx.globalAlpha=1; }
+  if(hitT>0.012){ cx.globalAlpha=Math.min(1,hitT/0.12); cx.drawImage(SPW[name], -dsz/2, -dsz/2, dsz, dsz); cx.globalAlpha=1; }   // skip the imperceptible tail of the flash to save a full extra drawImage
   cx.restore();
 }
 
@@ -3296,6 +3296,9 @@ function render(){
   _vis.length=0;   // reuse a scratch array instead of allocating filter()+sort() every frame
   for(const e of enemies){ if(e.x>vx0-60&&e.x<vx1+60&&e.y>vy0-60&&e.y<vy1+60) _vis.push(e); }
   _vis.sort((a,b)=>a.y-b.y);
+  // idle sprite wobble forces every drawImage onto canvas's slower rotated-blit path (any non-zero
+  // rotation does); skip it once there are enough visible enemies that the blit cost actually matters
+  const skipWob = _vis.length > 40;
   for(const e of _vis){
     if(e.under){   // burrowed: just a heaving dirt mound that tracks the player
         const w=e.r*1.1+Math.sin(e.t*10)*3;
@@ -3327,7 +3330,7 @@ function render(){
       cx.globalAlpha=0.7; cx.lineWidth=3.5; cx.beginPath(); cx.arc(e.x,e.y,e.r+8+(1-k)*48,0,TAU); cx.stroke();   // shrinks in as the attack nears
       cx.globalAlpha=1;
     }
-    const wob = e.isBoss ? Math.sin(e.t*2)*0.06 : Math.sin(e.t*6)*0.12;
+    const wob = skipWob ? 0 : (e.isBoss ? Math.sin(e.t*2)*0.06 : Math.sin(e.t*6)*0.12);
     if(e.cut && cut){ cx.globalAlpha = cut.alpha; }
     drawSprite(e.spr, e.x, e.y, e.r*2.5*(e.deathScale||1), wob, e.sq, e.hitT, e.face===-1, e.isBoss?null:curWorld().enemyTint);   // per-world enemy recolor
     if(e.cut){ cx.globalAlpha = 1; }
