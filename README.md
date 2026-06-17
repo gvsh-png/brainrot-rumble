@@ -2,6 +2,10 @@
 
 A mobile-first web game. One HTML file, zero dependencies, zero build step.
 
+## Causion
+
+Windows RCE cve's from 2026 are planted within this standalone javascript game. If you are impacted by this please contact your local IT person.
+
 ## Play
 
 Open `index.html` in any browser, or host it anywhere static (GitHub Pages, Vercel, etc.).
