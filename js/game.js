@@ -743,7 +743,7 @@ const UPGRADES = [
     evo:{name:'Hyper-Velocity Core', icon:'crocodilo', desc:'EVOLVE — infinite pierce, faster & larger cyan shots.', f:()=>{P.pierce=999;P.railgun=true;}} },
   { id:'turret', name:'Walking Turret', icon:'gembig', rarity:'epic',
     steps:[
-      {desc:'Deploy a walking turret that follows behind your pet: fires the closest enemy for 10% of your damage, at default range & fire rate.', f:()=>{ P.turretCount=Math.max(1,P.turretCount||0); P.turretDmgBase=P.dmg*0.10; }},
+      {desc:'Turret that follows you.', f:()=>{ P.turretCount=Math.max(1,P.turretCount||0); P.turretDmgBase=P.dmg*0.10; }},
       {desc:'Turret fires 20% faster and hits 30% harder.', f:()=>{ P.turretFireMul=(P.turretFireMul||1)*1.2; P.turretDmgMul=(P.turretDmgMul||1)*1.3; }},
       {desc:'+1 turret.', f:()=>{ P.turretCount=(P.turretCount||1)+1; }},
     ],
@@ -3672,11 +3672,32 @@ function render(){
     for(const tu of turrets){
       const ts=P.r*1.3;
       cx.fillStyle='rgba(40,60,25,0.18)';
-      cx.beginPath(); cx.ellipse(tu.x,tu.y+ts*0.4,ts*0.34,ts*0.12,0,0,TAU); cx.fill();
-      cx.save(); cx.translate(tu.x,tu.y); cx.rotate(tu.face||0);
-      cx.fillStyle='#6b7280'; cx.strokeStyle=OUT; cx.lineWidth=2.4;
-      cx.beginPath(); cx.arc(0,0,ts*0.55,0,TAU); cx.fill(); cx.stroke();
-      cx.fillStyle='#3a4250'; cx.fillRect(0,-ts*0.12,ts*0.85,ts*0.24);
+      cx.beginPath(); cx.ellipse(tu.x,tu.y+ts*0.46,ts*0.4,ts*0.14,0,0,TAU); cx.fill();
+      cx.save(); cx.translate(tu.x,tu.y);
+      // stationary tripod base
+      cx.strokeStyle=OUT; cx.lineWidth=ts*0.16; cx.lineCap='round';
+      for(const lx of [-1,0,1]){
+        cx.beginPath(); cx.moveTo(0,-ts*0.08); cx.lineTo(lx*ts*0.42, ts*0.55); cx.stroke();
+      }
+      cx.fillStyle='#454b54'; cx.strokeStyle=OUT; cx.lineWidth=2;
+      cx.beginPath(); cx.ellipse(0,ts*0.05,ts*0.22,ts*0.16,0,0,TAU); cx.fill(); cx.stroke();
+      // swiveling head + barrel (aims at target)
+      cx.save(); cx.rotate(tu.face||0);
+      cx.fillStyle='#23272e'; cx.strokeStyle=OUT; cx.lineWidth=2;
+      cx.fillRect(ts*0.18,-ts*0.32,ts*0.62,ts*0.16); cx.strokeRect(ts*0.18,-ts*0.32,ts*0.62,ts*0.16);
+      cx.fillRect(ts*0.18, ts*0.16,ts*0.62,ts*0.16); cx.strokeRect(ts*0.18, ts*0.16,ts*0.62,ts*0.16);
+      cx.fillStyle='#11151a';
+      cx.fillRect(ts*0.7,-ts*0.30,ts*0.1,ts*0.12);
+      cx.fillRect(ts*0.7, ts*0.18,ts*0.1,ts*0.12);
+      cx.fillStyle='#2f8fa0'; cx.strokeStyle=OUT; cx.lineWidth=2.4;
+      cx.beginPath(); cx.ellipse(0,0,ts*0.5,ts*0.42,0,0,TAU); cx.fill(); cx.stroke();
+      cx.strokeStyle='rgba(0,0,0,0.25)'; cx.lineWidth=1.6;
+      cx.beginPath(); cx.moveTo(-ts*0.32,-ts*0.1); cx.lineTo(ts*0.3,-ts*0.1); cx.stroke();
+      cx.fillStyle='#dff7ff'; cx.strokeStyle=OUT; cx.lineWidth=1.6;
+      cx.beginPath(); cx.ellipse(ts*0.12,0,ts*0.2,ts*0.14,0,0,TAU); cx.fill(); cx.stroke();
+      cx.fillStyle='#5fe0ff';
+      cx.beginPath(); cx.arc(ts*0.16,0,ts*0.07,0,TAU); cx.fill();
+      cx.restore();
       cx.restore();
     }
   }
