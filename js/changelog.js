@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.12';
+const CURRENT_VERSION = '1.13';
 const CHANGELOG = [
+  { v: '1.13', notes: 'Challenger mode buffed: bigger boss arenas (even bigger on phase 3 finales), enemies hit harder and scale with world, 30% more mobs early on, mobs spawn closer in on wide screens, and Challenger now has its own danger-badge world icon.' },
   { v: '1.12', notes: 'Fixed world-select arrow buttons shifting position depending on world name length (title box is now a fixed width, not just a minimum).' },
   { v: '1.11', notes: 'Fixed UI layout jitter: world title, shop character carousel, weekly legendary card, and character-select button no longer shift position when text length changes.' },
   { v: '1.10', notes: 'Pulse Wave (shockwave): radius buffed to actually match its visual size, but damage nerfed and now scales off radius too, not just a flat number.' },

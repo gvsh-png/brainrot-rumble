@@ -63,8 +63,8 @@ function saveGold(){ localStorage.setItem('br_gold', gold); localStorage.setItem
 let arena=null, bossPending=0;
 const ARENA_SIZE=1000, ARENA_LEAD=4, ARENA_ZOOM=1.3;
 const STEALTH_RADIUS=260;   // Fantasma: enemies only notice him within this range (or once shot)
-const CHAL_ARENA_MUL=1.6;                          // challenger boss arenas are roomier than story mode
-const FINAL_ARENA_GROW=1.5, CHAL_FINAL_ARENA_GROW=2.2;   // phase-3 arena growth factor; challenger gets an even bigger blowout
+const CHAL_ARENA_MUL=2.1;                          // challenger boss arenas are roomier than story mode
+const FINAL_ARENA_GROW=1.5, CHAL_FINAL_ARENA_GROW=2.8;   // phase-3 arena growth factor; challenger gets an even bigger blowout
 const FINAL_CHARGE=2.6;   // seconds a final boss spends invincible & still before its phase-3 onslaught
 const BOSS_WIND=0.9;      // boss attack wind-up: how long the telegraph shows before the move fires
 // XP orb tiers (index = tier). Enemies drop one orb; tier scales with their xp value.
@@ -168,6 +168,7 @@ function foeIsBurst(d){ return !!d.shoot && (d.shoot.type==='ring' || (d.shoot.n
 function foeIsSpecial(d){ return foeIsHazard(d) || foeIsBurst(d); }
 function worldBand(){ return curWorld().band||0; }       // 0-indexed difficulty band (drives macro scaling)
 function worldDmgMul(){ return (curWorld().dmgMul||1) * (1 + worldBand()*0.12); }   // per-world enemy damage (band ramp)
+function chalDmgMul(){ return gameMode==='challenger' ? 1.3 + worldBand()*0.08 : 1; }   // challenger: enemies hit harder, ramps with world
 function worldHpBand(){ return 1 + worldBand()*0.42; }   // enemy HP multiplier per world band
 function worldCoinMul(){ return 1 + worldBand()*0.22; }   // later worlds pay out more (gentle ramp, ~3x by W10 — funds the gear grind)
 // coins are scarce early; from wave 20 on they pay out a little more (capped at 3x)
@@ -637,11 +638,8 @@ function worldLabel(i){
   return 'WORLD '+(i+1)+' · '+(i<=unlockedMax ? WORLDS[i].name : '??? LOCKED');
 }
 // per-world preview emblem shown on the Battle stage: world ground tones + its end-boss silhouette
-const _emblemURL = {};
-function worldEmblemURL(i){
-  if(_emblemURL[i]) return _emblemURL[i];
-  const w=WORLDS[i], sz=220, c=document.createElement('canvas'); c.width=c.height=sz;
-  const g=c.getContext('2d'), th=w.theme;
+function drawWorldEmblemBase(g,w,sz){
+  const th=w.theme;
   g.fillStyle=th.tile2; g.fillRect(0,0,sz,sz);
   g.fillStyle=th.tile1; const T=28;                                   // checker ground
   for(let y=0;y<sz;y+=T) for(let x=0;x<sz;x+=T) if(((x/T+y/T)&1)) g.fillRect(x,y,T,T);
@@ -649,7 +647,31 @@ function worldEmblemURL(i){
   const spr = bdef && SP[bdef.spr];
   if(spr){ const pad=spr._nom?spr.width/spr._nom:1, s=sz*0.72*pad, im=(w.enemyTint && tintedSprite(bdef.spr,w.enemyTint))||spr;
     g.drawImage(im, (sz-s)/2, (sz-s)/2+8, s, s); }
+}
+const _emblemURL = {};
+function worldEmblemURL(i){
+  if(_emblemURL[i]) return _emblemURL[i];
+  const w=WORLDS[i], sz=220, c=document.createElement('canvas'); c.width=c.height=sz;
+  drawWorldEmblemBase(c.getContext('2d'), w, sz);
   const u=c.toDataURL(); _emblemURL[i]=u; return u;
+}
+// Challenger gets the same scene plus a red danger badge, so it reads as a distinct mode at a glance
+const _chalEmblemURL = {};
+function challengerEmblemURL(i){
+  if(_chalEmblemURL[i]) return _chalEmblemURL[i];
+  const w=WORLDS[i], sz=220, c=document.createElement('canvas'); c.width=c.height=sz;
+  const g=c.getContext('2d');
+  drawWorldEmblemBase(g, w, sz);
+  g.save(); g.globalCompositeOperation='multiply'; g.globalAlpha=0.4; g.fillStyle='#ff5a70'; g.fillRect(0,0,sz,sz); g.restore();
+  g.lineWidth=10; g.strokeStyle='#ff5a70'; g.strokeRect(5,5,sz-10,sz-10);
+  g.save();
+  g.translate(sz-38,38);
+  g.fillStyle='#ff5a70'; g.beginPath(); g.arc(0,0,28,0,TAU); g.fill();
+  g.lineWidth=4; g.strokeStyle='#2a1c10'; g.stroke();
+  g.fillStyle='#fff'; g.font='bold 32px sans-serif'; g.textAlign='center'; g.textBaseline='middle';
+  g.fillText('⚡',0,2);   // lightning bolt — challenger's danger badge
+  g.restore();
+  const u=c.toDataURL(); _chalEmblemURL[i]=u; return u;
 }
 let _trainingEmblemURL=null;
 function trainingEmblemURL(){
@@ -663,7 +685,9 @@ function trainingEmblemURL(){
 }
 function setStageEmblem(i){
   const img=$('charimg'); if(!img) return;
-  img.src = gameMode==='practice' ? trainingEmblemURL() : worldEmblemURL(clamp(i,0,WORLDS.length-1));
+  img.src = gameMode==='practice' ? trainingEmblemURL()
+    : gameMode==='challenger' ? challengerEmblemURL(clamp(i,0,WORLDS.length-1))
+    : worldEmblemURL(clamp(i,0,WORLDS.length-1));
 }
 function refreshWorldSel(){
   $('wname').textContent = worldLabel(selWorld);
@@ -1042,7 +1066,7 @@ function startWave(){
   $('wavetag').textContent = 'WAVE '+wave;
   if(typeof fireHook==='function') fireHook('waveStart');
   if(wave % 5 === 0){ startBossArena(); waveEnemiesLeft = 0; }
-  else { waveEnemiesLeft = Math.max(4, Math.round((7 + wave*3) * (curWorld().enemyMul||1))); spawnTimer = 0; sfx.wave();
+  else { waveEnemiesLeft = Math.max(4, Math.round((7 + wave*3) * (curWorld().enemyMul||1) * (wave<=9?1.3:1))); spawnTimer = 0; sfx.wave();
     const luckyCap = Math.max(2, ...(typeof queryHook==='function' ? queryHook('getLuckyCap') : [2]));
     spawnLuckyBatch(luckyCap);
   }
@@ -1109,7 +1133,12 @@ function startBossArena(){
   sfx.warn();
 }
 
-function spawnRingDist(){ return Math.max(W,H)/Math.max(zoom,0.0001)*0.62 + 80; }   // world-space ring radius; scales with viewport so it stays off-screen on wide/zoomed-out monitors
+function spawnRingDist(){
+  // Challenger: use the SHORT viewport axis instead of the long one, so on wide/ultrawide
+  // monitors mobs spawn closer in (visible, in-your-face) rather than way off past the long edge.
+  if(gameMode==='challenger') return Math.min(W,H)/Math.max(zoom,0.0001)*0.58 + 60;
+  return Math.max(W,H)/Math.max(zoom,0.0001)*0.62 + 80;   // world-space ring radius; scales with viewport so it stays off-screen on wide/zoomed-out monitors
+}
 function ringPos(){ // spawn point on a ring around player, clamped to world
   const a = rand(0,TAU), d = spawnRingDist();
   return { x: clamp(P.x+Math.cos(a)*d, WALL+30, WORLD.w-WALL-30),
@@ -1973,7 +2002,9 @@ function update(dt){
   // --- spawn during wave ---
   spawnTimer -= dt;
   if(!betweenWaves && waveEnemiesLeft>0 && spawnTimer<=0){
-    spawnTimer = Math.max(0.14, 0.85 - wave*0.04);
+    // Challenger's first stretch (before its 1st boss) spawns 30% faster, same early-game buff as story waves 1-9
+    const chalEarlyMul = (gameMode==='challenger' && chalBossIdx===0) ? 1.3 : 1;
+    spawnTimer = Math.max(0.14, (0.85 - wave*0.04) / chalEarlyMul);
     if(spawnEnemy() !== false) waveEnemiesLeft--;   // at the cap? keep the budget and retry next tick
   }
 
@@ -2112,7 +2143,7 @@ function update(dt){
 
     if(!e.under && dist2(e.x,e.y,P.x,P.y) < (e.r+P.r)*(e.r+P.r)){
       const hitLands = P.inv<=0 && P.dashT<=0 && P.shield<=0;   // the contact actually deals damage this frame
-      hurtPlayer((e.isBoss?20:10)*(e.dmgBuff||1), e);
+      hurtPlayer((e.isBoss?20:10)*(e.dmgBuff||1)*chalDmgMul(), e);
       if(P.thorns>0 && hitLands && !e.isBoss) damageEnemy(e, P.thorns, P.x, P.y, false);   // Spiky Peel
       if(e.kb && e.dst==='dash'){   // charging boulder bowls the player back
         const a=Math.atan2(P.y-e.y,P.x-e.x);
@@ -2221,7 +2252,7 @@ function update(dt){
       for(let s=-1;s<=1;s++) fireEB(b.x,b.y, base+s*0.32, sp, b.color);
       ebullets.splice(i,1); continue;
     }
-    if(dist2(b.x,b.y,P.x,P.y) < (b.r+P.r-3)*(b.r+P.r-3)){ ebullets.splice(i,1); hurtPlayer(8); }
+    if(dist2(b.x,b.y,P.x,P.y) < (b.r+P.r-3)*(b.r+P.r-3)){ ebullets.splice(i,1); hurtPlayer(8*chalDmgMul()); }
   }
 
   // --- lucky blocks ---
@@ -2301,7 +2332,7 @@ function update(dt){
         });
       }
     } else if(active && P.dashT<=0 && P.inv<=0 && dist2(z.x,z.y,P.x,P.y)<z.r*z.r){
-      P.hp -= z.dps*dt*worldDmgMul(); hitFlash=Math.max(hitFlash,0.3);
+      P.hp -= z.dps*dt*worldDmgMul()*chalDmgMul(); hitFlash=Math.max(hitFlash,0.3);
       if(z.slow) P.slowT=Math.max(P.slowT,0.4);
       if(P.hp<=0){ gameOver(); }
     }
