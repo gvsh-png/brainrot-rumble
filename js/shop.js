@@ -117,6 +117,17 @@ function normalizeEquip(raw, owned){
 }
 let _gearUidSeq = Math.max(1, +(localStorage.getItem(GEAR_UID_KEY)||1));
 function nextGearUid(){ const uid='g'+(_gearUidSeq++).toString(36); localStorage.setItem(GEAR_UID_KEY, String(_gearUidSeq)); return uid; }
+// uids are sequential base36 counters, but a cloud-account restore can drop in instances whose uids
+// were minted by a different device/session -- re-sync past the highest uid actually in use so new
+// pulls never mint a uid that collides with a restored one (collision = two tiles fight over one slot).
+function syncGearUidSeq(){
+  let maxN = 0;
+  for(const inst of gearOwned){
+    const n = parseInt(String(inst.uid).slice(1), 36);
+    if(Number.isFinite(n) && n>maxN) maxN = n;
+  }
+  if(maxN+1 > _gearUidSeq){ _gearUidSeq = maxN+1; localStorage.setItem(GEAR_UID_KEY, String(_gearUidSeq)); }
+}
 const _ownedRaw = JSON.parse(localStorage.getItem('br_items_owned')||'[]');
 const _ownedNorm = normalizeOwned(_ownedRaw);
 let gearOwned = _ownedNorm.list;
@@ -132,6 +143,7 @@ let gearSeen = new Set(_seenNorm.list);
 if(_ownedNorm.dirty) localStorage.setItem('br_items_owned', JSON.stringify(gearOwned));
 if(_equipNorm.dirty) localStorage.setItem('br_gear_equipped', JSON.stringify(gearEquip));
 if(_seenNorm.dirty) localStorage.setItem('br_gear_seen', JSON.stringify([...gearSeen]));
+syncGearUidSeq();
 function saveOwned(){ localStorage.setItem('br_items_owned', JSON.stringify(gearOwned)); if(window.markDirty) window.markDirty(); }
 function saveEquip(){ localStorage.setItem('br_gear_equipped', JSON.stringify(gearEquip)); if(window.markDirty) window.markDirty(); }
 function saveSeen(){  localStorage.setItem('br_gear_seen',   JSON.stringify([...gearSeen])); if(window.markDirty) window.markDirty(); }

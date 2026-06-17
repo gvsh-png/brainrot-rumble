@@ -113,6 +113,20 @@ test('instance helpers exist and legacy owned ids migrate to instance records', 
   assert.equal(equip.helmet, owned.find(x => x.itemId === 'dmg_common_0').uid);
 });
 
+test('a cloud restore with higher uids does not collide with newly minted uids', () => {
+  const { sandbox } = loadShop({
+    br_gear_reset_v2: '1',
+    br_gear_uid_seq: '1',
+    br_items_owned: JSON.stringify([{ uid: 'g9', itemId: 'dmg_common_0' }]),
+  });
+
+  const fresh = sandbox.addGearInstance('hp_rare_2');
+  assert.notEqual(fresh.uid, 'g9');
+  const owned = sandbox.ownedGearList();
+  const uids = owned.map(x => x.uid);
+  assert.equal(new Set(uids).size, uids.length);
+});
+
 test('selling one duplicate removes only one copy and pays 40 percent refund', () => {
   const { sandbox } = loadShop({ br_gear_reset_v2: '1' });
   sandbox.gold = 0;

@@ -107,6 +107,7 @@ function rehydrate(){
       const ownedNorm = normalizeOwned(ownedRaw);
       gearOwned = ownedNorm.list;
       if(ownedNorm.dirty) localStorage.setItem('br_items_owned', JSON.stringify(gearOwned));
+      if(typeof syncGearUidSeq==='function') syncGearUidSeq();
       const equipRaw = JSON.parse(localStorage.getItem('br_gear_equipped')||'{}');
       if(typeof normalizeEquip==='function'){
         const equipNorm = normalizeEquip(equipRaw, gearOwned);
