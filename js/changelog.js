@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.37';
+const CURRENT_VERSION = '1.38';
 const CHANGELOG = [
+  { v: '1.38', notes: 'Fixed Walking Turret card not adding a turret on top of Engineer\'s starting 2. Dashing as Engineer at the 3-turret cap now destroys the oldest placed turret and places a new one instead of doing nothing.' },
   { v: '1.37', notes: 'Engineer is now unlocked at World 2 (for now), instead of being a gem-shop character.' },
   { v: '1.36', notes: 'New character: Engineer! Fires no bullets of his own — starts with 2 turrets that share all his stats, and Dash is replaced with placing a stationary turret (25 HP, max 3). Two new Engineer-exclusive cards: Minigun Turret (fast, low damage, +fire rate then +1 turret) and Flamethrower Turret (AOE flame damage).' },
   { v: '1.26', notes: 'Fixed ability cards showing extra unreachable stars after evolving (e.g. Turret Network showed 5 star slots for a card with only 4 real levels).' },

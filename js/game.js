@@ -824,7 +824,7 @@ const UPGRADES = [
     evo:{name:'Hyper-Velocity Core', icon:'crocodilo', desc:'EVOLVE — infinite pierce, faster & larger cyan shots.', f:()=>{P.pierce=999;P.railgun=true;}} },
   { id:'turret', name:'Walking Turret', icon:'gembig', rarity:'epic',
     steps:[
-      {desc:'Turret that follows you.', f:()=>{ P.turretCount=Math.max(1,P.turretCount||0); P.turretDmgBase=P.dmg*0.10; }},
+      {desc:'Turret that follows you.', f:()=>{ P.turretCount=(P.turretCount||0)+1; P.turretDmgBase=P.dmg*0.10; }},
       {desc:'Turret fires 20% faster and hits 30% harder.', f:()=>{ P.turretFireMul=(P.turretFireMul||1)*1.2; P.turretDmgMul=(P.turretDmgMul||1)*1.3; }},
       {desc:'+1 turret.', f:()=>{ P.turretCount=(P.turretCount||1)+1; }},
     ],
@@ -1566,7 +1566,7 @@ function gameOver(){
 function tryDash(){
   if(state!==ST.PLAY || P.dashCd>0) return;
   if(P.engineerPlace){
-    if(placedTurrets.length>=3) return;   // cap of 3 — wait for one to be destroyed
+    if(placedTurrets.length>=3) placedTurrets.shift();   // cap of 3 — oldest placed turret gets replaced
     placedTurrets.push({x:P.x,y:P.y,hp:25,maxHp:25,cd:0,face:0,inv:0});
     P.dashCd=P.dashMax;
     sfx.dash();
