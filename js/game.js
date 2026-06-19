@@ -1104,7 +1104,7 @@ function resetPlayer(){
     dmg:10, fireRate:0.26, fireCd:0, shots:1, pierce:0, range:330,
     magnet:90, crit:0.05, orbs:0, orbA:0, orbR:96, nova:false, novaCd:5, novaCdBase:5, novaPow:1,
     vamp:0, bslow:1, lv:1, xp:0, xpNext:4, inv:0, up:{}, slowT:0,
-    face:0, walk:0, dashCd:0, dashMax:1.8, dashT:0, dvx:0, dvy:0,
+    face:0, walk:0, tlx:0, tly:0, dashCd:0, dashMax:1.8, dashT:0, dvx:0, dvy:0,
     radial:false, railgun:false, orbShield:false, novaEvo:false, freeze:false,
     critMul:3, frenzy:0, frenzyGain:0, frenzyMax:0,
     shield:0, shieldMax:0, shieldCd:0, shieldCdBase:8, shieldDR:1, aegisEvo:false,
@@ -1726,6 +1726,9 @@ function update(dt){
   if(keys['d']||keys['arrowright']) mx+=1;
   const ml=Math.hypot(mx,my); if(ml>1){ mx/=ml; my/=ml; }
   if(ml>0.05){ P.face=Math.atan2(my,mx); P.walk+=dt*10; } else P.walk*=0.9;
+  // camera look-ahead target: lead in the move direction, scaled by how hard you're pushing
+  if(ml>0.05){ const k=Math.min(1,ml); P.tlx=(mx/ml)*CAM_LEAD*k; P.tly=(my/ml)*CAM_LEAD*k; }
+  else { P.tlx=0; P.tly=0; }
 
   if(P.dashT>0){
     P.dashT-=dt;
