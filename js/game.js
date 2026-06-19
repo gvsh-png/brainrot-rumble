@@ -3863,11 +3863,6 @@ function hurtPlayer(dmg, src){
   shake = Math.max(shake,10); hitFlash = 1; hitstop=Math.max(hitstop,0.04);
   sfx.hurt(); burst(P.x,P.y,'#e54d4d',12,200);
   if(navigator.vibrate) navigator.vibrate(60);
-  if(src){
-    const a=Math.atan2(P.y-src.y,P.x-src.x);
-    P.x = clamp(P.x+Math.cos(a)*30, WALL+P.r, WORLD.w-WALL-P.r);
-    P.y = clamp(P.y+Math.sin(a)*30, WALL+P.r, WORLD.h-WALL-P.r);
-  }
   if(P.hp<=0){
     if(typeof fireHook==='function') fireHook('onHpZero');
     if(P.phoenix>0){   // Phoenix: rise from the ashes instead of dying
@@ -4310,8 +4305,7 @@ function render(){
   if(state!==ST.MENU){
     cx.fillStyle='rgba(40,60,25,0.3)';
     cx.beginPath(); cx.ellipse(P.x, P.y+P.r*0.9, P.r*0.85, P.r*0.34, 0,0,TAU); cx.fill();
-    const blink = P.inv>0 && P.dashT<=0 && Math.floor(P.inv*12)%2===0;
-    if(!blink){
+    {
       const bob=Math.sin(P.walk)*0.06;
       const flip = Math.cos(P.face)<0;
       if(typeof drawCharacter==='function') drawCharacter(P.charId||'gianni', P.x, P.y, P.r*2.6, bob, flip);
