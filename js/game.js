@@ -321,6 +321,8 @@ const FOES_DIRT = [
   { spr:'ambalabu',  name:'Boneca Ambalabu',     hp:19, sp:44, r:20, xp:4, score:46, cast:{kind:'geyser',cd:3.2,range:430,n:6,lines:3,col:'#5a9e3f'} },
   { spr:'dindin',    name:'U Din Din Din Din Dun Ma Din Din Din Dun', hp:21, sp:36, r:22, xp:5, score:50, death:{type:'split',n:2} },
 ];
+// Swamp uses the dirt roster minus Chimpanzini Bananini + Bananita Dolfinita (removed by request).
+const FOES_SWAMP = FOES_DIRT.filter(f => f.spr!=='bananini' && f.spr!=='dolfinita');
 const BOSSES_DIRT = [
   { spr:'tatasahur', name:'TING TING TING BAHUR 2.0',        hp:185, r:54, pattern:'chaos',  phased:true },
   { spr:'hotspot',   name:'POT HOTSPOT',              hp:280, r:60, pattern:'rings',  phased:true },
@@ -521,7 +523,7 @@ const WORLDS = [
     theme:{ void:'#38502a', tile1:'#5f7a45', tile2:'#56713e', tuft:'rgba(30,50,20,0.35)',
             wall:'#3a4d28', post:'#5a7038', postDark:'#28361c', bg:'#55703c', tint:'#6a8a3a', music:'world_swamp',
             debris:0.7 },
-    foes:FOES_DIRT, bosses:BOSSES_DIRT },
+    foes:FOES_SWAMP, bosses:BOSSES_DIRT },
   { id:'sky', name:'SKYLAND', band:6, waveTarget:20, endless:false, map:{w:3000,h:3000}, enemyTint:'#bfe0ff',
     theme:{ void:'#8fb6cf', tile1:'#cfe6f5', tile2:'#c0dcef', tuft:'rgba(140,180,210,0.28)',
             wall:null, post:null, bg:'#c2def0', tint:'#bfe0ff', music:'world_sky' },
