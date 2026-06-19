@@ -381,28 +381,30 @@ const BOSSES_W5 = [   // original carnival movesets; telegraphed melee/zone with
 ];
 // ============ WORLD 6 — AUTUMN WOODS (band 4): unique autumn roster ============
 const FOES_W6 = [
-  // Tier I — fodder
-  { spr:'duck',      name:'Papera Fogliosa',         hp:4,  sp:82, r:14, xp:1, score:12 },
-  { spr:'goose',     name:'Oca Autunnale',           hp:4,  sp:76, r:15, xp:1, score:12, death:{type:'ring',n:4} },
-  { spr:'flamingo',  name:'Fenicottero dei Boschi',  hp:3,  sp:70, r:15, xp:1, score:14, dash:true },
-  { spr:'pigeon',    name:'Piccione delle Foglie',   hp:3,  sp:90, r:14, xp:1, score:10 },
+  // Tier I — fodder (different sprites from grass world)
+  { spr:'golubiro',  name:'Golubiro Foglietto',      hp:4,  sp:82, r:15, xp:1, score:10 },
+  { spr:'bananini',  name:'Bananini Autunnali',      hp:3,  sp:88, r:16, xp:1, score:12, death:{type:'split',n:2} },
+  { spr:'dolfinita', name:'Dolfinita Boschiva',      hp:4,  sp:58, r:16, xp:1, score:12, dash:true },
+  { spr:'frula',     name:'Fruli Frula Autunnale',   hp:3,  sp:54, r:15, xp:1, score:14 },
+  { spr:'baraboom',  name:'Baraboom dei Boschi',     hp:3,  sp:72, r:15, xp:1, score:14, death:{type:'ring',n:4} },
   // Tier II — infantry
-  { spr:'beaver',    name:'Castoro delle Foglie',    hp:6,  sp:64, r:16, xp:2, score:18, front:0.35 },
-  { spr:'capy',      name:'Capibara Selvatico',      hp:7,  sp:62, r:17, xp:2, score:20, dash:true },
-  { spr:'candypig',  name:'Maialino Boschivo',       hp:6,  sp:68, r:16, xp:2, score:16, death:{type:'ring',n:5} },
-  { spr:'turtle',    name:'Testuggine del Bosco',    hp:9,  sp:42, r:18, xp:2, score:24, front:0.5 },
+  { spr:'bobrito',   name:'Bobrito Selvatico',       hp:6,  sp:64, r:17, xp:2, score:22, range:320, shoot:{type:'aim',n:2,cd:2.6,spd:160,col:'#c87a30'} },
+  { spr:'trulimero', name:'Trulimero Autunnale',     hp:6,  sp:66, r:16, xp:2, score:18, range:260, shoot:{type:'ring',n:6,cd:3.0,spd:120,col:'#c87a30',move:true} },
+  { spr:'lirili',    name:'Lirili Autunnale',        hp:13, sp:42, r:22, xp:3, score:30, range:320, shoot:{type:'aim',n:3,cd:3.0,spd:130,col:'#a05a20'} },
+  { spr:'patapim',   name:'Patapim Boschivo',        hp:12, sp:46, r:21, xp:3, score:28, range:300, shoot:{type:'aim',n:2,cd:3.2,spd:120,col:'#9c6b3f'} },
   // Tier III — casters
-  { spr:'jelly',     name:'Medusa Ambrata',          hp:8,  sp:50, r:19, xp:3, score:30, cast:{kind:'sweep',cd:3.4,dur:1.6,col:'#c87a30'} },
-  { spr:'octopus',   name:'Polipo Selvatico',        hp:9,  sp:48, r:19, xp:3, score:30, cast:{kind:'debris',cd:3.0,n:3,col:'#c87a30'} },
-  { spr:'panda',     name:'Panda dei Boschi',        hp:8,  sp:54, r:19, xp:3, score:28, range:320, shoot:{type:'aim',n:2,cd:3.0,spd:140,col:'#c87a30',arc:true} },
-  { spr:'hippo',     name:'Ippopotamo Boschivo',     hp:10, sp:44, r:21, xp:3, score:34, cast:{kind:'geyser',cd:3.6,range:380,n:5,col:'#c87a30'} },
+  { spr:'ananasini', name:'Ananasini Autunnali',     hp:9,  sp:52, r:20, xp:4, score:34, range:340, shoot:{type:'aim',n:2,cd:2.8,spd:150,col:'#e3a13a',arc:true} },
+  { spr:'glorbo',    name:'Glorbo Autunnale',        hp:8,  sp:52, r:19, xp:3, score:30, cast:{kind:'geyser',cd:3.2,range:380,n:5,col:'#a05a20'} },
+  { spr:'zibra',     name:'Zibra Boschiva',          hp:10, sp:56, r:20, xp:4, score:34, range:340, shoot:{type:'aim',n:2,cd:2.6,spd:150,col:'#cfcfd8',split:true} },
+  { spr:'espresso',  name:'Espresso Autunnale',      hp:9,  sp:58, r:17, xp:3, score:32, range:300, shoot:{type:'ring',n:5,cd:2.2,spd:130,col:'#a16a3c'} },
   // Tier IV — heavies
-  { spr:'rhino',     name:'Rinoceronte Selvatico',   hp:20, sp:38, r:23, xp:4, score:46, range:320, shoot:{type:'aim',n:2,cd:3.2,spd:135,col:'#c87a30'}, death:{type:'split',n:2} },
-  { spr:'camel',     name:'Cammello dei Boschi',     hp:22, sp:34, r:24, xp:5, score:52, aoe:{r:50,dps:9,life:1.8,tele:0.6,slow:true,col:'#c87a30',cd:3.6} },
-  { spr:'tiger',     name:'Tigre Autunnale',         hp:18, sp:50, r:22, xp:4, score:46, dash:true, kb:true },
+  { spr:'burbaloni', name:'Burbaloni dei Boschi',    hp:19, sp:38, r:24, xp:5, score:50, aoe:{r:50,dps:9,life:1.6,tele:0.6,slow:true,col:'#c87a30',cd:3.4} },
+  { spr:'cocofanto', name:'Cocofanto Fogliame',      hp:21, sp:32, r:25, xp:5, score:55, pullAura:55, trail:{cd:0.5,r:34,life:1.6,dps:7,col:'#3a2616'} },
+  { spr:'girafa',    name:'Girafa Autunnale',        hp:24, sp:30, r:26, xp:5, score:55, dash:true, kb:true },
   // Tier V — elites
-  { spr:'orangutan', name:'Orangutan dei Boschi',    hp:16, sp:46, r:21, xp:4, score:46, cast:{kind:'summon',cd:5,spr:'duck',n:3,cap:4} },
-  { spr:'penguin',   name:'Pinguino Selvatico',      hp:18, sp:40, r:22, xp:5, score:52, death:{type:'split',n:2} },
+  { spr:'bicus',     name:'Bicus Autunnale',         hp:14, sp:50, r:20, xp:4, score:44, cast:{kind:'summon',cd:5,spr:'golubiro',n:3,cap:4} },
+  { spr:'ambalabu',  name:'Ambalabu dei Boschi',     hp:14, sp:44, r:20, xp:4, score:44, cast:{kind:'geyser',cd:3.4,range:420,n:5,lines:3,col:'#a05a20'} },
+  { spr:'dindin',    name:'Din Din Autunnale',       hp:16, sp:38, r:22, xp:5, score:48, death:{type:'split',n:2} },
 ];
 const BOSSES_W6 = [
   { spr:'bonecaambalabu', name:'BONECA STREGONICA',          hp:170, r:54, pattern:'chaos',  phased:true },
@@ -3524,7 +3526,7 @@ const FINAL_SCRIPT = {
         const horiz=(e.sk%2===0), side=horiz?(e.sk%4<2?'left':'right'):(e.sk%4<2?'top':'bottom');
         const gapAt=horiz?rand(a.y+70,a.y+a.h-70):rand(a.x+70,a.x+a.w-70);
         mWall(side,152+e.loop*15,'#5a7a3a',gapAt,70,13);
-        summonAdds(e,'duck',1,4); } } },
+        summonAdds(e,'golubiro',1,4); } } },
     { name:'SURFACE — STRIKE NOW!', col:'#7ed957', dur:8.0, iv:false },
     { name:'TURBINE FINALE', col:'#3a5a2a', dur:6.0, iv:true, hold:'center',
       enter(e){ e.pull=6.0; e.pullStr=155; burst(e.x,e.y,'#5a7a3a',28,320); shake=Math.max(shake,12);
