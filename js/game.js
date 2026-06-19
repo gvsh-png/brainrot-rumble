@@ -1196,7 +1196,7 @@ function resetPlayer(){
     daredevil:0, knives:false, knifeCd:0, knifeCdBase:3.5, knifeN:0, knifeBig:false, knifeEvo:false,
     // World 1 additions
     seeker:0, laststand:0,
-    turretCount:0, turretDmgBase:0, turretDmgMul:1, turretFireMul:1, turretRangeBase:330, turretRangeBonus:0, turretAdaptive:false,
+    startDmg:10, turretCount:0, turretDmgBase:0, turretDmgMul:1, turretFireMul:1, turretRangeBase:330, turretRangeBonus:0, turretAdaptive:false,
     turretDmgFrac:0.10, turretFireFromPlayer:false,
     // Engineer character: no normal shots, dash places a stationary turret, plus 2 exclusive turret cards
     noPlayerShots:false, engineerPlace:false,
@@ -1246,6 +1246,7 @@ function _doStartGame(wi){
   if(typeof equippedRangeMult==='function') P.range *= equippedRangeMult();
   if(typeof registerActiveChar==='function') registerActiveChar();
   if(typeof registerActivePet==='function') registerActivePet();
+  P.startDmg = P.dmg;   // damage at run start (char base + gear + passives); non-engineer turrets scale off this
   timeScale=1.0;
   bullets=[]; ebullets=[]; petBullets=[]; enemies=[]; gems=[]; texts=[]; zones=[]; holes=[]; luckies=[]; clearParts();
   wave=1; kills=0; elapsed=0; boss=null; waveGapT=0; arena=null; bossPending=0;
@@ -1844,7 +1845,10 @@ function update(dt){
       if(turrets.length > P.turretCount) turrets.length = P.turretCount;
       const turretRange = P.turretAdaptive ? P.range : (P.turretRangeBase + P.turretRangeBonus);
       const turretFireCd = (P.turretFireFromPlayer ? P.fireRate : 0.32) / (P.turretFireMul||1);
-      const dmgBase = P.turretAdaptive ? P.dmg*(P.turretDmgFrac||0.10) : P.turretDmgBase;
+      // Non-engineer normal turret: flat 1/6 of starting damage + gear. Engineer keeps the old base
+      // (and the adaptive evo, which intentionally scales with current damage, still wins for either).
+      const dmgBase = P.turretAdaptive ? P.dmg*(P.turretDmgFrac||0.10)
+                    : (P.charId!=='engineer' ? P.startDmg/6 : P.turretDmgBase);
       for(const tu of turrets){
         const tx = chx + tfdx*34, ty = chy + tfdy*34;
         tu.x += (tx-tu.x)*Math.min(1,dt*9);
