@@ -1101,9 +1101,9 @@ const UPGRADES = [
 
   { id:'auramonster', name:'Aura Monster', icon:'gembig', rarity:'rare', minWorld:1, cap:3,
     steps:[
-      {desc:'gain a green damage aura around you.', f:()=>{P.auraR=70; P.auraDmg=8;}},
-      {desc:'aura grows bigger.',                   f:()=>{P.auraR+=30;}},
-      {desc:'aura grows bigger and hits harder.',   f:()=>{P.auraR+=30; P.auraDmg+=10;}},
+      {desc:'gain a green damage aura around you.', f:()=>{P.auraR=120; P.auraDmg=8;}},
+      {desc:'aura grows bigger.',                   f:()=>{P.auraR+=55;}},
+      {desc:'aura grows bigger and hits harder.',   f:()=>{P.auraR+=55; P.auraDmg+=10;}},
     ] },
   { id:'skibidi', name:'Skibidi Toilet', icon:'gembig', rarity:'epic', minWorld:3,
     steps:[
