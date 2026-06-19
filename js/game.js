@@ -1654,6 +1654,7 @@ function openLevelUp(){
                   `<div class="cstars">${stars}</div>`;
     d.onclick = ()=>{
       m.evolve ? sfx.evolve() : sfx.pick();
+      m.apply(); P.up[u.id]=(P.up[u.id]||0)+1;
       const allCards = [...$('cards').querySelectorAll('.card')];
       allCards.forEach(c => { c.style.pointerEvents='none'; });
       d.classList.add('card-selected');
@@ -1664,10 +1665,9 @@ function openLevelUp(){
         c.classList.add(rejClass[i]);
       });
       setTimeout(()=>{
-        m.apply(); P.up[u.id]=(P.up[u.id]||0)+1;
         $('levelup').classList.add('hidden');
-        state=ST.PLAY;
         tPrev=performance.now();
+        state=ST.PLAY;
       }, 440);
     };
     wrap.appendChild(d);
