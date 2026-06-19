@@ -3,6 +3,105 @@
 const OUT = '#33272a';           // outline color used across all sprites
 const SP = {};                   // sprite canvases
 const SPW = {};                  // white flash versions
+const RIG  = {};                  // part-based rig store (see makePart below)
+
+// ============ PART-BASED RIG ENGINE ============
+// Canvas center = joint pivot. uScale overrides u (lets you use original-sprite coords in a smaller canvas).
+function makePart(rigName, partName, partSize, draw, uScale) {
+  const PAD = 1.4;
+  const full = Math.round(partSize * PAD);
+  const c = document.createElement('canvas'); c.width=full; c.height=full;
+  const g = c.getContext('2d');
+  g.translate(full/2, full/2); g.lineJoin='round'; g.lineCap='round';
+  draw(g, uScale !== undefined ? uScale : partSize/100);
+  const w = document.createElement('canvas'); w.width=full; w.height=full;
+  const wg = w.getContext('2d');
+  wg.drawImage(c,0,0); wg.globalCompositeOperation='source-in'; wg.fillStyle='#fff'; wg.fillRect(0,0,full,full);
+  if(!RIG[rigName]) RIG[rigName] = {parts:{}, layout:{}, baseSize:100, archetype:'biped'};
+  RIG[rigName].parts[partName] = {bmp:c, wbmp:w};
+}
+
+// ============ KEYFRAME ANIMATION ENGINE ============
+// Angles in radians. Positive = CW. For a right-facing biped:
+//   body/head  → CW = leans/tips forward (toward player)
+//   legL/R     → CW = foot swings forward (toward player); CC = foot swings back
+//   armL/R     → CW = arm swings forward; CC = arm swings back
+// When character flips (faces left, cx.scale(-1,1)), rotations visually mirror — gait stays correct.
+function animLerp(frames, phase) {
+  phase = ((phase % 1) + 1) % 1;
+  let lo = frames[0], hi = frames[frames.length-1];
+  for(let i=0; i<frames.length-1; i++){
+    if(phase >= frames[i].ph && phase <= frames[i+1].ph){ lo=frames[i]; hi=frames[i+1]; break; }
+  }
+  const t = hi.ph===lo.ph ? 0 : (phase-lo.ph)/(hi.ph-lo.ph);
+  const e = t*t*(3-2*t); // smoothstep — preserves snappy peak poses, eases into/out of them
+  const L = (a,b) => (a||0)+((b||0)-(a||0))*e;
+  return { body:L(lo.body,hi.body), head:L(lo.head,hi.head),
+           armL:L(lo.armL,hi.armL), armR:L(lo.armR,hi.armR),
+           legL:L(lo.legL,hi.legL), legR:L(lo.legR,hi.legR) };
+}
+
+// ---- BIPED WALK (8-pose cycle: contact→down→passing→up × 2 strides) ----
+// Contact: feet wide, planted; Down: body sinks, weight on foot; Passing: legs cross;
+// Up: stride fully open, about to plant opposite foot.
+// legR/armL lead together (natural cross-gait), swap at ph=0.5.
+const _WALK = [
+  {ph:0.00, body: 0.06, head: 0.06, armL: 0.55, armR:-0.62, legL:-0.58, legR: 0.68}, // contact A
+  {ph:0.12, body: 0.10, head: 0.03, armL: 0.20, armR:-0.22, legL:-0.20, legR: 0.25}, // down A
+  {ph:0.25, body: 0.05, head: 0.00, armL:-0.04, armR: 0.04, legL: 0.08, legR:-0.09}, // passing A
+  {ph:0.40, body: 0.03, head:-0.04, armL:-0.52, armR: 0.58, legL: 0.62, legR:-0.58}, // up A
+  {ph:0.50, body: 0.06, head: 0.06, armL:-0.62, armR: 0.55, legL: 0.68, legR:-0.58}, // contact B
+  {ph:0.62, body: 0.10, head: 0.03, armL:-0.22, armR: 0.20, legL: 0.25, legR:-0.20}, // down B
+  {ph:0.75, body: 0.05, head: 0.00, armL: 0.04, armR:-0.04, legL:-0.09, legR: 0.08}, // passing B
+  {ph:0.88, body: 0.03, head:-0.04, armL: 0.58, armR:-0.52, legL:-0.58, legR: 0.62}, // up B
+  {ph:1.00, body: 0.06, head: 0.06, armL: 0.55, armR:-0.62, legL:-0.58, legR: 0.68}, // contact A
+];
+
+// ---- BIPED ATTACK (windup hold → snap → follow-through → recover) ----
+// ph 0.20-0.22: held windup (zero-duration gap between poses creates "snap" read).
+const _ATTACK = [
+  {ph:0.00, body: 0.00, head: 0.00, armL: 0.00, armR: 0.00, legL: 0.00, legR: 0.00},
+  {ph:0.20, body:-0.28, head:-0.18, armL:-1.65, armR: 0.48, legL: 0.32, legR:-0.22}, // WINDUP peak
+  {ph:0.22, body:-0.28, head:-0.18, armL:-1.65, armR: 0.48, legL: 0.32, legR:-0.22}, // hold 1 frame
+  {ph:0.36, body: 0.38, head: 0.28, armL: 1.25, armR:-0.38, legL:-0.28, legR: 0.20}, // STRIKE snap
+  {ph:0.58, body: 0.20, head: 0.14, armL: 0.68, armR:-0.15, legL:-0.10, legR: 0.06}, // follow-through
+  {ph:1.00, body: 0.00, head: 0.00, armL: 0.00, armR: 0.00, legL: 0.00, legR: 0.00}, // recover
+];
+
+// ---- BIPED HIT REACTION (sharp peak at ph≈0.10, recovers by ph=1.0) ----
+// Body+head snap back; arms fling wide; legs buckle. Quick-in, slow-out.
+const _HIT = [
+  {ph:0.00, body: 0.00, head: 0.00, armL: 0.00, armR: 0.00, legL: 0.00, legR: 0.00},
+  {ph:0.10, body:-0.30, head:-0.32, armL:-0.70, armR: 0.68, legL:-0.38, legR: 0.28}, // IMPACT
+  {ph:0.40, body:-0.12, head:-0.13, armL:-0.25, armR: 0.22, legL:-0.12, legR: 0.08},
+  {ph:1.00, body: 0.00, head: 0.00, armL: 0.00, armR: 0.00, legL: 0.00, legR: 0.00},
+];
+
+// ---- BIPED KNOCKBACK (harder than hit — body slammed, slow recovery) ----
+const _KNOCKBACK = [
+  {ph:0.00, body:-0.52, head:-0.48, armL:-0.85, armR: 0.82, legL:-0.65, legR: 0.48},
+  {ph:0.30, body:-0.32, head:-0.28, armL:-0.52, armR: 0.50, legL:-0.38, legR: 0.28},
+  {ph:0.72, body:-0.12, head:-0.10, armL:-0.20, armR: 0.18, legL:-0.12, legR: 0.08},
+  {ph:1.00, body: 0.00, head: 0.00, armL: 0.00, armR: 0.00, legL: 0.00, legR: 0.00},
+];
+
+// ---- BIPED DEATH (crumple: stagger → full collapse) ----
+const _DEATH = [
+  {ph:0.00, body: 0.00, head: 0.00, armL: 0.00, armR: 0.00, legL: 0.00, legR: 0.00},
+  {ph:0.18, body:-0.22, head:-0.38, armL:-0.80, armR: 0.62, legL:-0.48, legR: 0.58},
+  {ph:0.52, body: 0.75, head: 0.85, armL:-1.45, armR: 0.95, legL: 0.82, legR: 1.25},
+  {ph:1.00, body: 1.50, head: 1.05, armL:-1.65, armR: 1.15, legL: 1.05, legR: 1.55},
+];
+
+const POSE_BIPED = {
+  idle:      ()   => ({body:0, head:0, armL:0, armR:0, legL:0, legR:0}),
+  walk:      (ph) => animLerp(_WALK, ph),
+  attack:    (ph) => animLerp(_ATTACK, ph),
+  hit:       (ph) => animLerp(_HIT, ph),
+  knockback: (ph) => animLerp(_KNOCKBACK, ph),
+  death:     (ph) => animLerp(_DEATH, ph),
+};
+
 function makeSprite(name, size, draw){
   const PAD = 1.3; // 30% padding on each side so drawings up to ±65u don't get clipped
   const full = Math.round(size * PAD);
@@ -236,6 +335,58 @@ makeSprite('chimp', 104, (g,u)=>{
   eyes(g,u,-2*u,-24*u,5*u,3.2*u);
   dot(g,-5*u,-13*u,1.4*u,OUT); dot(g,1*u,-13*u,1.4*u,OUT);
 });
+
+// === CHIMP RIG (biped archetype) ===
+// All makePart calls use uScale=1.04 (original chimp u), so coordinates match makeSprite('chimp') exactly.
+// Anchor coordinates (ax,ay) are in the same u-space, positioned relative to the sprite canvas center.
+// Pivot convention for each part: canvas center (0,0 in draw fn) = the joint.
+//   body  → pivot at banana visual center (y≈8u in original, shifted -8u so 0 = center here)
+//   head  → pivot at neck bottom (13u below head ellipse center)
+//   arms  → pivot at shoulder (arm hangs down from 0)
+//   legs  → pivot at hip (leg hangs down from 0)
+{
+  const _u = 1.04;
+  RIG['chimp'] = {parts:{}, archetype:'biped', baseSize:104, layout:{
+    legR: {ax:  5*_u, ay: 28*_u, z:0},
+    armR: {ax: 13*_u, ay: -2*_u, z:1},
+    body: {ax:  0,    ay:  8*_u, z:2},
+    legL: {ax: -8*_u, ay: 28*_u, z:3},
+    head: {ax: -2*_u, ay: -7*_u, z:4},
+    armL: {ax:-15.5*_u,ay:  6*_u, z:5},
+  }};
+
+  // body: banana shape; all y shifted -8u so visual center = origin (pivot)
+  makePart('chimp','body', 90, (g,u)=>{
+    sh(g,'#f4d24a',3.4*u,(g)=>{
+      g.moveTo(-14*u,-26*u); g.quadraticCurveTo(28*u,-14*u,16*u,26*u);
+      g.quadraticCurveTo(2*u,22*u,-8*u,10*u); g.quadraticCurveTo(-22*u,-8*u,-14*u,-26*u); g.closePath();
+    });
+  }, _u);
+
+  // head: pivot=neck (origin); head ellipse 13u above, ears, muzzle, eyes, nostrils all re-centered to neck
+  makePart('chimp','head', 72, (g,u)=>{
+    sh(g,'#7a5a44',3.2*u,(g)=>{ g.ellipse(0,-13*u,15*u,13*u,0,0,TAU); });
+    sh(g,'#7a5a44',0,(g)=>{ g.ellipse(-14*u,-15*u,5*u,6*u,0,0,TAU); });   // left ear
+    sh(g,'#7a5a44',0,(g)=>{ g.ellipse(14*u,-15*u,5*u,6*u,0,0,TAU); });    // right ear
+    sh(g,'#e3c9a8',0,(g)=>{ g.ellipse(0,-9*u,9*u,8*u,0,0,TAU); });        // muzzle
+    eyes(g,u,0,-17*u,5*u,3.2*u);
+    dot(g,-3*u,-6*u,1.4*u,OUT); dot(g,3*u,-6*u,1.4*u,OUT);                // nostrils
+  }, _u);
+
+  // arms: pivot=shoulder (origin); arm hangs down from origin
+  makePart('chimp','armL', 46, (g,u)=>{ sh(g,'#7a5a44',3*u,(g)=>{ g.roundRect(-4.5*u,0,9*u,20*u,4*u); }); }, _u);
+  makePart('chimp','armR', 46, (g,u)=>{ sh(g,'#7a5a44',2.6*u,(g)=>{ g.roundRect(-4.5*u,0,9*u,20*u,4*u); }); }, _u);
+
+  // legs: pivot=hip (origin); leg + small foot knob hang down from origin
+  makePart('chimp','legL', 46, (g,u)=>{
+    sh(g,'#7a5a44',3*u,(g)=>{ g.roundRect(-4.5*u,0,9*u,18*u,3.5*u); });
+    sh(g,'#6a4a34',0,(g)=>{ g.ellipse(0,18*u,5*u,3.5*u,0,0,TAU); });
+  }, _u);
+  makePart('chimp','legR', 46, (g,u)=>{
+    sh(g,'#7a5a44',3*u,(g)=>{ g.roundRect(-4.5*u,0,9*u,18*u,3.5*u); });
+    sh(g,'#6a4a34',0,(g)=>{ g.ellipse(0,18*u,5*u,3.5*u,0,0,TAU); });
+  }, _u);
+}
 
 // ---- Penguino Cocosino: coconut-shell penguin ----
 makeSprite('penguin', 102, (g,u)=>{
@@ -1618,3 +1769,103 @@ makeSprite('granpagliaccio', 256, (g,u)=>{
   sh(g,'#2a2f36',4*u,(p)=>{ p.ellipse(0,-40*u,26*u,6*u,0,0,TAU); }); sh(g,'#e8463c',4*u,(p)=>{ p.rect(-16*u,-47*u,32*u,9*u); });
   sh(g,'#2a2f36',0,(p)=>{ p.rect(-16*u,-40*u,32*u,4*u); }); // hat band
 });
+
+// ============ AUTO-RIG: apply animated legs to baked sprites ============
+// body(z=0) drawn first; legs(z=1,2) drawn ON TOP — animated leg overlays baked-in leg.
+// cfg = [legCol, legPivotY, legLen, legWidth, legSideOffset]   (u-space at size=100)
+function autoRig(name, cfg) {
+  const src = SP[name]; if(!src) return;
+  const bsz = src._nom;
+  const lc=cfg[0], lyo=cfg[1], llen=cfg[2], lw=cfg[3], lxo=cfg[4]??4;
+  RIG[name] = {parts:{}, archetype:'biped', baseSize:bsz, layout:{
+    body: {ax:0,    ay:0,   z:0},
+    legR: {ax: lxo, ay:lyo, z:1},
+    legL: {ax:-lxo, ay:lyo, z:2},
+  }};
+  RIG[name].parts['body'] = {bmp:src, wbmp:SPW[name]};
+  makePart(name,'legL', bsz, (g,u)=>{
+    sh(g, lc, 2.6*u, (g)=>{ g.roundRect(-lw*0.5*u, 0, lw*u, llen*u, lw*0.38*u); });
+    sh(g, lc, 0,     (g)=>{ g.ellipse(0, llen*u, lw*0.62*u, lw*0.4*u, 0,0,TAU); });
+  });
+  RIG[name].parts['legR'] = RIG[name].parts['legL'];
+}
+
+{
+  // [legCol, legPivotY, legLen, legWidth, legSideOffset]  (pixels at 100u scale)
+  const _C = {
+    // ── World 1 ──
+    pigeon:    ['#f0a23a', 18,  8, 3, 3],
+    penguin:   ['#f0a23a', 20, 11, 5, 4],
+    flamingo:  ['#e07aa0', 24, 16, 4, 3],
+    cappuccino:['#cfd2d8', 24, 11, 4, 4],
+    ballerina: ['#f0c9a0', 26, 13, 4, 3],
+    candypig:  ['#f7a8d6', 14,  8, 6, 4],
+    beaver:    ['#8a5f38', 22, 12, 5, 4],
+    pinecroc:  ['#e9b73a', 20, 10, 5, 4],
+    espresso:  ['#5b3a22', 26, 13, 4, 3],
+    orangutan: ['#d36a2a', 22, 13, 6, 5],
+    rhino:     ['#9a9aa6', 20, 13, 7, 5],
+    hippo:     ['#7ab955', 16,  9, 8, 5],
+    camel:     ['#c79a5a', 20, 15, 7, 5],
+    turtle:    ['#5fae5a', 16,  9, 6, 5],
+    panda:     ['#f7d24a', 22, 16, 8, 5],
+    tiger:     ['#3f7d33', 17, 10, 6, 4],
+    capy:      ['#9a6e44', 12,  8, 7, 5],
+    lirili:    ['#f4a6c0', 24,  8, 9, 5],
+    patapim:   ['#6b4a2b', 22, 12, 6, 5],
+    // ── World 2 ──
+    golubiro:  ['#8a96a4', 18, 11, 5, 4],
+    bananini:  ['#6e4a30', 22, 12, 5, 4],
+    frula:     ['#d8504a', 16,  8, 6, 4],
+    bobrito:   ['#8a5f38', 22, 12, 5, 4],
+    trulimero: ['#e0c39a', 20, 13, 5, 4],
+    ananasini: ['#c97a2a', 22, 13, 6, 5],
+    glorbo:    ['#5a9e3f', 20, 11, 7, 5],
+    zibra:     ['#e8e4dc', 22, 15, 7, 5],
+    burbaloni: ['#a07a52', 20, 10, 7, 5],
+    cocofanto: ['#7d8a93', 22, 12, 8, 5],
+    girafa:    ['#f2c84a', 28, 20, 6, 4],
+    bicus:     ['#f0a23a', 18, 10, 4, 4],
+    ambalabu:  ['#5a9e3f', 24, 12, 7, 5],
+    dindin:    ['#9a7a52', 24, 12, 9, 5],
+    tatasahur: ['#caa96a', 22, 12, 8, 5],
+    saturnita: ['#e6e0d4', 22, 11, 7, 5],
+    madudung:  ['#6b5a48', 26, 15,10, 6],
+    garamaraman:['#3a2a26',24, 13, 9, 5],
+    // ── World 3 ──
+    pipikiwi:  ['#5a7a5a', 18, 10, 4, 4],
+    tukanno:   ['#2b2b32', 18, 10, 4, 4],
+    raccooni:  ['#6a5a4a', 20, 11, 5, 4],
+    avoguffo:  ['#5f9e4a', 20, 10, 6, 4],
+    svinino:   ['#f58fb5', 18,  9, 6, 4],
+    avoantilope:['#5f9e4a',22, 14, 6, 4],
+    perochello:['#f0a23a', 18, 10, 4, 4],
+    eccocavallo:['#9a8060',26, 18, 8, 5],
+    tigrwater: ['#3f7d33', 22, 11, 6, 4],
+    avocadorilla:['#5f9e4a',22,13, 7, 5],
+    tracotucotulu:['#9a6a4a',22,11, 6, 4],
+    // ── World 4 ice cream ──
+    gelatogattino:    ['#e0a85a', 20, 11, 5, 4],
+    pinguinocaramelino:['#f5a623',28,  9, 5, 4],
+    americanopenguino: ['#f5a623',28,  9, 5, 4],
+    frullifrulla:      ['#f5a623',28,  9, 5, 4],
+    sorbettoleonino:   ['#f6c27a', 20, 13, 7, 5],
+    granitagabbiano:   ['#f5a623', 24, 10, 4, 4],
+    // ── World 5 circus ──
+    burbalonidog:  ['#e8463c', 22,  9, 5, 4],
+    zuccherofilino:['#e0a85a', 12,  8, 4, 3],
+    clownino:      ['#5aa0e0', 20, 11, 5, 4],
+    giocoliere:    ['#8d6240', 24, 11, 5, 4],
+    forzutoorsino: ['#8d5a32', 22, 13, 9, 5],
+    maestrofoccino:['#7d8893', 24, 12, 6, 4],
+    // ── Bosses ──
+    sahur:          ['#caa96a', 26, 13, 9, 5],
+    vaca:           ['#e6e0d4', 26, 14, 8, 5],
+    gorillo:        ['#4a4a52', 28, 15, 9, 5],
+    bobritto:       ['#8a5f38', 26, 14, 7, 5],
+    bonecaambalabu: ['#5a9e3f', 26, 13, 8, 5],
+    girafassassina: ['#f2c84a', 32, 22, 7, 5],
+    kikkurimi:      ['#a08060', 24, 13, 8, 5],
+  };
+  for(const [n,c] of Object.entries(_C)) autoRig(n, c);
+}

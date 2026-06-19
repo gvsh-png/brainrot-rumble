@@ -1104,7 +1104,7 @@ function resetPlayer(){
     dmg:10, fireRate:0.26, fireCd:0, shots:1, pierce:0, range:330,
     magnet:90, crit:0.05, orbs:0, orbA:0, orbR:96, nova:false, novaCd:5, novaCdBase:5, novaPow:1,
     vamp:0, bslow:1, lv:1, xp:0, xpNext:4, inv:0, up:{}, slowT:0,
-    face:0, walk:0, dashCd:0, dashMax:1.8, dashT:0, dvx:0, dvy:0,
+    face:0, walk:0, moving:false, hitT:0, dashCd:0, dashMax:1.8, dashT:0, dvx:0, dvy:0,
     radial:false, railgun:false, orbShield:false, novaEvo:false, freeze:false,
     critMul:3, frenzy:0, frenzyGain:0, frenzyMax:0,
     shield:0, shieldMax:0, shieldCd:0, shieldCdBase:8, shieldDR:1, aegisEvo:false,
@@ -1725,7 +1725,7 @@ function update(dt){
   if(keys['a']||keys['arrowleft']) mx-=1;
   if(keys['d']||keys['arrowright']) mx+=1;
   const ml=Math.hypot(mx,my); if(ml>1){ mx/=ml; my/=ml; }
-  if(ml>0.05){ P.face=Math.atan2(my,mx); P.walk+=dt*10; } else P.walk*=0.9;
+  if(ml>0.05){ P.face=Math.atan2(my,mx); P.walk+=dt*10; P.moving=true; } else { P.walk*=0.9; P.moving=false; }
 
   if(P.dashT>0){
     P.dashT-=dt;
@@ -2297,13 +2297,15 @@ function update(dt){
           }
           if(move){ e.x += Math.cos(a)*e.sp*fs*dt; e.y += Math.sin(a)*e.sp*fs*dt; }
           e.face = Math.cos(toP)>=0 ? 1 : -1;
+          e.moving = move;
         } else {
           // asleep to Fantasma: slow drifting wander instead of chasing
           const wa = e.t*0.6 + e.wob*7;
           e.x += Math.cos(wa)*e.sp*0.3*fs*dt; e.y += Math.sin(wa)*e.sp*0.3*fs*dt;
           e.face = Math.cos(wa)>=0 ? 1 : -1;
+          e.moving = true;
         }
-      }
+      } else { e.moving = dashing; }
       separate(e);   // resolve overlaps with nearby foes so the pack spreads + flows around
       e.x = clamp(e.x, WALL, WORLD.w-WALL); e.y = clamp(e.y, WALL, WORLD.h-WALL);
       if(arena){ e.x=clamp(e.x, arena.x+e.r, arena.x+arena.w-e.r); e.y=clamp(e.y, arena.y+e.r, arena.y+arena.h-e.r); }
@@ -2477,7 +2479,7 @@ function update(dt){
       for(let s=-1;s<=1;s++) fireEB(b.x,b.y, base+s*0.32, sp, b.color);
       ebullets.splice(i,1); continue;
     }
-    if(dist2(b.x,b.y,P.x,P.y) < (b.r+P.r-3)*(b.r+P.r-3)){ ebullets.splice(i,1); hurtPlayer(8*chalDmgMul()); }
+    if(dist2(b.x,b.y,P.x,P.y) < (b.r+P.r-3)*(b.r+P.r-3)){ ebullets.splice(i,1); hurtPlayer(8*chalDmgMul(), b); }
   }
 
   // --- lucky blocks ---
@@ -2582,6 +2584,7 @@ function update(dt){
 
   if(shake>0) shake = Math.max(0, shake - dt*40);
   if(hitFlash>0) hitFlash -= dt*3;
+  if(P.hitT>0) P.hitT -= dt;
 
   $('xpfill').style.width = (P.xp/P.xpNext)*100+'%';
   { const displayTime=timerMode()?chalElapsed:elapsed;
@@ -2634,6 +2637,11 @@ function damageEnemy(e,dmg,fx,fy,crit){
     floatText(e.x,e.y-e.r-20,'JACKPOT!','#ffd24a',16);
   }
   e.hp -= dmg; e.hitT=0.12; e.sq=1;
+  if(!e.isBoss && !e.under && fx!=null && fy!=null && !(fx===e.x && fy===e.y)){   // small knockback away from the hit source
+    const a=Math.atan2(e.y-fy,e.x-fx);
+    e.x = clamp(e.x+Math.cos(a)*14, WALL+e.r, WORLD.w-WALL-e.r);
+    e.y = clamp(e.y+Math.sin(a)*14, WALL+e.r, WORLD.h-WALL-e.r);
+  }
   if(P.stealthAggro && !e.isBoss) e.aggroT=Math.max(e.aggroT||0,3);   // getting shot wakes the enemy up
   if(P.freeze && !e.isBoss) e.frz=1.2;
   if(P.chillHit && !e.isBoss && e.frz<=0) e.chillT = Math.max(e.chillT||0, 0.8 + 0.25*P.chillHit);   // Permafrost: chill-on-hit
@@ -3800,7 +3808,7 @@ function updateBoss(e,dt){
     if(e.cbT<=0){ e.cbT=0.1; addZone(e.x,e.y,58,{tele:0.5,life:0.55,dps:18,col:'#ff7a2a'}); } }
   // TETHER (final duo): a damaging beam strung between the two titans that sweeps as they move
   if(e.tether>0 && e.mate){ e.tether-=dt;
-    if(P.inv<=0 && P.dashT<=0 && segDist(P.x,P.y,e.x,e.y,e.mate.x,e.mate.y) < 28) hurtPlayer(14);
+    if(P.inv<=0 && P.dashT<=0 && segDist(P.x,P.y,e.x,e.y,e.mate.x,e.mate.y) < 28) hurtPlayer(14, e);
   }
 
   // ---- telegraphed move cycle: recover -> wind -> fire -> recover ----
@@ -3848,7 +3856,7 @@ function hurtPlayer(dmg, src){
     if(P.aegisNova){ const {R,dmg}=novaStats(); novaBlast(P.x,P.y,R,dmg); }   // Aegis Nova synergy
     return;
   }
-  P.hp -= dmg*(P.shieldDR||1)*(P.armor||1)*worldDmgMul(); P.inv = 0.8;
+  P.hp -= dmg*(P.shieldDR||1)*(P.armor||1)*worldDmgMul(); P.inv = 0.8; P.hitT = 0.25;
   shake = Math.max(shake,10); hitFlash = 1; hitstop=Math.max(hitstop,0.04);
   sfx.hurt(); burst(P.x,P.y,'#e54d4d',12,200);
   if(navigator.vibrate) navigator.vibrate(60);
@@ -3882,13 +3890,13 @@ function hurtPlayer(dmg, src){
 // ============ RENDER ============
 const TILE = 80;
 const _sortByY = (a,b) => a.y - b.y;
-function drawSprite(name, x, y, size, rot, sq, hitT, flip, tint){
+function drawSprite(name, x, y, size, rot, sq, hitT, flip, tint, pulse){
   const img = SP[name]; if(!img) return;
   const dsz = img._nom ? size * img.width / img._nom : size;
   const drawImg = (tint && tintedSprite(name,tint)) || img;
   const half = dsz * 0.5;
-  // fast path: no rotation, no squash, no flip — skip save/restore entirely (majority of calls)
-  if(!rot && !(sq>0) && !flip){
+  // fast path: no rotation, no squash, no flip, no shoot-pulse — skip save/restore entirely (majority of calls)
+  if(!rot && !(sq>0) && !flip && !pulse){
     cx.drawImage(drawImg, x-half, y-half, dsz, dsz);
     if(hitT>0.012){ cx.globalAlpha=Math.min(1,hitT/0.12); cx.drawImage(SPW[name], x-half, y-half, dsz, dsz); cx.globalAlpha=1; }
     return;
@@ -3898,8 +3906,36 @@ function drawSprite(name, x, y, size, rot, sq, hitT, flip, tint){
   if(rot) cx.rotate(rot);
   if(flip) cx.scale(-1,1);
   if(sq>0){ const k=Math.sin(sq*Math.PI)*0.22; cx.scale(1+k, 1-k); }
+  if(pulse){ const k=pulse*0.16; cx.scale(1+k, 1+k); }   // shoot tell: anticipation shrinks in (pulse<0), recoil punches out (pulse>0)
   cx.drawImage(drawImg, -half, -half, dsz, dsz);
   if(hitT>0.012){ cx.globalAlpha=Math.min(1,hitT/0.12); cx.drawImage(SPW[name], -half, -half, dsz, dsz); cx.globalAlpha=1; }
+  cx.restore();
+}
+
+// Composite-draw a part-based rig at (x,y) with displaySize, flip, hit-flash, pose, and squash.
+// pose: 'idle'|'walk'|'attack'|'hit'|'knockback'|'death'   phase: 0..1 within that pose
+// Each part is blitted at anchor * scale; rotation applied around the joint pivot (canvas center).
+function drawRig(rigName, x, y, displaySize, flip, hitT, pose, phase, sq) {
+  const rig = RIG[rigName]; if(!rig) return;
+  const s = displaySize / rig.baseSize;
+  const poseFn = POSE_BIPED[pose] || POSE_BIPED.idle;
+  const angles = poseFn(phase);
+  const sortedParts = Object.entries(rig.layout).sort((a,b)=>a[1].z-b[1].z);
+  cx.save();
+  cx.translate(x, y);
+  if(flip) cx.scale(-1,1);
+  if(sq>0){ const k=Math.sin(sq*Math.PI)*0.18; cx.scale(1+k,1-k); }
+  for(const [pName, pDef] of sortedParts){
+    const part = rig.parts[pName]; if(!part) continue;
+    const angle = angles[pName] || 0;
+    cx.save();
+    cx.translate(pDef.ax*s, pDef.ay*s);
+    if(angle) cx.rotate(angle);
+    const psz = part.bmp.width * s, half = psz*0.5;
+    cx.drawImage(part.bmp, -half, -half, psz, psz);
+    if(hitT>0.012){ cx.globalAlpha=Math.min(1,hitT/0.12); cx.drawImage(part.wbmp,-half,-half,psz,psz); cx.globalAlpha=1; }
+    cx.restore();
+  }
   cx.restore();
 }
 
@@ -4174,9 +4210,18 @@ function render(){
       cx.globalAlpha=0.7; cx.lineWidth=3.5; cx.beginPath(); cx.arc(e.x,e.y,e.r+8+(1-k)*48,0,TAU); cx.stroke();   // shrinks in as the attack nears
       cx.globalAlpha=1;
     }
-    const wob = skipWob ? 0 : (e.isBoss ? Math.sin(e.t*2)*0.06 : Math.sin(e.t*6)*0.12);
+    const wob = skipWob ? 0 : (e.isBoss ? Math.sin(e.t*2)*0.06 : (e.moving===false ? 0 : Math.sin(e.t*6)*0.12));   // walk-cycle wobble only while actually moving
+    const pulse=0;
     if(e.cut && cut){ cx.globalAlpha = cut.alpha; }
-    drawSprite(e.spr, e.x, e.y, e.r*2.5*(e.deathScale||1), wob, e.sq, e.hitT, e.face===-1, e.isBoss?null:curWorld().enemyTint);   // per-world enemy recolor
+    if(RIG[e.spr]){
+      // part-based rig draw — pose driven by movement/hit/knockback state
+      let ePose='idle', ePhase=0;
+      if(e.sq>0){ ePose=e.sq>0.5?'knockback':'hit'; ePhase=1-e.sq; }
+      else if(e.moving){ ePose='walk'; ePhase=(e.t*3)%1; }
+      drawRig(e.spr, e.x, e.y, e.r*2.5*(e.deathScale||1), e.face===-1, e.hitT, ePose, ePhase, e.sq);
+    } else {
+      drawSprite(e.spr, e.x, e.y, e.r*2.5*(e.deathScale||1), wob, e.sq, e.hitT, e.face===-1, e.isBoss?null:curWorld().enemyTint, pulse);   // per-world enemy recolor
+    }
     if(e.cut){ cx.globalAlpha = 1; }
     if(e.frz>0){ cx.globalAlpha=0.4; cx.fillStyle='#bfe6ff'; cx.beginPath(); cx.arc(e.x,e.y,e.r*1.05,0,TAU); cx.fill(); cx.globalAlpha=1; }
     else if(e.chillT>0){ cx.globalAlpha=0.22; cx.fillStyle='#bfe6ff'; cx.beginPath(); cx.arc(e.x,e.y,e.r*1.05,0,TAU); cx.fill(); cx.globalAlpha=1; }

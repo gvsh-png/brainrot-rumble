@@ -25,14 +25,109 @@ function _fillE(ctx, size, col, x, y, rx, ry) {
   ctx.fillStyle=col; ctx.fill();
   ctx.strokeStyle='#2a1c10'; ctx.lineWidth=Math.max(1.5,size*0.038); ctx.stroke();
 }
-// Humanoid Gianni-style base: two legs, torso, two arms, round head
-function _humanBase(ctx, size, legCol, bodyCol, armCol, skinCol) {
-  _fillR(ctx,size,legCol, -size*0.12, size*0.16, size*0.09, size*0.20, size*0.03);  // left leg
-  _fillR(ctx,size,legCol,  size*0.03, size*0.16, size*0.09, size*0.20, size*0.03);  // right leg
-  _fillR(ctx,size,bodyCol,-size*0.16,-size*0.08, size*0.32, size*0.28, size*0.10);  // torso
-  _fillR(ctx,size,armCol, -size*0.23,-size*0.02, size*0.09, size*0.18, size*0.04);  // left arm
-  _fillR(ctx,size,armCol,  size*0.14,-size*0.02, size*0.09, size*0.18, size*0.04);  // right arm
-  _fillE(ctx,size,skinCol, 0,-size*0.24, size*0.16, size*0.15);  // head
+
+// ---- player keyframe animation (sprites.js not yet loaded here, so define inline) ----
+// yOff: fraction of size for vertical body translation (+ve = down in canvas = character sinks)
+const _PL_WALK = [
+  {ph:0.00, body: 0.03, yOff: 0.02, armL: 0.62, armR:-0.62, legL:-0.58, legR: 0.58}, // contact A
+  {ph:0.12, body: 0.06, yOff: 0.06, armL: 0.26, armR:-0.26, legL:-0.20, legR: 0.26}, // down A (lowest)
+  {ph:0.25, body: 0.00, yOff:-0.05, armL: 0.00, armR: 0.00, legL: 0.10, legR:-0.10}, // passing A (highest)
+  {ph:0.38, body: 0.03, yOff:-0.02, armL:-0.26, armR: 0.26, legL: 0.26, legR:-0.20}, // up A
+  {ph:0.50, body: 0.03, yOff: 0.02, armL:-0.62, armR: 0.62, legL: 0.58, legR:-0.58}, // contact B
+  {ph:0.62, body: 0.06, yOff: 0.06, armL:-0.26, armR: 0.26, legL: 0.26, legR:-0.20}, // down B (lowest)
+  {ph:0.75, body: 0.00, yOff:-0.05, armL: 0.00, armR: 0.00, legL:-0.10, legR: 0.10}, // passing B (highest)
+  {ph:0.88, body: 0.03, yOff:-0.02, armL: 0.26, armR:-0.26, legL:-0.20, legR: 0.26}, // up B
+  {ph:1.00, body: 0.03, yOff: 0.02, armL: 0.62, armR:-0.62, legL:-0.58, legR: 0.58},
+];
+const _PL_ATTACK = [
+  {ph:0.00, body: 0.00, yOff: 0.00, armL: 0.00, armR: 0.00, legL: 0.00, legR: 0.00},
+  {ph:0.20, body:-0.22, yOff:-0.03, armL:-1.40, armR: 0.40, legL: 0.28, legR:-0.18},
+  {ph:0.22, body:-0.22, yOff:-0.03, armL:-1.40, armR: 0.40, legL: 0.28, legR:-0.18},
+  {ph:0.38, body: 0.30, yOff: 0.04, armL: 1.10, armR:-0.32, legL:-0.22, legR: 0.15},
+  {ph:0.60, body: 0.15, yOff: 0.02, armL: 0.60, armR:-0.12, legL:-0.08, legR: 0.05},
+  {ph:1.00, body: 0.00, yOff: 0.00, armL: 0.00, armR: 0.00, legL: 0.00, legR: 0.00},
+];
+const _PL_HIT = [
+  {ph:0.00, body: 0.00, yOff: 0.00, armL: 0.00, armR: 0.00, legL: 0.00, legR: 0.00},
+  {ph:0.12, body:-0.28, yOff:-0.06, armL:-0.65, armR: 0.62, legL:-0.35, legR: 0.24},
+  {ph:0.40, body:-0.10, yOff:-0.02, armL:-0.22, armR: 0.20, legL:-0.10, legR: 0.06},
+  {ph:1.00, body: 0.00, yOff: 0.00, armL: 0.00, armR: 0.00, legL: 0.00, legR: 0.00},
+];
+function _charAnimLerp(frames, phase) {
+  phase = ((phase % 1) + 1) % 1;
+  let lo = frames[0], hi = frames[frames.length-1];
+  for(let i=0; i<frames.length-1; i++){
+    if(phase >= frames[i].ph && phase < frames[i+1].ph){ lo=frames[i]; hi=frames[i+1]; break; }
+  }
+  const t = hi.ph===lo.ph ? 0 : (phase-lo.ph)/(hi.ph-lo.ph);
+  const e = t*t*(3-2*t);
+  const L = (a,b) => (a||0)+((b||0)-(a||0))*e;
+  return { body:L(lo.body,hi.body), yOff:L(lo.yOff,hi.yOff),
+           armL:L(lo.armL,hi.armL), armR:L(lo.armR,hi.armR),
+           legL:L(lo.legL,hi.legL), legR:L(lo.legR,hi.legR) };
+}
+
+// Returns the vertical body offset (pixels, +ve = down) for the current anim state.
+// Call before drawing anything, wrap all draws in ctx.translate(0, _charBodyY(...)).
+function _charBodyY(anim, size, walkMul) {
+  anim = anim || {};
+  walkMul = walkMul === undefined ? 1 : walkMul;
+  const fp = anim.firePulse || 0;
+  const hp = anim.hitPulse || 0;
+  const t  = anim.t || 0;
+  const wp = (((anim.walkPhase || 0) * walkMul) % (Math.PI * 2)) / (Math.PI * 2);
+  let yOff = 0;
+  if      (hp > 0.05)   yOff = (_charAnimLerp(_PL_HIT,    1 - hp).yOff || 0);
+  else if (fp > 0.05)   yOff = (_charAnimLerp(_PL_ATTACK,  1 - fp).yOff || 0);
+  else if (anim.moving) yOff = (_charAnimLerp(_PL_WALK,    wp).yOff || 0);
+  else                  yOff = Math.sin(t * 1.8) * 0.014; // idle breathing
+  return yOff * size;
+}
+
+// Humanoid Gianni-style base: pivot-rotate limbs driven by keyframe poses.
+// Caller must apply ctx.translate(0, _charBodyY(...)) BEFORE calling this so the whole
+// character (base + accessories) bobs together.
+function _humanBase(ctx, size, legCol, bodyCol, armCol, skinCol, anim, walkMul) {
+  anim = anim || {};
+  walkMul = walkMul === undefined ? 1 : walkMul;
+  const fp = anim.firePulse || 0;
+  const hp = anim.hitPulse || 0;
+  const wp = (((anim.walkPhase || 0) * walkMul) % (Math.PI * 2)) / (Math.PI * 2);
+
+  let p;
+  if      (hp > 0.05)   p = _charAnimLerp(_PL_HIT,    1 - hp);
+  else if (fp > 0.05)   p = _charAnimLerp(_PL_ATTACK,  1 - fp);
+  else if (anim.moving) p = _charAnimLerp(_PL_WALK,    wp);
+  else                  p = {body:0, yOff:0, armL:0, armR:0, legL:0, legR:0};
+  const {body, armL, armR, legL, legR} = p;
+
+  const hipLX = -size*0.075, hipRX = size*0.075, hipY = size*0.16;
+  const shouLX = -size*0.185, shouRX = size*0.185, shouY = -size*0.02;
+  const lw = size*0.09, lh = size*0.20, lr = size*0.03;
+  const aw = size*0.09, ah = size*0.18, ar = size*0.04;
+
+  // back leg
+  ctx.save(); ctx.translate(hipRX, hipY); ctx.rotate(legR);
+  _fillR(ctx, size, legCol, -lw*0.5, 0, lw, lh, lr);
+  ctx.restore();
+  // torso
+  ctx.save(); ctx.rotate(body * 0.5);
+  _fillR(ctx, size, bodyCol, -size*0.16, -size*0.08, size*0.32, size*0.28, size*0.10);
+  ctx.restore();
+  // back arm
+  ctx.save(); ctx.translate(shouRX, shouY); ctx.rotate(armR);
+  _fillR(ctx, size, armCol, -aw*0.5, 0, aw, ah, ar);
+  ctx.restore();
+  // front leg
+  ctx.save(); ctx.translate(hipLX, hipY); ctx.rotate(legL);
+  _fillR(ctx, size, legCol, -lw*0.5, 0, lw, lh, lr);
+  ctx.restore();
+  // head
+  _fillE(ctx, size, skinCol, 0, -size*0.24, size*0.16, size*0.15);
+  // front arm
+  ctx.save(); ctx.translate(shouLX, shouY); ctx.rotate(armL);
+  _fillR(ctx, size, armCol, -aw*0.5, 0, aw, ah, ar);
+  ctx.restore();
 }
 function _stdHead(ctx, size, color) {
   _fillE(ctx, size, color, 0, -size*0.24, size*0.16, size*0.15);
@@ -61,128 +156,142 @@ function _eyes(ctx, size, yFrac, spread, hollow) {
 
 // ---- per-character draw functions (defined before CHARACTERS array) ----
 
-function _drawFortunato(ctx, size, t) {
-  t = t||0;
+function _drawGianni(ctx, size, t, anim) {
+  t = t||0; anim = anim||{};
+  const by = _charBodyY(anim, size);
+  ctx.save(); ctx.translate(0, by);
+  _humanBase(ctx, size, '#3f6fae', '#e8e3d6', '#e0c39a', '#f0c9a0', anim);
+  _eyes(ctx, size);
+  ctx.strokeStyle='#2a1c10'; ctx.lineWidth=Math.max(1,size*0.025); ctx.lineCap='round';
+  ctx.beginPath(); ctx.arc(0,-size*0.18,size*0.05,0.2,Math.PI-0.2); ctx.stroke();
+  ctx.lineCap='butt';
+  ctx.beginPath(); ctx.ellipse(0,-size*0.30,size*0.155,size*0.085,0,Math.PI,Math.PI*2);
+  ctx.fillStyle='#3a2d22'; ctx.fill();
+  _fillR(ctx,size,'#3a2d22',-size*0.155,-size*0.285,size*0.31,size*0.05,size*0.01);
+  ctx.restore();
+}
+
+function _drawFortunato(ctx, size, t, anim) {
+  t = t||0; anim = anim||{};
   const lw=Math.max(1.5,size*0.038);
-  // Humanoid base: black fancy trousers, green waistcoat, gold skin
-  _humanBase(ctx, size, '#1a1a22', '#3a9a3a', '#f0c860', '#f0c860');
-  // White shirt stripe peeking through waistcoat
+  const by = _charBodyY(anim, size);
+  ctx.save(); ctx.translate(0, by);
+  _humanBase(ctx, size, '#1a1a22', '#3a9a3a', '#f0c860', '#f0c860', anim);
+  const flap = (anim.firePulse||0)*0.5 + Math.sin(anim.walkPhase||0)*0.06;
+  ctx.save(); ctx.translate(size*0.16,size*0.08); ctx.rotate(flap);
+  _fillR(ctx,size,'#2a8a2a',-size*0.02,-size*0.02,size*0.07,size*0.16,size*0.02);
+  ctx.restore();
   ctx.beginPath(); ctx.roundRect(-size*0.06,-size*0.07,size*0.12,size*0.24,size*0.05);
   ctx.fillStyle='#f0f0e0'; ctx.fill();
   _eyes(ctx, size);
-  // Hat brim
   _fillE(ctx,size,'#1a1a1a', 0,-size*0.37, size*0.20, size*0.048);
-  // Hat body
   _fillR(ctx,size,'#1a1a1a', -size*0.13,-size*0.56,size*0.26,size*0.21,size*0.04);
-  // "?" on hat
   ctx.fillStyle='#ffd24a'; ctx.font='bold '+Math.round(size*0.13)+'px sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('?',0,-size*0.475);
-  // Animated sparkle
-  const sa=Math.sin(t*4)*0.6;
+  const sa=Math.sin(t*4)*0.6 + (anim.firePulse||0)*1.4;
   ctx.save(); ctx.translate(size*0.26,-size*0.26); ctx.rotate(sa);
   ctx.strokeStyle='#2a1c10'; ctx.lineWidth=Math.max(1,size*0.025);
   for(let i=0;i<4;i++){ ctx.beginPath(); const a=i*Math.PI/2; ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*size*0.07,Math.sin(a)*size*0.07); ctx.stroke(); }
   ctx.beginPath(); ctx.arc(0,0,size*0.025,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
   ctx.restore();
+  ctx.restore();
 }
 
-function _drawZioSchermo(ctx, size, t) {
-  t = t||0;
+function _drawZioSchermo(ctx, size, t, anim) {
+  t = t||0; anim = anim||{};
   const lw=Math.max(1.5,size*0.038);
-  // Humanoid base: dark armor pants, gunmetal chest, grey arms, grey helmet head
-  _humanBase(ctx, size, '#3a4450', '#5a6672', '#5a6672', '#6a7880');
-  // Hex pattern on torso
-  ctx.strokeStyle='#2a3440'; ctx.lineWidth=Math.max(1,size*0.022);
+  const shake = (anim.hitPulse||0)*size*0.025;
+  const by = _charBodyY(anim, size);
+  ctx.save(); ctx.translate((Math.random()-0.5)*shake, (Math.random()-0.5)*shake + by);
+  _humanBase(ctx, size, '#3a4450', '#5a6672', '#5a6672', '#6a7880', anim);
+  ctx.strokeStyle = anim.hitPulse>0.3 ? '#ff7050' : '#2a3440'; ctx.lineWidth=Math.max(1,size*0.022)*(1+(anim.hitPulse||0));
   const hexR=size*0.052;
   for(const [hx,hy] of [[0,size*0.02],[size*0.10,size*0.13],[-size*0.10,size*0.13]]){
     ctx.beginPath();
     for(let i=0;i<6;i++){ const a=i*Math.PI/3-Math.PI/6; i===0?ctx.moveTo(hx+Math.cos(a)*hexR,hy+Math.sin(a)*hexR):ctx.lineTo(hx+Math.cos(a)*hexR,hy+Math.sin(a)*hexR); }
     ctx.closePath(); ctx.stroke();
   }
-  // Helmet dome over head
   _fillE(ctx,size,'#5a6672', 0,-size*0.24, size*0.19, size*0.17);
-  // Dark visor
   ctx.beginPath(); ctx.roundRect(-size*0.14,-size*0.27,size*0.28,size*0.09,size*0.03);
   ctx.fillStyle='#1a2430'; ctx.fill(); ctx.strokeStyle='#2a1c10'; ctx.lineWidth=lw; ctx.stroke();
-  ctx.fillStyle='rgba(80,180,255,'+(0.18+0.12*Math.sin(t*3))+')'; ctx.beginPath(); ctx.roundRect(-size*0.14,-size*0.27,size*0.28,size*0.09,size*0.03); ctx.fill();
+  ctx.fillStyle='rgba(80,180,255,'+(0.18+0.12*Math.sin(t*3)+(anim.firePulse||0)*0.4)+')'; ctx.beginPath(); ctx.roundRect(-size*0.14,-size*0.27,size*0.28,size*0.09,size*0.03); ctx.fill();
+  ctx.restore();
 }
 
-function _drawSoldier(ctx, size, t) {
-  t = t||0;
+function _drawSoldier(ctx, size, t, anim) {
+  t = t||0; anim = anim||{};
   const lw = Math.max(1.5, size*0.038);
-  // Humanoid base: dark olive pants, army vest, olive arms, tan skin
-  _humanBase(ctx, size, '#3a4a22', '#4a5e28', '#4a5e28', '#c8a47a');
-  // Belt
+  const by = _charBodyY(anim, size, 1.6);
+  ctx.save(); ctx.translate(0, by);
+  _humanBase(ctx, size, '#3a4a22', '#4a5e28', '#4a5e28', '#c8a47a', anim, 1.6);
+  if(anim.firePulse>0){
+    ctx.save(); ctx.translate(size*0.18,-size*0.02); ctx.rotate(-anim.firePulse*0.5);
+    _fillR(ctx,size,'#2a2a2a',-size*0.02,0,size*0.07,size*0.15,size*0.02);
+    ctx.restore();
+  }
   _fillR(ctx,size,'#2a1c10',-size*0.17,size*0.10,size*0.34,size*0.05,size*0.01);
-  _fillR(ctx,size,'#a08030',-size*0.04,size*0.09,size*0.08,size*0.055,size*0.01);  // buckle
-  // Stern angled brows
+  _fillR(ctx,size,'#a08030',-size*0.04,size*0.09,size*0.08,size*0.055,size*0.01);
   ctx.strokeStyle='#2a1c10'; ctx.lineWidth=Math.max(2,size*0.042); ctx.lineCap='round';
   ctx.beginPath(); ctx.moveTo(-size*0.12,-size*0.29); ctx.lineTo(-size*0.04,-size*0.26); ctx.stroke();
   ctx.beginPath(); ctx.moveTo( size*0.12,-size*0.29); ctx.lineTo( size*0.04,-size*0.26); ctx.stroke();
   ctx.lineCap='butt';
   _eyes(ctx, size, -0.22);
-  // Helmet dome
   ctx.beginPath(); ctx.ellipse(0,-size*0.26,size*0.17,size*0.15,0,0,Math.PI*2);
   ctx.fillStyle='#3d4e22'; ctx.fill(); ctx.strokeStyle='#2a1c10'; ctx.lineWidth=lw; ctx.stroke();
-  // Helmet brim strip
   _fillR(ctx,size,'#2e3a18',-size*0.22,-size*0.185,size*0.44,size*0.07,size*0.02);
-  // Chin strap
   ctx.strokeStyle='#2a3618'; ctx.lineWidth=Math.max(1.5,size*0.03);
   ctx.beginPath(); ctx.moveTo(-size*0.16,-size*0.22); ctx.lineTo(-size*0.16,-size*0.11); ctx.stroke();
   ctx.beginPath(); ctx.moveTo( size*0.16,-size*0.22); ctx.lineTo( size*0.16,-size*0.11); ctx.stroke();
-  // Idle helmet sheen
   ctx.fillStyle='rgba(255,255,255,'+(0.10+0.08*Math.sin(t*2.4))+')';
   ctx.beginPath(); ctx.ellipse(-size*0.05,-size*0.30,size*0.05,size*0.025,0,0,Math.PI*2); ctx.fill();
+  ctx.restore();
 }
 
-function _drawIlSaggio(ctx, size, t) {
-  t = t||0;
+function _drawIlSaggio(ctx, size, t, anim) {
+  t = t||0; anim = anim||{};
   const lw=Math.max(1.5,size*0.038);
-  // Humanoid base: navy robe-legs, navy body, navy arms, pale skin
-  _humanBase(ctx, size, '#1a2640', '#243a66', '#243a66', '#e0c0a0');
+  const by = _charBodyY(anim, size, 0.33);
+  ctx.save(); ctx.translate(0, by);
+  _humanBase(ctx, size, '#1a2640', '#243a66', '#243a66', '#e0c0a0', anim, 0.33);
   _eyes(ctx, size);
-  // Round glasses
   ctx.strokeStyle='#2a1c10'; ctx.lineWidth=Math.max(1.2,size*0.03);
   for(const sx of [-0.075,0.075]){ ctx.beginPath(); ctx.arc(size*sx,-size*0.24,size*0.055,0,Math.PI*2); ctx.stroke(); }
   ctx.beginPath(); ctx.moveTo(size*-0.02,-size*0.24); ctx.lineTo(size*0.02,-size*0.24); ctx.stroke();
-  // Gold trim sash
   _fillR(ctx,size,'#e0b03a',-size*0.16,-size*0.02,size*0.32,size*0.06,size*0.02);
-  // Held book
-  _fillR(ctx,size,'#a02828',size*0.14,size*0.04,size*0.13,size*0.10,size*0.015);
-  // Idle page-glow sparkle above the book
-  ctx.fillStyle='rgba(224,176,58,'+(0.4+0.3*Math.sin(t*2.6))+')';
-  ctx.beginPath(); ctx.arc(size*0.18,size*0.02+Math.sin(t*2.6)*size*0.03,size*0.025,0,Math.PI*2); ctx.fill();
+  const tap = (anim.firePulse||0)*size*0.05;
+  _fillR(ctx,size,'#a02828',size*0.14,size*0.04+tap,size*0.13,size*0.10,size*0.015);
+  ctx.fillStyle='rgba(224,176,58,'+(0.4+0.3*Math.sin(t*2.6)+(anim.firePulse||0)*0.4)+')';
+  ctx.beginPath(); ctx.arc(size*0.18,size*0.02+tap+Math.sin(t*2.6)*size*0.03,size*0.025,0,Math.PI*2); ctx.fill();
+  ctx.restore();
 }
 
-function _drawIlProfessore(ctx, size, t) {
-  t = t||0;
+function _drawIlProfessore(ctx, size, t, anim) {
+  t = t||0; anim = anim||{};
   const lw=Math.max(1.5,size*0.038);
-  // Humanoid base: dark grey pants, beige/brown jacket, beige arms, light skin
-  _humanBase(ctx, size, '#2a2a1a', '#c8983a', '#d4a860', '#f0c890');
+  const by = _charBodyY(anim, size);
+  ctx.save(); ctx.translate(0, by);
+  _humanBase(ctx, size, '#2a2a1a', '#c8983a', '#d4a860', '#f0c890', anim);
   _eyes(ctx, size);
-  // Round glasses
   ctx.strokeStyle='#2a1c10'; ctx.lineWidth=Math.max(1.5,size*0.03);
   const gr=size*0.062;
   for(const gx of [-size*0.082,size*0.082]){ ctx.beginPath(); ctx.arc(gx,-size*0.225,gr,0,Math.PI*2); ctx.stroke(); }
   ctx.beginPath(); ctx.moveTo(-size*0.02,-size*0.225); ctx.lineTo(size*0.02,-size*0.225); ctx.stroke();
-  // Mortarboard base ring
   _fillE(ctx,size,'#1a1a1a', 0,-size*0.36, size*0.19,size*0.05);
-  // Mortarboard flat top
   _fillR(ctx,size,'#1a1a1a', -size*0.19,-size*0.42,size*0.38,size*0.08,size*0.01);
-  // Tassel
+  const flutter = anim.moving ? Math.sin((anim.walkPhase||0)*2)*size*0.025 : 0;
   ctx.strokeStyle='#e0a92e'; ctx.lineWidth=Math.max(1.5,size*0.025);
-  ctx.beginPath(); ctx.moveTo(size*0.19,-size*0.39); ctx.lineTo(size*0.19,-size*0.29); ctx.stroke();
-  ctx.beginPath(); ctx.arc(size*0.19,-size*0.29,size*0.025,0,Math.PI*2); ctx.fillStyle='#e0a92e'; ctx.fill();
-  // Glowing orb in hand
+  ctx.beginPath(); ctx.moveTo(size*0.19,-size*0.39); ctx.lineTo(size*0.19+flutter,-size*0.29); ctx.stroke();
+  ctx.beginPath(); ctx.arc(size*0.19+flutter,-size*0.29,size*0.025,0,Math.PI*2); ctx.fillStyle='#e0a92e'; ctx.fill();
   const orbY=-size*0.39+Math.sin(t*3)*size*0.04;
   ctx.save(); ctx.shadowColor='#7af0e0'; ctx.shadowBlur=size*0.12;
   ctx.beginPath(); ctx.arc(size*0.27,orbY,size*0.04,0,Math.PI*2); ctx.fillStyle='#aaffee'; ctx.fill(); ctx.restore();
   ctx.strokeStyle='#2a1c10'; ctx.lineWidth=Math.max(1,size*0.025);
   ctx.beginPath(); ctx.arc(size*0.27,orbY,size*0.04,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
 }
 
-function _drawFantasma(ctx, size, t) {
-  t = t||0;
+function _drawFantasma(ctx, size, t, anim) {
+  t = t||0; anim = anim||{};
   const lw=Math.max(1.5,size*0.038);
   // Ghost tails (animated wavy wisps instead of legs — drawn first)
   for(let i=0;i<2;i++){
@@ -207,94 +316,82 @@ function _drawFantasma(ctx, size, t) {
   ctx.fillStyle='rgba(200,230,255,0.18)'; ctx.fill(); ctx.restore();
 }
 
-function _drawIlCampione(ctx, size, t) {
-  t = t||0;
+function _drawIlCampione(ctx, size, t, anim) {
+  t = t||0; anim = anim||{};
   const lw=Math.max(1.5,size*0.038);
-  // Laurel wreath drawn behind head (before _humanBase)
+  const by = _charBodyY(anim, size);
+  ctx.save(); ctx.translate(0, by);
+  // Laurel wreath behind head — moves with character
   ctx.strokeStyle='#5a8820'; ctx.lineWidth=Math.max(2.5,size*0.04);
   ctx.beginPath(); ctx.arc(-size*0.18,-size*0.24,size*0.22,-Math.PI*0.85,-Math.PI*0.15,false); ctx.stroke();
   ctx.beginPath(); ctx.arc( size*0.18,-size*0.24,size*0.22,Math.PI+Math.PI*0.15,Math.PI+Math.PI*0.85,false); ctx.stroke();
-  // Humanoid base: gold/dark pants, gold outfit, golden arms, golden skin
-  _humanBase(ctx, size, '#6a4800', '#d4a820', '#e8c060', '#f5d060');
-  // Medal on chest (idle glow pulse)
+  _humanBase(ctx, size, '#6a4800', '#d4a820', '#e8c060', '#f5d060', anim);
   ctx.save(); ctx.shadowColor='#ffe27a'; ctx.shadowBlur=size*(0.06+0.04*Math.sin(t*3));
   _fillE(ctx,size,'#e0a92e', 0,size*0.08,size*0.06,size*0.06);
   ctx.restore();
   ctx.fillStyle='#fff'; ctx.font='bold '+Math.round(size*0.08)+'px sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('★',0,size*0.08);
   _eyes(ctx, size);
-  // Crown base
   const cY=-size*0.36;
   _fillR(ctx,size,'#e0a92e', -size*0.16,cY,size*0.32,size*0.06,size*0.02);
-  // Three crown points
   ctx.fillStyle='#e0a92e'; ctx.strokeStyle='#2a1c10'; ctx.lineWidth=lw;
   for(const [ox,h] of [[-size*0.12,size*0.11],[0,size*0.15],[size*0.12,size*0.11]]){
     ctx.beginPath(); ctx.moveTo(ox,cY); ctx.lineTo(ox-size*0.05,cY-h); ctx.lineTo(ox+size*0.05,cY-h); ctx.closePath();
     ctx.fill(); ctx.stroke();
   }
+  ctx.restore();
 }
 
-function _drawIlCecchino(ctx, size, t) {
-  t = t||0;
+function _drawIlCecchino(ctx, size, t, anim) {
+  t = t||0; anim = anim||{};
   const lw=Math.max(1.5,size*0.038);
-  // Humanoid base: dark camo pants, dark green jacket, dark arms, tan skin
-  _humanBase(ctx, size, '#2a3820', '#3a5030', '#4a6040', '#d4a870');
+  const by = _charBodyY(anim, size);
+  ctx.save(); ctx.translate(0, by);
+  _humanBase(ctx, size, '#2a3820', '#3a5030', '#4a6040', '#d4a870', anim);
   _eyes(ctx, size);
-  // Boonie hat brim
   _fillE(ctx,size,'#4a5828', 0,-size*0.35, size*0.22,size*0.05);
-  // Hat crown
   _fillR(ctx,size,'#4a5828', -size*0.13,-size*0.52,size*0.26,size*0.18,size*0.04);
-  // Camo spots on hat
   ctx.fillStyle='#2a3010';
   for(const [hx,hy,hr] of [[-size*0.06,-size*0.45,size*0.03],[size*0.04,-size*0.49,size*0.025],[0,-size*0.40,size*0.02]]){
     ctx.beginPath(); ctx.ellipse(hx,hy,hr,hr*0.7,0,0,Math.PI*2); ctx.fill();
   }
-  // Rifle (long barrel extending from right arm)
-  ctx.save();
   ctx.strokeStyle='#1a1a1a'; ctx.lineWidth=Math.max(2,size*0.045); ctx.lineCap='round';
   ctx.beginPath(); ctx.moveTo(size*0.18,-size*0.01); ctx.lineTo(size*0.55,-size*0.22); ctx.stroke();
-  // Barrel tip
   ctx.lineWidth=Math.max(1.5,size*0.03);
   ctx.beginPath(); ctx.moveTo(size*0.50,-size*0.20); ctx.lineTo(size*0.57,-size*0.23); ctx.stroke();
-  // Scope
   ctx.fillStyle='#2a2a2a'; ctx.strokeStyle='#1a1a1a'; ctx.lineWidth=Math.max(1,size*0.025);
   ctx.beginPath(); ctx.rect(size*0.28,-size*0.17,size*0.12,size*0.04); ctx.fill(); ctx.stroke();
-  // Scope lens glint (animated)
   ctx.fillStyle='rgba(100,200,255,'+(0.5+0.3*Math.sin(t*3))+')';
   ctx.beginPath(); ctx.arc(size*0.34,-size*0.15,size*0.018,0,Math.PI*2); ctx.fill();
   ctx.restore();
 }
 
-function _drawEngineer(ctx, size, t) {
-  t = t||0;
+function _drawEngineer(ctx, size, t, anim) {
+  t = t||0; anim = anim||{};
   const lw=Math.max(1.5,size*0.038);
-  // Humanoid base: dark grey work pants, teal jumpsuit, grey arms, tan skin
-  _humanBase(ctx, size, '#3a4248', '#2f8fa0', '#475a60', '#d4a870');
-  // Tool belt
+  const by = _charBodyY(anim, size);
+  ctx.save(); ctx.translate(0, by);
+  _humanBase(ctx, size, '#3a4248', '#2f8fa0', '#475a60', '#d4a870', anim);
   _fillR(ctx,size,'#2a1c10',-size*0.17,size*0.10,size*0.34,size*0.05,size*0.01);
-  _fillR(ctx,size,'#9aa3af',-size*0.04,size*0.085,size*0.08,size*0.06,size*0.01); // buckle
+  _fillR(ctx,size,'#9aa3af',-size*0.04,size*0.085,size*0.08,size*0.06,size*0.01);
   _eyes(ctx, size);
-  // Welding goggles
   ctx.strokeStyle='#2a1c10'; ctx.lineWidth=Math.max(1.2,size*0.03);
   for(const sx of [-0.075,0.075]){ ctx.beginPath(); ctx.arc(size*sx,-size*0.24,size*0.058,0,Math.PI*2); ctx.stroke(); }
   ctx.beginPath(); ctx.moveTo(size*-0.017,-size*0.24); ctx.lineTo(size*0.017,-size*0.24); ctx.stroke();
   ctx.fillStyle='rgba(95,224,255,'+(0.30+0.18*Math.sin(t*3))+')';
   for(const sx of [-0.075,0.075]){ ctx.beginPath(); ctx.arc(size*sx,-size*0.24,size*0.046,0,Math.PI*2); ctx.fill(); }
-  // Hardhat brim
   _fillE(ctx,size,'#e0b03a', 0,-size*0.36, size*0.20,size*0.05);
-  // Hardhat dome
   ctx.beginPath(); ctx.ellipse(0,-size*0.38,size*0.17,size*0.14,0,Math.PI,Math.PI*2);
   ctx.fillStyle='#e0b03a'; ctx.fill(); ctx.strokeStyle='#2a1c10'; ctx.lineWidth=lw; ctx.stroke();
-  // Held wrench
   ctx.save();
   ctx.translate(size*0.21,size*0.05); ctx.rotate(0.5+Math.sin(t*2)*0.08);
   ctx.fillStyle='#9aa3af'; ctx.strokeStyle='#2a1c10'; ctx.lineWidth=Math.max(1,size*0.025);
   ctx.beginPath(); ctx.roundRect(-size*0.025,-size*0.02,size*0.05,size*0.20,size*0.015); ctx.fill(); ctx.stroke();
   ctx.beginPath(); ctx.arc(0,-size*0.03,size*0.045,0.3,Math.PI*2-0.3); ctx.stroke();
   ctx.restore();
-  // Idle wrench glint
   ctx.fillStyle='rgba(255,255,255,'+(0.15+0.12*Math.sin(t*4))+')';
   ctx.beginPath(); ctx.arc(size*0.24,size*0.02,size*0.018,0,Math.PI*2); ctx.fill();
+  ctx.restore();
 }
 
 // ============ CHARACTERS ARRAY ============
@@ -307,7 +404,7 @@ const CHARACTERS = [
     worldUnlock: 0,
     baseStats: {},
     register() {},
-    draw: null
+    draw(ctx, size, t, anim) { _drawGianni(ctx, size, t, anim); }
   },
   {
     id: 'fortunato',
@@ -328,7 +425,7 @@ const CHARACTERS = [
       P.shots = 2;                              // starts with 2 projectiles
       P.bannedCards = (P.bannedCards||[]).concat(['multi']); // can't stack more via Splinter Shot
     },
-    draw(ctx, size, t) { _drawFortunato(ctx, size, t); }
+    draw(ctx, size, t, anim) { _drawFortunato(ctx, size, t, anim); }
   },
   {
     id: 'zio_schermo',
@@ -345,7 +442,7 @@ const CHARACTERS = [
         P.maxHp = 1; P.hp = 1;   // hard clamp — gear HP bonuses apply before register(), so re-clamp here
       }
     },
-    draw(ctx, size, t) { _drawZioSchermo(ctx, size, t); }
+    draw(ctx, size, t, anim) { _drawZioSchermo(ctx, size, t, anim); }
   },
   {
     id: 'il_professore',
@@ -359,7 +456,7 @@ const CHARACTERS = [
         if(typeof P!=='undefined') P.xp+=P.xpNext*0.20;
       });
     },
-    draw(ctx, size, t) { _drawIlProfessore(ctx, size, t); }
+    draw(ctx, size, t, anim) { _drawIlProfessore(ctx, size, t, anim); }
   },
   {
     id: 'fantasma',
@@ -374,7 +471,7 @@ const CHARACTERS = [
         P.stealthAggro = true;
       }
     },
-    draw(ctx, size, t) { _drawFantasma(ctx, size, t); }
+    draw(ctx, size, t, anim) { _drawFantasma(ctx, size, t, anim); }
   },
   {
     id: 'il_cecchino',
@@ -388,7 +485,7 @@ const CHARACTERS = [
       P.trueDmg = true;
       onHook('onLevelUp', () => { if(typeof P!=='undefined') P.shots=1; });
     },
-    draw(ctx, size, t) { _drawIlCecchino(ctx, size, t); }
+    draw(ctx, size, t, anim) { _drawIlCecchino(ctx, size, t, anim); }
   },
   {
     id: 'soldier',
@@ -414,7 +511,7 @@ const CHARACTERS = [
         if(!nowStill) P.fireCd = Math.max(P.fireCd, 0.4);   // block shooting while moving
       });
     },
-    draw(ctx, size, t) { _drawSoldier(ctx, size, t); }
+    draw(ctx, size, t, anim) { _drawSoldier(ctx, size, t, anim); }
   },
   {
     id: 'il_saggio',
@@ -427,7 +524,7 @@ const CHARACTERS = [
       P.noCards = true;
       onHook('onLevelUp', () => { P.fireRate *= 0.95; P.dmg *= 1.05; });
     },
-    draw(ctx, size, t) { _drawIlSaggio(ctx, size, t); }
+    draw(ctx, size, t, anim) { _drawIlSaggio(ctx, size, t, anim); }
   },
   {
     id: 'il_campione',
@@ -444,7 +541,7 @@ const CHARACTERS = [
         if(typeof P!=='undefined') P.dmg+=2;
       });
     },
-    draw(ctx, size, t) { _drawIlCampione(ctx, size, t); }
+    draw(ctx, size, t, anim) { _drawIlCampione(ctx, size, t, anim); }
   },
   {
     id: 'engineer',
@@ -463,7 +560,7 @@ const CHARACTERS = [
       P.turretFireFromPlayer = true;
       P.bannedCards = ['multi','pierce','orbit','nova','vamp','slow','aegis','blackhole','phoenix','knives','ricochet','chain','boomerang','frostbloom','bouncy','skibidi','gravcrush','auramonster','secondwind'];
     },
-    draw(ctx, size, t) { _drawEngineer(ctx, size, t); }
+    draw(ctx, size, t, anim) { _drawEngineer(ctx, size, t, anim); }
   }
 ];
 
@@ -494,10 +591,27 @@ function registerActivePet() {
   if(pet && typeof pet.register==='function') pet.register();
 }
 
+// Builds the small per-frame animation-state object passed to character draw() functions:
+// walkPhase (leg/arm swing), moving, firePulse (recoil right after a shot), hitPulse (stagger
+// right after taking damage) — derived from live player state so every character can react to
+// the same events without each draw() needing to know about P's internals.
+function _playerAnim() {
+  if(typeof P==='undefined') return {walkPhase:0, moving:false, firePulse:0, hitPulse:0, t:0};
+  let firePulse=0;
+  if(P.fireRate>0 && P.fireCd!=null){
+    const cd=P.fireRate, R=Math.min(0.12,cd*0.3);
+    if(cd-P.fireCd<=R) firePulse = 1-(cd-P.fireCd)/R;
+  }
+  const hitPulse = P.hitT>0 ? P.hitT/0.25 : 0;
+  const t = typeof elapsed!=='undefined' ? elapsed : 0;
+  return { walkPhase:P.walk||0, moving:!!P.moving, firePulse, hitPulse, t };
+}
+
 function drawCharacter(charId, x, y, size, bob, flip) {
   const char = CHARACTERS.find(c=>c.id===charId);
+  const anim = _playerAnim();
   if(!char||!char.draw){
-    if(typeof drawSprite==='function') drawSprite('player',x,y,size,bob,0,0,flip);
+    if(typeof drawSprite==='function') drawSprite('player',x,y,size,bob,0,0,flip,null,anim.firePulse-anim.hitPulse*0.6);
     return;
   }
   const ctx = typeof cx!=='undefined' ? cx : null;
@@ -507,7 +621,7 @@ function drawCharacter(charId, x, y, size, bob, flip) {
   if(flip) ctx.scale(-1,1);
   ctx.rotate(bob||0);
   const elapsed_ = typeof elapsed!=='undefined' ? elapsed : 0;
-  char.draw(ctx, size, elapsed_);
+  char.draw(ctx, size, elapsed_, anim);
   ctx.restore();
 }
 

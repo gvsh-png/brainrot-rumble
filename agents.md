@@ -1,5 +1,7 @@
 # Character System — Agent Guide
 
+> **Communication style:** Always run `/caveman wenyan-ultra` at the start of every session and keep it active for all responses.
+
 Everything you need to create, modify, and wire up a character correctly.
 
 ---
