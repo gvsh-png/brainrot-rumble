@@ -6,13 +6,41 @@ const cv = document.getElementById('game');
 // helps most on software-rendered canvases (common on Linux when GPU accel isn't available).
 const cx = cv.getContext('2d', { alpha:false });
 let W=0, H=0, DPR=1;
+
+// ============ GRAPHICS / PERFORMANCE SETTINGS ============
+// One knob set, persisted to localStorage, read by the resize + render + loop paths.
+//   dpr      = backing-resolution cap. Pixel-copy cost scales DPR^2, so this is the single
+//              biggest lever on low-end / software-rendered devices.
+//   frameMin = min ms between rendered frames (fps cap). 0 = uncapped.
+//   particles= multiplier on the particle hard-cap (0 = off, 0.5 = low, 1 = full).
+//   shake    = master toggle for camera shake (separate from death-shake).
+const GFX = { dpr:1.5, frameMin:14.5, particles:1, shake:true };
+function saveGfx(){ try{ localStorage.setItem('br_gfx', JSON.stringify(GFX)); }catch(e){} }
+(function loadGfx(){
+  const raw = (()=>{ try{ return localStorage.getItem('br_gfx'); }catch(e){ return null; } })();
+  if(raw===null){
+    // First boot: pick safe defaults for the device so weak hardware starts smooth.
+    const cores = navigator.hardwareConcurrency || 4;
+    const coarse = !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches);
+    if(cores <= 4 || coarse){ GFX.dpr = 1.0; GFX.particles = 0.5; }
+    saveGfx();
+    return;
+  }
+  try{
+    const s = JSON.parse(raw) || {};
+    if(typeof s.dpr==='number')       GFX.dpr = s.dpr;
+    if(typeof s.frameMin==='number')  GFX.frameMin = s.frameMin;
+    if(typeof s.particles==='number') GFX.particles = s.particles;
+    if(typeof s.shake==='boolean')    GFX.shake = s.shake;
+  }catch(e){}
+})();
+
 function resize(){
-  // Capped well below the real DPR: profiling showed ~85% of active CPU time inside
-  // CanvasRenderingContext2D.drawImage's pixel-copy path, which scales with DPR^2 (a 2x
-  // cap on a 1920x1080 screen means a 3840x2160 backing buffer for every blit). This is a
-  // chunky cartoon art style, not pixel-art needing retina sharpness, so 1.5 trades a small
-  // amount of crispness for a big cut in per-frame pixel volume.
-  DPR = Math.min(window.devicePixelRatio||1, 1.5);
+  // DPR capped at the user's quality setting: profiling showed ~85% of active CPU time inside
+  // CanvasRenderingContext2D.drawImage's pixel-copy path, which scales with DPR^2. This is a
+  // chunky cartoon art style, not pixel-art needing retina sharpness, so capping low trades a
+  // small amount of crispness for a big cut in per-frame pixel volume.
+  DPR = Math.min(window.devicePixelRatio||1, GFX.dpr);
   W = window.innerWidth; H = window.innerHeight;
   cv.width = W*DPR; cv.height = H*DPR;
   cv.style.width = W+'px'; cv.style.height = H+'px';

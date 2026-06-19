@@ -164,7 +164,10 @@ const MAX_SHOOTERS = 14;                    // foes with any `shoot` attack
 const MAX_HAZARD   = 4;                     // "earthquake" types: ground AoE / geyser / debris
 const MAX_BURST    = 4;                     // burst shooters: ring volleys or 3+ aimed shots
 const SPECIAL_HP_BUFF = 1.6, SPECIAL_DMG_BUFF = 1.3;   // hazard/burst foes are rarer, so tankier & hit harder
-const MAXPARTS = 160, MAXEB = 240;   // hard caps on particles / enemy bullets (bound worst-case render + GC)
+const MAXEB = 240;   // hard cap on enemy bullets (bound worst-case render + GC)
+// particle cap is user-tunable (Graphics settings): scales the base 160 by GFX.particles (0=off)
+let MAXPARTS = Math.round(160 * GFX.particles);
+function applyGfxParts(){ MAXPARTS = Math.round(160 * GFX.particles); }
 function foeIsShooter(d){ return !!d.shoot; }
 function foeIsHazard(d){ return !!d.aoe || (d.cast && (d.cast.kind==='geyser'||d.cast.kind==='debris')); }
 function foeIsBurst(d){ return !!d.shoot && (d.shoot.type==='ring' || (d.shoot.n||1)>=3); }
@@ -4014,7 +4017,7 @@ function drawTurretUnit(tu, ts, bodyCol, visorCol, hpFrac){
 function render(){
   cx.save();
   let sx=0, sy=0;
-  if(shake>0){ sx=rand(-shake,shake); sy=rand(-shake,shake); cx.translate(sx,sy); }
+  if(shake>0 && GFX.shake){ sx=rand(-shake,shake); sy=rand(-shake,shake); cx.translate(sx,sy); }
   cx.scale(zoom, zoom);
   cx.translate(-camera.x, -camera.y);
 
@@ -4622,7 +4625,7 @@ function drawMinimapCard(view,mx,my){
 // ============ MAIN LOOP ============
 function loop(t){
   requestAnimationFrame(loop);
-  if(t - tPrev < 14.5) return;   // ~69fps cap — skip frames on 120/144Hz to halve render cost
+  if(GFX.frameMin>0 && t - tPrev < GFX.frameMin) return;   // fps cap (user setting) — skip frames to cut render cost
   let dt = Math.min(0.033, (t-tPrev)/1000 || 0.016);
   tPrev = t;
   if(hitstop>0){ hitstop-=dt; dt=0; }
@@ -4689,6 +4692,34 @@ function setDeathShake(v){
   deathShakeOn = v; localStorage.setItem('br_deathshake', deathShakeOn?'1':'0');
   const dsb=$('sdrop-deathshake'); if(dsb){ dsb.textContent='Death Shake: '+(deathShakeOn?'On':'Off'); dsb.classList.toggle('off', !deathShakeOn); }
 }
+// ---- Graphics / Performance settings (cycling toggles, persisted via GFX/saveGfx in core.js) ----
+const GFX_QUALITY   = [ {lbl:'Low',val:1.0}, {lbl:'Medium',val:1.25}, {lbl:'High',val:1.5} ];
+const GFX_FPS       = [ {lbl:'30',val:33.4}, {lbl:'60',val:16}, {lbl:'120',val:8}, {lbl:'Max',val:0} ];
+const GFX_PARTICLES = [ {lbl:'Off',val:0}, {lbl:'Low',val:0.5}, {lbl:'Full',val:1} ];
+function gfxNearest(opts,v){ let bi=0,bd=Infinity; for(let i=0;i<opts.length;i++){ const d=Math.abs(opts[i].val-v); if(d<bd){bd=d;bi=i;} } return bi; }
+function refreshGfxUI(){
+  const q=$('sdrop-quality'); if(q){ q.textContent='Quality: '+GFX_QUALITY[gfxNearest(GFX_QUALITY,GFX.dpr)].lbl; }
+  const f=$('sdrop-fps');     if(f){ f.textContent='FPS Cap: '+GFX_FPS[gfxNearest(GFX_FPS,GFX.frameMin)].lbl; }
+  const p=$('sdrop-particles');if(p){ p.textContent='Particles: '+GFX_PARTICLES[gfxNearest(GFX_PARTICLES,GFX.particles)].lbl; p.classList.toggle('off', GFX.particles===0); }
+  const s=$('sdrop-shake');   if(s){ s.textContent='Screen Shake: '+(GFX.shake?'On':'Off'); s.classList.toggle('off', !GFX.shake); }
+}
+function cycleGfx(opts, key, cur, applyFn){
+  const i=(gfxNearest(opts,cur)+1)%opts.length;
+  GFX[key]=opts[i].val; saveGfx(); if(applyFn) applyFn(); refreshGfxUI();
+}
+function setGfxShake(v){ GFX.shake=v; saveGfx(); refreshGfxUI(); }
+function wireGfxUI(){
+  const q=$('sdrop-quality');  if(q) q.addEventListener('click',()=>cycleGfx(GFX_QUALITY,'dpr',GFX.dpr,resize));
+  const f=$('sdrop-fps');      if(f) f.addEventListener('click',()=>cycleGfx(GFX_FPS,'frameMin',GFX.frameMin));
+  const p=$('sdrop-particles');if(p) p.addEventListener('click',()=>cycleGfx(GFX_PARTICLES,'particles',GFX.particles,applyGfxParts));
+  const s=$('sdrop-shake');    if(s) s.addEventListener('click',()=>setGfxShake(!GFX.shake));
+  const pm=$('sdrop-perfmode');if(pm) pm.addEventListener('click',()=>{
+    GFX.dpr=1.0; GFX.frameMin=16; GFX.particles=0.5; GFX.shake=false;
+    saveGfx(); applyGfxParts(); resize(); refreshGfxUI();
+  });
+  refreshGfxUI();
+}
+wireGfxUI();
 // Settings modal toggle
 (function(){
   const btn=$('settingsbtn'), drop=$('settingsdrop'), closeBtn=$('sdrop-close');
