@@ -4502,7 +4502,12 @@ function render(){
       if(typeof drawCharacter==='function') drawCharacter(P.charId||'gianni', P.x, P.y, P.r*2.6, bob, flip);
       else drawSprite('player', P.x, P.y, P.r*2.6, bob, 0, 0, flip);
       cx.globalAlpha=1;
-      if(typeof drawPlayerGear==='function' && gearShouldShow(P.charId)) drawPlayerGear(P.x, P.y, P.r*2.6, bob, flip);   // equipped gear overlay (hidden by default on non-default characters)
+      if(typeof drawPlayerGear==='function' && gearShouldShow(P.charId)){
+        // match drawCharacter's full rotation: bob + screenLean (lean toward movement direction)
+        const _a = typeof _playerAnim==='function' ? _playerAnim() : {};
+        const _lean = (_a.faceX||0)*0.16*(_a.walkAmt||0);
+        drawPlayerGear(P.x, P.y, P.r*2.6, bob+(flip?-_lean:_lean), flip);
+      }
     }
     // Phoenix burn aura
     if(P.burnAura>0){
