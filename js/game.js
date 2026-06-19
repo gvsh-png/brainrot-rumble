@@ -1698,6 +1698,11 @@ function tryDash(){
   if(navigator.vibrate) navigator.vibrate(20);
 }
 
+// O(1) removal for arrays where order doesn't matter (bullets/projectiles): overwrite slot i with
+// the last element and shrink. Safe inside a reverse loop — the moved element came from a higher
+// index already visited this frame. Avoids splice()'s O(n) element shift on every removal.
+function swapRemove(arr,i){ const last=arr.length-1; arr[i]=arr[last]; arr.length=last; }
+
 // ============ SPATIAL HASH GRID (enemy separation + fast collision queries) ============
 const CELL = 64, GW = 8192;           // 64px cells; GW packs (cx,cy) into a single int key
 let egrid = new Map();
@@ -1959,7 +1964,7 @@ function update(dt){
       });
       if(P.orbShield){                    // Sigma Squad: orbs eat enemy bullets
         for(let bi=ebullets.length-1;bi>=0;bi--){
-          if(dist2(ox,oy,ebullets[bi].x,ebullets[bi].y) < 14*14) ebullets.splice(bi,1);
+          if(dist2(ox,oy,ebullets[bi].x,ebullets[bi].y) < 14*14) swapRemove(ebullets,bi);
         }
       }
     }
@@ -2151,19 +2156,20 @@ function update(dt){
         e.hp -= h.dmg*P.dmg*0.12*dt; e.hitT=Math.max(e.hitT,0.05);
       }
     }
-    if(h.evo){ for(let bi=ebullets.length-1;bi>=0;bi--){ if(dist2(h.x,h.y,ebullets[bi].x,ebullets[bi].y)<h.r*h.r) ebullets.splice(bi,1); } }
+    if(h.evo){ for(let bi=ebullets.length-1;bi>=0;bi--){ if(dist2(h.x,h.y,ebullets[bi].x,ebullets[bi].y)<h.r*h.r) swapRemove(ebullets,bi); } }
     if(h.t>=h.life){ if(P.holeNova) novaBlast(h.x,h.y,h.r*1.1,30*P.dmg); holes.splice(i,1); }
   }
 
   // --- player bullets ---
   for(let i=bullets.length-1;i>=0;i--){
     const b=bullets[i];
-    if(b.homing){                           // Seeker Rounds: curve toward the nearest foe
+    if(b.spd===undefined) b.spd=Math.sqrt(b.vx*b.vx+b.vy*b.vy);   // cache speed once (direction can change, magnitude rarely does)
+    if(b.homing){                           // Seeker Rounds: curve toward the nearest foe (enemy count is hard-capped, so a direct scan beats 289 grid-cell Map lookups)
       let best=null,bd=420*420; for(const e of enemies){ if(e.iv>0||e.under||e.lead) continue; const d=dist2(b.x,b.y,e.x,e.y); if(d<bd){bd=d;best=e;} }
       if(best){ const cur=Math.atan2(b.vy,b.vx), want=Math.atan2(best.y-b.y,best.x-b.x);
         let da=((want-cur+Math.PI)%TAU+TAU)%TAU-Math.PI; const turn=clamp(da,-(2.4+b.homing*1.3)*dt,(2.4+b.homing*1.3)*dt);
-        const sp=Math.hypot(b.vx,b.vy), na=cur+turn; b.vx=Math.cos(na)*sp; b.vy=Math.sin(na)*sp; } }
-    b.dist -= Math.hypot(b.vx,b.vy)*dt;     // range limit
+        const na=cur+turn; b.vx=Math.cos(na)*b.spd; b.vy=Math.sin(na)*b.spd; } }   // rotation preserves magnitude -> b.spd stays valid
+    b.dist -= b.spd*dt;                      // range limit (cached speed, no per-frame hypot)
     b.x+=b.vx*dt; b.y+=b.vy*dt;
     if(b.boom){ b.spin=(b.spin||0)+dt*18; if(Math.random()<0.5) spawnPart(b.x,b.y,0,0,0.18,0.18,'#7ef0a8',b.r*0.7); }   // spin + green trail
     if(b.bounce>0){                          // Bouncy Shot: ricochet off the world walls, re-arming the hit set
@@ -2177,12 +2183,12 @@ function update(dt){
     // Boomerang Croc: reverse toward player when range runs out
     if(b.boomerang && b.dist<=0){
       const a=Math.atan2(P.y-b.y,P.x-b.x), spd=b.boomSpd||340;
-      b.vx=Math.cos(a)*spd; b.vy=Math.sin(a)*spd;
+      b.vx=Math.cos(a)*spd; b.vy=Math.sin(a)*spd; b.spd=spd;   // new heading + magnitude -> refresh cached speed
       b.boomerang=false; b.dist=600; b.hit=new Set();   // can hit again on return
       continue;
     }
-    if(b.dist<=0){ burst(b.x,b.y,'#fff6bf',3,55); bullets.splice(i,1); continue; }
-    if(b.x<-20||b.x>WORLD.w+20||b.y<-20||b.y>WORLD.h+20){ bullets.splice(i,1); continue; }
+    if(b.dist<=0){ burst(b.x,b.y,'#fff6bf',3,55); swapRemove(bullets,i); continue; }
+    if(b.x<-20||b.x>WORLD.w+20||b.y<-20||b.y>WORLD.h+20){ swapRemove(bullets,i); continue; }
     // grid-accelerated hit test: only check enemies in the bullet's cell block, one hit per frame
     let hitDone=false;
     const bgx=Math.floor(b.x/CELL), bgy=Math.floor(b.y/CELL);
@@ -2237,7 +2243,7 @@ function update(dt){
               }
             }
           }
-          if(b.pierce>0){ b.pierce--; } else { bullets.splice(i,1); }
+          if(b.pierce>0){ b.pierce--; } else { swapRemove(bullets,i); }
           hitDone=true; break;   // one enemy per frame (pierced bullets hit the next on later frames)
         }
       }
@@ -2257,7 +2263,7 @@ function update(dt){
             hitSpark(b.x,b.y,isCrit?'#ffe14d':'#ff9f3a',isCrit);
             damageLucky(lb,dmg,b.x,b.y,isCrit);
           }
-          if(b.pierce>0){ b.pierce--; } else { bullets.splice(i,1); }
+          if(b.pierce>0){ b.pierce--; } else { swapRemove(bullets,i); }
           break;
         }
       }
@@ -2547,13 +2553,13 @@ function update(dt){
       b.y = b.orbit.cy + Math.sin(b.orbit.ang)*b.orbit.rad;
     } else { b.x += b.vx*dt*P.bslow; b.y += b.vy*dt*P.bslow; }
     b.t = (b.t||0)+dt;
-    if(b.x<-30||b.x>WORLD.w+30||b.y<-30||b.y>WORLD.h+30||b.t>9){ ebullets.splice(i,1); continue; }
+    if(b.x<-30||b.x>WORLD.w+30||b.y<-30||b.y>WORLD.h+30||b.t>9){ swapRemove(ebullets,i); continue; }
     if(b.split && b.t>=b.splitT){    // shard bursts into a 3-way fan mid-flight
-      const base=Math.atan2(b.vy,b.vx), sp=Math.hypot(b.vx,b.vy);
+      const base=Math.atan2(b.vy,b.vx), sp=Math.sqrt(b.vx*b.vx+b.vy*b.vy);
       for(let s=-1;s<=1;s++) fireEB(b.x,b.y, base+s*0.32, sp, b.color);
-      ebullets.splice(i,1); continue;
+      swapRemove(ebullets,i); continue;
     }
-    if(dist2(b.x,b.y,P.x,P.y) < (b.r+P.r-3)*(b.r+P.r-3)){ ebullets.splice(i,1); hurtPlayer(8*chalDmgMul()*(b.dmgMul||1), b); }
+    if(dist2(b.x,b.y,P.x,P.y) < (b.r+P.r-3)*(b.r+P.r-3)){ swapRemove(ebullets,i); hurtPlayer(8*chalDmgMul()*(b.dmgMul||1), b); }
   }
 
   // --- lucky blocks ---
@@ -4195,18 +4201,37 @@ function render(){
   const bcore = P.railgun ? '#5fe6ff' : P.soldierBullets ? '#1a1a22' : P.whiteBullets ? '#ffffff' : '#ffd21f';
   const bhi   = P.railgun ? '#dafcff' : P.soldierBullets ? '#44444e' : P.whiteBullets ? '#bcdcff' : '#fff6bf';
   if(P.ghostBullets) cx.globalAlpha=0.6;
+  // special bullets draw individually; plain gold bullets are batched into 3 paths (halo/core/highlight)
+  // so the whole volley costs 3 fill() calls instead of 3 per bullet.
+  cx.fillStyle='#fff'; cx.beginPath();
   for(const b of bullets){
     if(b.x<vx0-30||b.x>vx1+30||b.y<vy0-30||b.y>vy1+30) continue;
-    if(b.boom){ drawBoomerangCroc(b); continue; }
-    if(b.knife){ drawKnifeBullet(b); continue; }
-    if(b.lucky){
+    if(b.boom||b.knife||b.lucky) continue;
+    cx.moveTo(b.x+b.r+2,b.y); cx.arc(b.x,b.y,b.r+2,0,TAU);
+  }
+  cx.fill();
+  cx.fillStyle=bcore; cx.beginPath();
+  for(const b of bullets){
+    if(b.x<vx0-30||b.x>vx1+30||b.y<vy0-30||b.y>vy1+30) continue;
+    if(b.boom||b.knife||b.lucky) continue;
+    cx.moveTo(b.x+b.r,b.y); cx.arc(b.x,b.y,b.r,0,TAU);
+  }
+  cx.fill();
+  cx.fillStyle=bhi; cx.beginPath();
+  for(const b of bullets){
+    if(b.x<vx0-30||b.x>vx1+30||b.y<vy0-30||b.y>vy1+30) continue;
+    if(b.boom||b.knife||b.lucky) continue;
+    const hx=b.x-b.r*0.3, hy=b.y-b.r*0.3, hr=b.r*0.4; cx.moveTo(hx+hr,hy); cx.arc(hx,hy,hr,0,TAU);
+  }
+  cx.fill();
+  for(const b of bullets){   // special-shape bullets (own sprites)
+    if(b.x<vx0-30||b.x>vx1+30||b.y<vy0-30||b.y>vy1+30) continue;
+    if(b.boom){ drawBoomerangCroc(b); }
+    else if(b.knife){ drawKnifeBullet(b); }
+    else if(b.lucky){
       if(b.luckyCrit){ cx.filter='grayscale(1) contrast(1.1)'; drawSprite('luckyblock',b.x,b.y,b.r*7,0,0,0,false,null); cx.filter='none'; }
       else drawSprite('luckyblock',b.x,b.y,b.r*5,0,0,0,false,null);
-      continue;
     }
-    cx.fillStyle='#fff'; cx.beginPath(); cx.arc(b.x,b.y,b.r+2,0,TAU); cx.fill();
-    cx.fillStyle=bcore; cx.beginPath(); cx.arc(b.x,b.y,b.r,0,TAU); cx.fill();
-    cx.fillStyle=bhi; cx.beginPath(); cx.arc(b.x-b.r*0.3,b.y-b.r*0.3,b.r*0.4,0,TAU); cx.fill();
   }
   if(P.ghostBullets) cx.globalAlpha=1;
 
@@ -4318,13 +4343,18 @@ function render(){
     cx.globalAlpha=1; cx.restore();
   }
 
-  // --- enemy bullets: core + rim (glow pass removed — saves N arc() calls/frame) ---
-  cx.lineWidth=3.2; cx.strokeStyle=OUT;
+  // --- enemy bullets: fills are per-color (per bullet), but every outline is the same OUT color,
+  // so all rims are batched into one path + a single stroke() instead of one stroke per bullet. ---
   for(const b of ebullets){
     if(b.x<vx0-30||b.x>vx1+30||b.y<vy0-30||b.y>vy1+30) continue;
-    const bc=b.color||'#e54d4d';
-    cx.fillStyle=bc; cx.beginPath(); cx.arc(b.x,b.y,b.r,0,TAU); cx.fill(); cx.stroke();
+    cx.fillStyle=b.color||'#e54d4d'; cx.beginPath(); cx.arc(b.x,b.y,b.r,0,TAU); cx.fill();
   }
+  cx.lineWidth=3.2; cx.strokeStyle=OUT; cx.beginPath();
+  for(const b of ebullets){
+    if(b.x<vx0-30||b.x>vx1+30||b.y<vy0-30||b.y>vy1+30) continue;
+    cx.moveTo(b.x+b.r,b.y); cx.arc(b.x,b.y,b.r,0,TAU);
+  }
+  cx.stroke();
 
   // --- active pet (trails directly behind player) ---
   if(state!==ST.MENU && P.petId && typeof PETS!=='undefined'){
