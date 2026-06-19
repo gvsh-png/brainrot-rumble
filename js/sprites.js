@@ -120,7 +120,7 @@ makeSprite('crocodilo', 120, (g,u)=>{
   eyes(g,u,26*u,-12*u,5*u,3.4*u);
 });
 
-// ---- Tung Tung Tung Sahur: wooden mallet creature with a bat ----
+// ---- Ting Ting Ting Bahur: wooden mallet creature with a bat ----
 makeSprite('sahur', 130, (g,u)=>{
   // legs
   sh(g,'#7a5230',3*u,(g)=>{ g.roundRect(-12*u,26*u,8*u,16*u,3*u); });
@@ -609,7 +609,7 @@ makeSprite('dindin', 116, (g,u)=>{     // U Din Din...: bell-tower titan
   eyes(g,u,0,4*u,5*u,3*u);
 });
 // ============ WORLD 2 — DIRT DEPTHS BOSSES ============
-makeSprite('tatasahur', 132, (g,u)=>{  // TA TA TA TA SAHUR: burrowing wooden drummer
+makeSprite('tatasahur', 132, (g,u)=>{  // TING TING TING BAHUR 2.0: burrowing wooden drummer
   sh(g,'#8a6a3a',2.6*u,(g)=>{ g.roundRect(26*u,-30*u,8*u,40*u,3*u); }); // bat handle
   sh(g,'#a9844a',3*u,(g)=>{ g.roundRect(22*u,-46*u,16*u,22*u,5*u); }); // bat head
   sh(g,'#b5894e',4*u,(g)=>{ g.roundRect(-18*u,-20*u,36*u,50*u,10*u); }); // wooden body

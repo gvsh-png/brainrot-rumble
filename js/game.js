@@ -211,7 +211,7 @@ const FOES_GRASS = [
 const BOSSES_GRASS = [
   { spr:'tralalero', name:'TRALALERO TRALALA',        hp:150, r:54, pattern:'spiral' },
   { spr:'crocodilo', name:'BOMBARDIRO CROCODILO',     hp:230, r:56, pattern:'rings'  },
-  { spr:'sahur',     name:'TUNG TUNG TUNG SAHUR',     hp:300, r:58, pattern:'chaos'  },
+  { spr:'sahur',     name:'TING TING TING BAHUR',     hp:300, r:58, pattern:'chaos'  },
   { spr:'vaca',      name:'LA VACA SATURNO',          hp:440, r:58, pattern:'rings'  },
   { spr:'gorillo',   name:'GORILLO WATERMELLONDRILLO',hp:560, r:62, pattern:'chaos',  phased:true },
   { spr:'trippi',    name:'TRIPPI TROPPI',            hp:680, r:56, pattern:'spiral', phased:true },
@@ -249,7 +249,7 @@ const FOES_DIRT = [
   { spr:'dindin',    name:'U Din Din Din Din Dun Ma Din Din Din Dun', hp:21, sp:36, r:22, xp:5, score:50, death:{type:'split',n:2} },
 ];
 const BOSSES_DIRT = [
-  { spr:'tatasahur', name:'TA TA TA TA SAHUR',        hp:185, r:54, pattern:'chaos',  phased:true },
+  { spr:'tatasahur', name:'TING TING TING BAHUR 2.0',        hp:185, r:54, pattern:'chaos',  phased:true },
   { spr:'hotspot',   name:'POT HOTSPOT',              hp:280, r:60, pattern:'rings',  phased:true },
   { spr:'saturnita', name:'LA VACA SATURNO SATURNITA',hp:370, r:58, pattern:'chaos',  phased:true },
   { spr:'tralalero', name:'TRALALERO TRALALA 2.0',    hp:470, r:56, pattern:'spiral', phased:true, moveKey:'tralala2' },
@@ -652,7 +652,7 @@ function introRender(){
     }
     if(typeof SP!=='undefined' && SP['sahur']) drawSprite('sahur', bossX, bossY, 130+closeness*30, Math.sin(t*3)*0.05, 0,0,false,null);
   }
-  introCaption('...UNTIL TUNG TUNG TUNG SAHUR\'S ARMY INVADED.', t, 3.6, 8.6, H*0.86);
+  introCaption('...UNTIL TING TING TING BAHUR\'S ARMY INVADED.', t, 3.6, 8.6, H*0.86);
 
   // --- stage 3 (9-11.5s): chaos flash ---
   if(t>9 && t<11.5){
@@ -735,7 +735,7 @@ function w1OutroRender(){
   }
 
   introCaption('BACK IN THE GRASSLANDS...', t, 0.3, 2.8, H*0.18);
-  introCaption('TUNG TUNG TUNG SAHUR DID NOT STAY DOWN.', t, 2.6, 5.0, H*0.18);
+  introCaption('TING TING TING BAHUR DID NOT STAY DOWN.', t, 2.6, 5.0, H*0.18);
   introCaption('HE CALLS UPON HIS FALLEN ARMY...', t, 5.0, 8.6, H*0.86);
   introCaption('...AND THEY VOW TO GROW STRONGER.', t, 9.4, 11.6, H*0.86);
   introCaption('WORLD 2 AWAITS.', t, 11.2, 12.4, H*0.5);
