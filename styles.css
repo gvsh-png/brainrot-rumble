@@ -1039,3 +1039,115 @@ html,body { width:100%; height:100%; overflow:hidden; background:#6fae3d; font-f
   100% {transform:translateY(0) scale(1)}
 }
 @keyframes gFadeOut { from{opacity:1} to{opacity:0} }
+
+/* ============================================================
+   PC LAYOUT — sidebar nav, 3-col battle, wider grids
+   Kicks in at 860px on pointer:fine (mouse) devices
+   ============================================================ */
+@media (min-width:860px) and (hover:hover) and (pointer:fine){
+
+  /* Menu: CSS grid — topbar spans full width, sidebar left, content right */
+  #menu {
+    display:grid !important;
+    grid-template-rows:auto 1fr;
+    grid-template-columns:clamp(150px,13vw,200px) 1fr;
+    align-items:stretch; justify-items:stretch;
+    padding:0; gap:0;
+  }
+  #menu::before { grid-column:1/-1; grid-row:1/-1; }
+  #topbar { grid-column:1/-1; grid-row:1; z-index:2; }
+  #tabview {
+    grid-column:2; grid-row:2;
+    max-width:none; width:100%; margin:0;
+    padding:clamp(20px,2.4vw,38px) clamp(22px,2.8vw,44px);
+    overflow-y:auto; overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;
+    min-height:0; z-index:1;
+  }
+  #tabview .tabpanel { height:100%; }
+
+  /* Sidebar */
+  #tabbar {
+    grid-column:1; grid-row:2;
+    flex-direction:column; align-items:stretch; justify-content:flex-start;
+    border-top:none; border-right:3px solid #0e1320;
+    padding:clamp(10px,1.4vmin,18px) 0 clamp(10px,1.4vmin,18px);
+    background:#1a2030; height:100%; z-index:2;
+  }
+  .tabbtn {
+    flex-direction:column; border-right:none;
+    border-bottom:2px solid rgba(255,255,255,.05);
+    padding:clamp(14px,1.8vmin,22px) 6px;
+    flex:0 0 auto; border-radius:0;
+    transition:background .15s ease, color .15s ease;
+  }
+  .tabbtn:last-child { border-bottom:none; }
+  .tabbtn .tabico { width:clamp(24px,2.2vw,32px); height:clamp(24px,2.2vw,32px); }
+  .tabbtn .tablbl { font-size:clamp(10px,1.05vw,13px); }
+  .tabbtn.active {
+    border-radius:14px 0 0 14px;
+    border:3px solid #2a1c10 !important;
+    border-right:none !important;
+    padding-top:clamp(14px,1.8vmin,22px);
+    box-shadow:none;
+    margin-right:-1px;
+    z-index:3;
+  }
+  .tabbtn.active .tabico { width:clamp(26px,2.4vw,34px); height:clamp(26px,2.4vw,34px); }
+  .tabbtn.active .tablbl { font-size:clamp(11px,1.1vw,14px); }
+  /* notification badges in sidebar */
+  .tabbadge { right:auto; left:clamp(52px,6vw,78px); top:clamp(6px,1vmin,10px); }
+
+  /* ── Battle tab: 3-area grid ── */
+  #tab-battle {
+    display:grid !important;
+    grid-template-areas:
+      "world stage actions"
+      "sub   stage actions";
+    grid-template-columns:clamp(160px,17vw,240px) 1fr clamp(180px,20vw,270px);
+    grid-template-rows:auto 1fr;
+    gap:clamp(14px,1.8vw,26px);
+    height:100%; align-items:start;
+  }
+  #worldsel { grid-area:world; justify-content:center; }
+  #wname { width:auto; min-width:0; font-size:clamp(17px,2.2vw,30px); min-height:0; }
+  .worldsub { grid-area:sub; align-self:start; text-align:center; }
+  #stage {
+    grid-area:stage; height:100%; margin:0;
+    min-height:clamp(260px,48vh,560px);
+  }
+  #menubot {
+    grid-area:actions; flex-direction:column;
+    justify-content:center; align-items:stretch;
+    gap:clamp(12px,1.4vw,20px); padding:0; width:auto;
+  }
+  .startbtn { max-width:none; width:100%; font-size:clamp(22px,2.6vw,38px); }
+  .gamemodebtn { width:100%; }
+  #menu .hint { margin:0; font-size:clamp(11px,1.1vw,15px); }
+
+  /* ── Shop: 3-column item grid ── */
+  .ggrid { grid-template-columns:repeat(3,1fr); }
+  .crates { grid-template-columns:repeat(3,1fr); }
+
+  /* ── Character: 2-column list ── */
+  #charlist {
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:clamp(8px,1.2vw,14px);
+  }
+
+  /* ── Equipment: more columns ── */
+  #invowned.ggrid { grid-template-columns:repeat(7,1fr); }
+
+  /* ── Pet grids ── */
+  .petgrid { grid-template-columns:repeat(6,1fr); }
+  .petgrid-tab { grid-template-columns:repeat(6,1fr); }
+  .petownedgrid { grid-template-columns:repeat(6,1fr); }
+
+  /* ── Scrollable panels fill height ── */
+  #tab-shop,#tab-inventory,#tab-pets,#tab-character {
+    max-height:100%; overflow-y:auto;
+  }
+  /* topbar wider */
+  #topxp { width:clamp(100px,14vw,220px); }
+}
