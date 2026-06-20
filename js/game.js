@@ -967,8 +967,8 @@ const UPGRADES = [
     steps:[{desc:'every 5s, a shockwave hits nearby enemies.',f:()=>{P.nova=true;}},{desc:'shockwave: faster + stronger.',f:()=>{P.novaCdBase=Math.max(3.5,P.novaCdBase-0.6);P.novaPow*=1.35;}},{desc:'shockwave: faster + stronger.',f:()=>{P.novaCdBase=Math.max(3.2,P.novaCdBase-0.6);P.novaPow*=1.35;}},{desc:'shockwave: faster + stronger.',f:()=>{P.novaCdBase=Math.max(3.0,P.novaCdBase-0.6);P.novaPow*=1.35;}}],
     evo:{name:'Nova Cataclysm', icon:'gembig', desc:'EVOLVE — massive fast shockwave that clears nearby bullets.', f:()=>{P.nova=true;P.novaEvo=true;P.novaCdBase=3;P.novaPow*=1.5;}} },
   { id:'vamp', name:'Soul Harvest', icon:'heart', rarity:'epic',
-    steps:[{desc:'heal +1 HP per kill.',f:()=>P.vamp+=1},{desc:'heal +1 HP per kill.',f:()=>P.vamp+=1},{desc:'heal +1 HP per kill.',f:()=>P.vamp+=1},{desc:'heal +1 HP per kill.',f:()=>P.vamp+=1}],
-    evo:{name:'Vampiric Feast', icon:'heart', desc:'EVOLVE — restore a massive chunk of HP per kill.', f:()=>{P.vamp+=4;}} },
+    steps:[{desc:'heal +2 HP per kill.',f:()=>P.vamp+=2},{desc:'heal +2 HP per kill.',f:()=>P.vamp+=2},{desc:'heal +2 HP per kill.',f:()=>P.vamp+=2},{desc:'heal +2 HP per kill.',f:()=>P.vamp+=2}],
+    evo:{name:'Vampiric Feast', icon:'heart', desc:'EVOLVE — restore a massive chunk of HP per kill.', f:()=>{P.vamp+=6;}} },
   { id:'slow', name:'Stasis Field', icon:'gem', rarity:'rare',
     steps:[{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88},{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88},{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88},{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88}],
     evo:{name:'Glacial Freeze', icon:'gem', desc:'EVOLVE — enemies you hit freeze solid.', f:()=>{P.bslow*=0.7;P.freeze=true;}} },
@@ -1058,8 +1058,8 @@ const UPGRADES = [
          f:()=>{P.boomEvo=true;P.boomN=4;}} },
 
   { id:'execute', name:'Executioner', icon:'coin', rarity:'uncommon', cap:5, minWorld:2,
-    steps:[{desc:'enemies below 15% HP die instantly on your hits. (+3% per level)',
-            f:()=>P.execute=(P.execute||0.12)+0.03}] },
+    steps:[{desc:'enemies below 20% HP die instantly on your hits. (+4% per level)',
+            f:()=>P.execute=(P.execute||0.16)+0.04}] },
 
   { id:'secondwind', name:'Second Wind', icon:'heart', rarity:'legendary', cap:3, minWorld:2,
     steps:[
@@ -1110,16 +1110,16 @@ const UPGRADES = [
 
   { id:'auramonster', name:'Aura Monster', icon:'gembig', rarity:'rare', minWorld:1, cap:3,
     steps:[
-      {desc:'gain a green damage aura around you.', f:()=>{P.auraR=120; P.auraDmg=8;}},
-      {desc:'aura grows bigger.',                   f:()=>{P.auraR+=55;}},
-      {desc:'aura grows bigger and hits harder.',   f:()=>{P.auraR+=55; P.auraDmg+=10;}},
+      {desc:'gain a green energy aura that damages nearby enemies.',    f:()=>{P.auraR=150; P.auraDmg=16;}},
+      {desc:'aura grows larger and pulses harder.',                     f:()=>{P.auraR+=70; P.auraDmg+=10;}},
+      {desc:'aura expands massively and surges in power.',              f:()=>{P.auraR+=70; P.auraDmg+=16;}},
     ] },
   { id:'skibidi', name:'Skibidi Toilet', icon:'gembig', rarity:'epic', minWorld:3,
     steps:[
-      {desc:'summons toilets that bounce off the map edges 6 times before vanishing, reappearing after 10s.', f:()=>{P.skibidiCount=1; P.skibidiBounces=6;}},
-      {desc:'bounces more before vanishing.',         f:()=>{P.skibidiBounces+=4;}},
-      {desc:'+1 Skibidi Toilet.',                      f:()=>{P.skibidiCount+=1;}},
-      {desc:'+1 Skibidi Toilet.',                      f:()=>{P.skibidiCount+=1;}},
+      {desc:'summons a toilet that bounces off map edges 6 times, dealing heavy damage per hit. Respawns after 7s.', f:()=>{P.skibidiCount=1; P.skibidiBounces=6; P.skibidiRespawn=7;}},
+      {desc:'bounces more before vanishing (+4 bounces).',               f:()=>{P.skibidiBounces+=4;}},
+      {desc:'+1 Skibidi Toilet.',                                        f:()=>{P.skibidiCount+=1;}},
+      {desc:'+1 Skibidi Toilet.',                                        f:()=>{P.skibidiCount+=1;}},
     ],
     evo:{name:'Eternal Skibidi', icon:'gembig', desc:'EVOLVE — Skibidi Toilets never disappear.', f:()=>{P.skibidiNeverDie=true;}} },
 
@@ -1226,7 +1226,7 @@ function resetPlayer(){
     soldierStill:false, soldierBullets:false,
     noCards:false, whiteBullets:false, stealthAggro:false, ghostBullets:false,
     auraR:0, auraDmg:0,
-    skibidiCount:0, skibidiBounces:6, skibidiNeverDie:false
+    skibidiCount:0, skibidiBounces:6, skibidiNeverDie:false, skibidiRespawn:7
   });
   skibidiBullets.length=0; skibidiTimers.length=0;
   turrets.length=0; miniTurrets.length=0; flameTurrets.length=0; placedTurrets.length=0;
@@ -2252,14 +2252,16 @@ function update(dt){
     for(let i=0;i<P.skibidiCount;i++){
       if(!skibidiBullets[i] || skibidiBullets[i].dead){
         if(skibidiTimers[i]>0){ skibidiTimers[i]-=dt; continue; }
-        const a=rand(0,TAU), spd=300;
-        skibidiBullets[i]={x:P.x,y:P.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,bounces:0,spin:0,dead:false};
+        const a=rand(0,TAU), spd=320;
+        skibidiBullets[i]={x:P.x,y:P.y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,bounces:0,spin:0,dead:false,hitCd:new Map()};
       }
     }
   }
   for(let i=0;i<skibidiBullets.length;i++){
     const b=skibidiBullets[i]; if(!b||b.dead) continue;
     b.x+=b.vx*dt; b.y+=b.vy*dt; b.spin+=dt*7;
+    // tick per-enemy hit cooldowns
+    if(b.hitCd){ for(const [k,v] of b.hitCd){ const nv=v-dt; if(nv<=0) b.hitCd.delete(k); else b.hitCd.set(k,nv); } }
     let bounced=false;
     if(b.x<WALL){ b.x=WALL; b.vx=Math.abs(b.vx); bounced=true; }
     else if(b.x>WORLD.w-WALL){ b.x=WORLD.w-WALL; b.vx=-Math.abs(b.vx); bounced=true; }
@@ -2268,13 +2270,17 @@ function update(dt){
     if(bounced){
       b.bounces++; burst(b.x,b.y,'#cfe8ff',6,140); sfx.hit();
       if(b.bounces>=P.skibidiBounces){
-        if(P.skibidiNeverDie) b.bounces=0;   // evolved: keep bouncing forever instead of dying
-        else { b.dead=true; skibidiTimers[i]=10; continue; }
+        if(P.skibidiNeverDie) b.bounces=0;
+        else { b.dead=true; skibidiTimers[i]=(P.skibidiRespawn||7); continue; }
       }
     }
-    forEnemiesNear(b.x,b.y,24,(e)=>{
+    forEnemiesNear(b.x,b.y,26,(e)=>{
       if(e.iv>0 || e.lead) return;
-      if(dist2(b.x,b.y,e.x,e.y) < 24*24){ e.hp -= P.dmg*1.1*dt; e.hitT=Math.max(e.hitT,0.05); }
+      if(dist2(b.x,b.y,e.x,e.y) < 26*26 && !b.hitCd.has(e)){
+        b.hitCd.set(e, 0.4);
+        e.hp -= P.dmg*8; e.hitT=Math.max(e.hitT,0.25);
+        burst(b.x,b.y,'#a0d8ff',4,100);
+      }
     });
   }
 
