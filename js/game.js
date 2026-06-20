@@ -19,7 +19,7 @@ let chaosSchedule=[],chaosWaveIdx=0,chaosMidTimer=-1;
 let chaosAnnounceT=0,_chaosQueuedFn=null;
 let chaosSpeedT=0,chaosBlackoutT=0,chaosGiantN=0;
 let chaosGravT=0; // >0=scatter away, <0=rush toward player
-let chaosShrinkT=0,chaosDisarmT=0,chaosBerserkT=0;   // coins collected during the CURRENT world run (in-game HUD display; total still banked in `gold`)
+let chaosShrinkT=0,chaosDisarmT=0,chaosBerserkT=0,chaosBombRainT=0,chaosBombRainCd=0;   // coins collected during the CURRENT world run (in-game HUD display; total still banked in `gold`)
 let _lastSec=-1;    // throttles the survival-timer DOM update to once per second
 const MMH = window.MINIMAP_HELPERS;
 // ===== CHALLENGER MODE STATE =====
@@ -1445,7 +1445,7 @@ function scheduleChaos(){
   ];
   chaosWaveIdx=0; chaosMidTimer=-1; chaosAnnounceT=0; _chaosQueuedFn=null;
   chaosSpeedT=0; chaosBlackoutT=0; chaosGiantN=0; chaosGravT=0;
-  chaosShrinkT=0; chaosDisarmT=0; chaosBerserkT=0; _chaosMagN=0;
+  chaosShrinkT=0; chaosDisarmT=0; chaosBerserkT=0; chaosBombRainT=0; chaosBombRainCd=0; _chaosMagN=0;
   const el=$('chaos-announce'); if(el) el.classList.add('hidden');
 }
 
@@ -1528,7 +1528,7 @@ const CHAOS_EVENTS=[
   {name:'BERSERK',      fn:()=>{chaosBerserkT=7;for(const e of enemies){if(!e.isBoss&&!e.under)e.hp=Math.min(e.maxHp,e.hp+e.maxHp*0.20);}}},
   {name:'DISARM',       fn:()=>{chaosDisarmT=3.5;}},
   {name:'SWARM',        fn:()=>{ let n=18;while(n-->0&&enemies.length<MAX_ENEMIES-1){const p=ringPos(),f=curFoes[0];enemies.push({spr:f.spr,name:f.name,x:p.x,y:p.y,r:f.r*0.65,hp:f.hp*HP_MULT*0.28,maxHp:f.hp*HP_MULT*0.28,_shooter:false,_hazard:false,_burst:false,dmgBuff:0.5,sp:f.sp*1.8,xp:f.xp*0.25,score:8,range:0,shoot:null,death:null,aoe:null,aoeCd:3,dash:false,dst:'idle',dcd:2,da:0,dwin:0,ddur:0,shell:false,shellCd:5,iv:0.25,support:null,supCd:3,front:0,kb:0,pullAura:0,trail:null,trailT:0,cast:null,castCd:0,under:false,digT:0,spin:0,t:rand(0,TAU),wob:rand(2,4),shootCd:3,frz:0,isBoss:false,hitT:0,sq:0,face:1,chaosSwarm:true});}}},
-  {name:'BOMB RAIN',    fn:()=>{for(let i=0;i<10;i++){const a=rand(0,TAU),r=rand(28,200);addZone(P.x+Math.cos(a)*r,P.y+Math.sin(a)*r,72,{tele:1.1,life:0.85,dps:38,col:'#e04000'});}}},
+  {name:'BOMB RAIN',    fn:()=>{chaosBombRainT=20;chaosBombRainCd=0;}},
 ];
 
 function fireChaosEvent(){
@@ -1564,6 +1564,14 @@ function updateChaos(dt){
   if(chaosBlackoutT>0){chaosBlackoutT-=dt;if(chaosBlackoutT<0)chaosBlackoutT=0;}
   if(chaosDisarmT>0){chaosDisarmT-=dt;if(chaosDisarmT<0)chaosDisarmT=0;}
   if(chaosBerserkT>0){chaosBerserkT-=dt;if(chaosBerserkT<0)chaosBerserkT=0;}
+  if(chaosBombRainT>0){
+    chaosBombRainT-=dt; chaosBombRainCd-=dt;
+    if(chaosBombRainCd<=0){
+      chaosBombRainCd=0.42;
+      for(let i=0;i<2;i++){const a=rand(0,TAU),r=rand(30,290);addZone(P.x+Math.cos(a)*r,P.y+Math.sin(a)*r,54,{tele:0.85,life:1.0,dps:24,col:'#e04000'});}
+    }
+    if(chaosBombRainT<0)chaosBombRainT=0;
+  }
   if(chaosGravT>0){ chaosGravT-=dt; if(chaosGravT<=0) chaosGravT=-2.5; }
   else if(chaosGravT<0){ chaosGravT+=dt; if(chaosGravT>=0) chaosGravT=0; }
   if(chaosShrinkT>0){
