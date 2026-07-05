@@ -1475,18 +1475,31 @@ function chalWorldCleared(e){
   bigText('CHALLENGER CLEARED','#ff5a70');
 }
 
-// lock the field into a small bounded arena around the player; boss arrives after a delay
+// lock the field into a bounded arena with a clear fight floor; boss arrives after a delay
 function startBossArena(){
   const base = ARENA_SIZE * (gameMode==='challenger' ? CHAL_ARENA_MUL : 1);
   const usableW = WORLD.w - 2*WALL, usableH = WORLD.h - 2*WALL;
-  // shape arena to match world aspect ratio: 45% of each world dimension, min 600px, 80px margin each side
-  const aw = Math.min(Math.max(600, usableW * 0.45), base, usableW - 80);
-  const ah = Math.min(Math.max(600, usableH * 0.45), base, usableH - 80);
-  const cxw = clamp(P.x, WALL+aw/2, WORLD.w-WALL-aw/2);
-  const cyw = clamp(P.y, WALL+ah/2, WORLD.h-WALL-ah/2);
-  arena = { x:cxw-aw/2, y:cyw-ah/2, w:aw, h:ah };
-  luckies=[];                                // clear lucky blocks: they'd be stranded outside the arena
-  bossPending = ARENA_LEAD;                  // no auto zoom-in on boss arrival — keep the player's current zoom
+  const aw = Math.min(Math.max(640, usableW * 0.5), base, usableW - 80);
+  const ah = Math.min(Math.max(640, usableH * 0.5), base, usableH - 80);
+  let ax, ay;
+  if(typeof WorldMapLayout!=='undefined' && WorldMapLayout.findSafeArena){
+    const spot = WorldMapLayout.findSafeArena(WORLD.w, WORLD.h, aw, ah, curObstacles, WALL, P.x, P.y);
+    ax = spot.x; ay = spot.y;
+    if(WorldMapLayout.stripObsInArena) curObstacles = WorldMapLayout.stripObsInArena(curObstacles, ax, ay, aw, ah);
+  } else {
+    const cxw = clamp(P.x, WALL+aw/2, WORLD.w-WALL-aw/2);
+    const cyw = clamp(P.y, WALL+ah/2, WORLD.h-WALL-ah/2);
+    ax = cxw - aw/2; ay = cyw - ah/2;
+  }
+  arena = { x:ax, y:ay, w:aw, h:ah };
+  P.x = arena.x + arena.w/2;
+  P.y = arena.y + arena.h*0.58;
+  if(typeof WorldMapLayout!=='undefined' && WorldMapLayout.resolveCircle){
+    const r = WorldMapLayout.resolveCircle(P.x, P.y, P.r, curObstacles);
+    P.x = r.x; P.y = r.y;
+  }
+  luckies=[];
+  bossPending = ARENA_LEAD;
   const bw=$('bosswarn'); bw.textContent='BOSS INCOMING'; bw.classList.remove('hidden');
   sfx.warn();
 }
@@ -3946,7 +3959,12 @@ function expandFinalArena(e){
   const grow = gameMode==='challenger' ? CHAL_FINAL_ARENA_GROW : FINAL_ARENA_GROW;
   const naw=Math.min(arena.w*grow, WORLD.w-2*WALL), nah=Math.min(arena.h*grow, WORLD.h-2*WALL);
   const ncx=clamp(cx0,WALL+naw/2,WORLD.w-WALL-naw/2), ncy=clamp(cy0,WALL+nah/2,WORLD.h-WALL-nah/2);
-  arena={x:ncx-naw/2,y:ncy-nah/2,w:naw,h:nah};
+  const ax = ncx - naw/2, ay = ncy - nah/2;
+  arena={x:ax,y:ay,w:naw,h:nah};
+  if(typeof WorldMapLayout!=='undefined' && WorldMapLayout.stripObsInArena)
+    curObstacles = WorldMapLayout.stripObsInArena(curObstacles, ax, ay, naw, nah);
+  P.x = clamp(P.x, arena.x + P.r + 20, arena.x + arena.w - P.r - 20);
+  P.y = clamp(P.y, arena.y + P.r + 20, arena.y + arena.h - P.r - 20);
 }
 
 // ============================================================

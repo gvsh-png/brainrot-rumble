@@ -3,6 +3,7 @@
 
 (function () {
   const SPAWN_PAD = 150;   // keep this radius at map center obstacle-free
+  const ARENA_PAD = 100;   // clearance inside boss arena — obstacles removed in this zone
   const LAYOUT_CYCLE = [
     'open', 'pillars', 'islands', 'ring', 'lanes', 'clusters',
     'zigzag', 'corners', 'split', 'diagonal', 'arc', 'spine',
@@ -27,7 +28,7 @@
     if (world && world.mapLayout) return world.mapLayout;
     const id = world && world.id ? world.id : '';
     const byId = {
-      grass: 'open', citrus: 'lanes', forest: 'clusters', glacier: 'islands',
+      grass: 'open', citrus: 'clusters', forest: 'clusters', glacier: 'islands',
       circo: 'ring', autumn: 'clusters', swamp: 'meander', sky: 'pillars',
       crystal: 'islands', volcano: 'ring', dirt: 'pavilion',
     };
@@ -139,6 +140,66 @@
     return obs;
   }
 
+  function rectHitsObs(ax, ay, aw, ah, obs) {
+    for (const o of obs) {
+      if (o.x + o.w > ax && o.x < ax + aw && o.y + o.h > ay && o.y < ay + ah) return true;
+    }
+    return false;
+  }
+
+  function arenaObstacleScore(ax, ay, aw, ah, obs, pad) {
+    const m = pad || ARENA_PAD;
+    const ix = ax + m, iy = ay + m, iw = aw - m * 2, ih = ah - m * 2;
+    if (iw <= 0 || ih <= 0) return 9999;
+    let score = 0;
+    for (const o of obs) {
+      if (o.x + o.w > ix && o.x < ix + iw && o.y + o.h > iy && o.y < iy + ih) {
+        const ox = Math.max(0, Math.min(o.x + o.w, ix + iw) - Math.max(o.x, ix));
+        const oy = Math.max(0, Math.min(o.y + o.h, iy + ih) - Math.max(o.y, iy));
+        score += ox * oy;
+      }
+    }
+    return score;
+  }
+
+  /** Best boss-arena top-left: prefer near player, minimize obstacle overlap inside. */
+  function findSafeArena(W, H, aw, ah, obs, border, prefX, prefY) {
+    const pad = border || 120;
+    const maxX = W - pad - aw;
+    const maxY = H - pad - ah;
+    if (maxX < pad || maxY < pad) return { x: pad, y: pad };
+    const tries = [];
+    const add = (x, y) => {
+      const ax = Math.max(pad, Math.min(x, maxX));
+      const ay = Math.max(pad, Math.min(y, maxY));
+      tries.push({ x: ax, y: ay });
+    };
+    add(prefX - aw / 2, prefY - ah / 2);
+    add(W * 0.5 - aw / 2, H * 0.5 - ah / 2);
+    const stepX = Math.max(100, aw * 0.22);
+    const stepY = Math.max(100, ah * 0.22);
+    for (let y = pad; y <= maxY; y += stepY) {
+      for (let x = pad; x <= maxX; x += stepX) add(x, y);
+    }
+    let best = tries[0], bestScore = Infinity;
+    for (const t of tries) {
+      const overlap = arenaObstacleScore(t.x, t.y, aw, ah, obs, ARENA_PAD);
+      const cx = t.x + aw / 2, cy = t.y + ah / 2;
+      const dist = (cx - prefX) * (cx - prefX) + (cy - prefY) * (cy - prefY);
+      const score = overlap * 4 + dist * 0.002;
+      if (score < bestScore) { bestScore = score; best = t; }
+    }
+    return best;
+  }
+
+  /** Remove obstacles overlapping the arena fight zone (whole obstacle dropped if it intrudes). */
+  function stripObsInArena(obs, ax, ay, aw, ah, pad) {
+    const m = pad || ARENA_PAD;
+    const ix = ax + m, iy = ay + m, iw = aw - m * 2, ih = ah - m * 2;
+    if (iw <= 0 || ih <= 0) return obs;
+    return obs.filter(o => !(o.x + o.w > ix && o.x < ix + iw && o.y + o.h > iy && o.y < iy + ih));
+  }
+
   function ensureSpawnClear(obs, W, H, margin) {
     const cx = W * 0.5, cy = H * 0.5;
     const m = margin || SPAWN_PAD;
@@ -229,5 +290,6 @@
   window.WorldMapLayout = {
     getObstacles, resolveCircle, drawObstacles, pickLayout, pickExtendedLayout,
     isCircleFree, circleHitsObs, findSafeSpawn, ensureSpawnClear,
+    findSafeArena, stripObsInArena, arenaObstacleScore,
   };
 })();
