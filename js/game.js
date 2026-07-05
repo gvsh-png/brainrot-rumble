@@ -178,6 +178,12 @@ function dropOrb(x,y,tier,smin=90,smax=210){
 // global HP scale: enemies have 10x HP and the player does 10x damage, so the
 // numbers are big enough that % upgrades (e.g. +25%) visibly change the damage.
 const HP_MULT = 10;
+// Compact display for large economy numbers (shop prices, gold HUD, etc.)
+function fmtNum(n){
+  n = Math.round(+n || 0);
+  if(Math.abs(n) >= 10000) return Math.round(n / 1000) + 'k';
+  return String(n);
+}
 // ---- concurrency caps (perf + readability): keep specials few but make them buffy ----
 const MAX_ENEMIES  = IS_TOUCH ? 55 : 90;   // global hard cap on live actors (bosses are few, so this is ~enemies)
 const MAX_SHOOTERS = 14;                    // foes with any `shoot` attack
@@ -261,7 +267,18 @@ function worldDmgMul(){
 }
 function chalDmgMul(){ return gameMode==='challenger' ? 1.3 + worldBand()*0.08 : 1; }   // challenger: enemies hit harder, ramps with world
 function worldHpBand(){ return typeof extBandMul==='function' ? extBandMul(0.42, 9) : 1 + worldBand()*0.42; }
-function worldCoinMul(){ return typeof extBandMul==='function' ? extBandMul(0.22, 9) : 1 + worldBand()*0.22; }
+function worldCoinMul(){
+  const b = worldBand();
+  let mul = typeof extBandMul==='function' ? extBandMul(0.48, 9) : 1 + b * 0.48;
+  const wi = typeof worldIdx === 'number' ? worldIdx : 0;
+  if(wi > 10) mul *= 1 + (wi - 10) * 0.14;
+  return mul;
+}
+function killGoldDrop(e){
+  if(gameMode==='practice' || e.isBoss) return 0;
+  const base = Math.max(4, Math.round((e.score || 10) * 0.22));
+  return Math.round(base * worldCoinMul() * (P.goldMul || 1));
+}
 // coins are scarce early; from wave 20 on they pay out a little more (capped at 3x)
 function coinMult(){ return Math.min(3, wave < 20 ? 1 : 1 + (wave-19)*0.1); }
 // ---- enemy archetypes (ordered easy -> hard) ----
@@ -916,25 +933,38 @@ function worldLabel(i){
 // per-world preview emblem shown on the Battle stage: world ground tones + its end-boss silhouette
 function drawWorldEmblemBase(g,w,sz){
   const th=w.theme;
-  g.fillStyle=th.tile2; g.fillRect(0,0,sz,sz);
-  g.fillStyle=th.tile1; const T=28;                                   // checker ground
+  g.fillStyle=th.bg || th.tile1; g.fillRect(0,0,sz,sz);
+  g.fillStyle=th.tile1; const T=28;
   for(let y=0;y<sz;y+=T) for(let x=0;x<sz;x+=T) if(((x/T+y/T)&1)) g.fillRect(x,y,T,T);
-  const bdef = w.bosses[w.bosses.length-1];                           // headliner = the world's end-boss
+  g.fillStyle=th.tile2;
+  for(let y=0;y<sz;y+=T*2) for(let x=0;x<sz;x+=T*2) g.fillRect(x+T*0.25,y+T*0.25,T*0.5,T*0.5);
+  const foes=w.foes || [];
+  for(let fi=0; fi<Math.min(3, foes.length); fi++){
+    const f=foes[fi], spr=f && SP[f.spr];
+    if(!spr) continue;
+    const pad=spr._nom?spr.width/spr._nom:1, s=sz*0.22*pad;
+    const px=sz*(0.18+fi*0.22), py=sz*0.62;
+    g.drawImage(spr, px-s/2, py-s/2, s, s);
+  }
+  const bdef = w.bosses[w.bosses.length-1];
   const spr = bdef && SP[bdef.spr];
-  if(spr){ const pad=spr._nom?spr.width/spr._nom:1, s=sz*0.72*pad;
-    g.drawImage(spr, (sz-s)/2, (sz-s)/2+8, s, s); }
+  if(spr){ const pad=spr._nom?spr.width/spr._nom:1, s=sz*0.55*pad;
+    g.drawImage(spr, (sz-s)/2, (sz-s)/2-6, s, s); }
 }
+const EMBLEM_CACHE_VER = 'v155';
 const _emblemURL = {};
 function worldEmblemURL(i){
-  if(_emblemURL[i]) return _emblemURL[i];
+  const key=i+'|'+EMBLEM_CACHE_VER;
+  if(_emblemURL[key]) return _emblemURL[key];
   const w=WORLDS[i], sz=220, c=document.createElement('canvas'); c.width=c.height=sz;
   drawWorldEmblemBase(c.getContext('2d'), w, sz);
-  const u=c.toDataURL(); _emblemURL[i]=u; return u;
+  const u=c.toDataURL(); _emblemURL[key]=u; return u;
 }
 // Challenger gets the same scene plus a red danger badge, so it reads as a distinct mode at a glance
 const _chalEmblemURL = {};
 function challengerEmblemURL(i){
-  if(_chalEmblemURL[i]) return _chalEmblemURL[i];
+  const key=i+'|'+EMBLEM_CACHE_VER;
+  if(_chalEmblemURL[key]) return _chalEmblemURL[key];
   const w=WORLDS[i], sz=220, c=document.createElement('canvas'); c.width=c.height=sz;
   const g=c.getContext('2d');
   drawWorldEmblemBase(g, w, sz);
@@ -947,7 +977,7 @@ function challengerEmblemURL(i){
   g.fillStyle='#fff'; g.font='bold 32px sans-serif'; g.textAlign='center'; g.textBaseline='middle';
   g.fillText('⚡',0,2);   // lightning bolt — challenger's danger badge
   g.restore();
-  const u=c.toDataURL(); _chalEmblemURL[i]=u; return u;
+  const u=c.toDataURL(); _chalEmblemURL[key]=u; return u;
 }
 let _trainingEmblemURL=null;
 function trainingEmblemURL(){
@@ -971,6 +1001,8 @@ function refreshWorldSel(){
   $('wprev').disabled = selWorld<=0 || gameMode==='practice';
   $('wnext').disabled = gameMode==='practice' || selWorld>=(gameMode==='challenger' ? chalUnlocked : unlockedMax);
   setStageEmblem(selWorld);
+  const shopPane=$('tab-shop');
+  if(shopPane && !shopPane.classList.contains('hidden') && typeof renderShop==='function') renderShop();
 }
 function triggerUnlockReveal(){
   refreshWorldSel();
@@ -1304,7 +1336,8 @@ function resetPlayer(){
     soldierStill:false, soldierBullets:false,
     noCards:false, whiteBullets:false, stealthAggro:false, ghostBullets:false,
     auraR:0, auraDmg:0,
-    skibidiCount:0, skibidiBounces:6, skibidiNeverDie:false, skibidiRespawn:7
+    skibidiCount:0, skibidiBounces:6, skibidiNeverDie:false, skibidiRespawn:7,
+    gamblerGoldStacks:0, mimicPetRate:1
   });
   skibidiBullets.length=0; skibidiTimers.length=0;
   turrets.length=0; miniTurrets.length=0; flameTurrets.length=0; placedTurrets.length=0;
@@ -1333,6 +1366,14 @@ function _doStartGame(wi){
   if(typeof equippedHp==='function'){ const h=equippedHp(); P.maxHp += h; P.hp = P.maxHp; }
   if(typeof equippedSpeedMult==='function') P.speed *= equippedSpeedMult();
   if(typeof equippedRangeMult==='function') P.range *= equippedRangeMult();
+  if(typeof equippedCrit==='function') P.crit = Math.min(0.8, P.crit + equippedCrit());
+  if(typeof equippedArmorMult==='function') P.armor *= equippedArmorMult();
+  if(typeof equippedRateMult==='function') P.fireRate /= equippedRateMult();
+  if(typeof equippedMagnetMult==='function') P.magnet *= equippedMagnetMult();
+  if(typeof equippedRegen==='function') P.regen += equippedRegen();
+  if(typeof equippedGoldMult==='function'){ const g=equippedGoldMult(); P.goldMul *= g; P.xpMul *= g; }
+  if(typeof equippedVamp==='function') P.vamp += equippedVamp();
+  if(typeof equippedPierce==='function') P.pierce += equippedPierce();
   if(typeof registerActiveChar==='function') registerActiveChar();
   if(typeof registerActivePet==='function') registerActivePet();
   P.startDmg = P.dmg;   // damage at run start (char base + gear + passives); non-engineer turrets scale off this
@@ -1440,8 +1481,16 @@ function spawnRingDist(){
   if(gameMode==='challenger') return Math.min(W,H)/Math.max(zoom,0.0001)*0.58 + 60;
   return Math.max(W,H)/Math.max(zoom,0.0001)*0.52 + 60;   // world-space ring radius; scales with viewport so it stays off-screen on wide/zoomed-out monitors
 }
-function ringPos(){ // spawn point on a ring around player, clamped to world
-  const a = rand(0,TAU), d = spawnRingDist();
+function ringPos(){ // spawn point on a ring around player, clamped to world + clear of obstacles
+  const d = spawnRingDist();
+  for(let attempt=0; attempt<20; attempt++){
+    const a = rand(0,TAU);
+    const x = clamp(P.x+Math.cos(a)*d, WALL+30, WORLD.w-WALL-30);
+    const y = clamp(P.y+Math.sin(a)*d, WALL+30, WORLD.h-WALL-30);
+    if(!curObstacles.length || typeof WorldMapLayout==='undefined' || WorldMapLayout.isCircleFree(x, y, 16, curObstacles))
+      return { x, y };
+  }
+  const a = rand(0,TAU);
   return { x: clamp(P.x+Math.cos(a)*d, WALL+30, WORLD.w-WALL-30),
            y: clamp(P.y+Math.sin(a)*d, WALL+30, WORLD.h-WALL-30) };
 }
@@ -2029,6 +2078,35 @@ function separate(e){
     }
   }
   if(sx||sy){ e.x+=clamp(sx,-12,12); e.y+=clamp(sy,-12,12); }   // capped so nothing teleports
+}
+
+function resolveEnemyObstacles(e){
+  if(!e || !curObstacles.length || typeof WorldMapLayout==='undefined') return;
+  const r = WorldMapLayout.resolveCircle(e.x, e.y, e.r, curObstacles);
+  e.x = r.x; e.y = r.y;
+}
+
+function steerEnemyAngle(e, a, step){
+  if(!curObstacles.length || typeof WorldMapLayout==='undefined' || step<=0) return a;
+  const nx0 = e.x + Math.cos(a)*step, ny0 = e.y + Math.sin(a)*step;
+  if(WorldMapLayout.isCircleFree(nx0, ny0, e.r, curObstacles)) return a;
+  const tx=P.x, ty=P.y;
+  let best=a, bestD=Infinity;
+  const offs=[Math.PI/4,-Math.PI/4,Math.PI/2,-Math.PI/2,Math.PI*3/4,-Math.PI*3/4,Math.PI,-Math.PI/6,Math.PI/6];
+  for(const off of offs){
+    const ta=a+off;
+    const nx=e.x+Math.cos(ta)*step, ny=e.y+Math.sin(ta)*step;
+    if(!WorldMapLayout.isCircleFree(nx, ny, e.r, curObstacles)) continue;
+    const d=(tx-nx)*(tx-nx)+(ty-ny)*(ty-ny);
+    if(d<bestD){ bestD=d; best=ta; }
+  }
+  return best;
+}
+
+function clampEnemyWorld(e){
+  e.x = clamp(e.x, WALL, WORLD.w-WALL); e.y = clamp(e.y, WALL, WORLD.h-WALL);
+  if(arena){ e.x=clamp(e.x, arena.x+e.r, arena.x+arena.w-e.r); e.y=clamp(e.y, arena.y+e.r, arena.y+arena.h-e.r); }
+  resolveEnemyObstacles(e);
 }
 
 // ============ UPDATE ============
@@ -2624,6 +2702,7 @@ function update(dt){
       e.digT-=dt;
       const a=Math.atan2(P.y-e.y,P.x-e.x);
       e.x=clamp(e.x+Math.cos(a)*e.sp*1.35*dt,WALL,WORLD.w-WALL); e.y=clamp(e.y+Math.sin(a)*e.sp*1.35*dt,WALL,WORLD.h-WALL);
+      clampEnemyWorld(e);
       if(e.digT<=0){ e.under=false; e.iv=0.2; burst(e.x,e.y,'#7a5a30',16,220); }
     } else {
       if(e.iv>0) e.iv-=dt;
@@ -2639,7 +2718,7 @@ function update(dt){
       let dashing=false;
       if(e.dash){
         if(e.dst==='wind'){ e.dwin-=dt; dashing=true; if(e.dwin<=0){ e.dst='dash'; e.ddur=0.32; } }
-        else if(e.dst==='dash'){ e.ddur-=dt; dashing=true; e.x+=Math.cos(e.da)*460*dt; e.y+=Math.sin(e.da)*460*dt; if(e.ddur<=0){ e.dst='idle'; e.dcd=rand(2.6,4.6); } }
+        else if(e.dst==='dash'){ e.ddur-=dt; dashing=true; e.x+=Math.cos(e.da)*460*dt; e.y+=Math.sin(e.da)*460*dt; resolveEnemyObstacles(e); if(e.ddur<=0){ e.dst='idle'; e.dcd=rand(2.6,4.6); } }
         else { e.dcd-=dt; if(e.dcd<=0 && e.iv<=0 && dist2(e.x,e.y,P.x,P.y)<380*380){ e.dst='wind'; e.dwin=0.5; e.da=Math.atan2(P.y-e.y,P.x-e.x); dashing=true; } }
       }
       // Fantasma's stealth: enemies stay put (and hold fire) unless he's close or they've been shot recently
@@ -2662,13 +2741,19 @@ function update(dt){
             else if(e.shoot && e.shoot.move){ a = toP + Math.PI/2; } // in range + mobile: strafe
             else { move=false; }                                  // in range + stationary: hold
           }
-          if(move){ e.x += Math.cos(a)*e.sp*fs*_cSpd*dt; e.y += Math.sin(a)*e.sp*fs*_cSpd*dt; }
+          if(move){
+            const step = e.sp*fs*_cSpd*dt;
+            a = steerEnemyAngle(e, a, step);
+            e.x += Math.cos(a)*step; e.y += Math.sin(a)*step;
+          }
           e.face = Math.cos(toP)>=0 ? 1 : -1;
           e.moving = move;
         } else {
           // asleep to Fantasma: slow drifting wander instead of chasing
           const wa = e.t*0.6 + e.wob*7;
-          e.x += Math.cos(wa)*e.sp*0.3*fs*dt; e.y += Math.sin(wa)*e.sp*0.3*fs*dt;
+          const wStep = e.sp*0.3*fs*dt;
+          const sa = steerEnemyAngle(e, wa, wStep);
+          e.x += Math.cos(sa)*wStep; e.y += Math.sin(sa)*wStep;
           e.face = Math.cos(wa)>=0 ? 1 : -1;
           e.moving = true;
         }
@@ -2676,14 +2761,14 @@ function update(dt){
       // ease walk-pose blend toward moving/idle target instead of snapping legs straight when motion starts/stops
       e.walkAmt = (e.walkAmt||0) + ((e.moving?1:0)-(e.walkAmt||0)) * Math.min(1, dt*8);
       separate(e);   // resolve overlaps with nearby foes so the pack spreads + flows around
-      e.x = clamp(e.x, WALL, WORLD.w-WALL); e.y = clamp(e.y, WALL, WORLD.h-WALL);
-      if(arena){ e.x=clamp(e.x, arena.x+e.r, arena.x+arena.w-e.r); e.y=clamp(e.y, arena.y+e.r, arena.y+arena.h-e.r); }
+      clampEnemyWorld(e);
       // chaos gravity: scatter away (>0) or rush in (<0)
       if(_gravOn&&e.iv<=0){
         const ga=chaosGravT>0?Math.atan2(e.y-P.y,e.x-P.x):Math.atan2(P.y-e.y,P.x-e.x);
         const gs=chaosGravT>0?270:420;
         e.x=clamp(e.x+Math.cos(ga)*gs*dt,WALL,WORLD.w-WALL);
         e.y=clamp(e.y+Math.sin(ga)*gs*dt,WALL,WORLD.h-WALL);
+        resolveEnemyObstacles(e);
       }
       // skip shooting / casting / aoe / support for enemies well outside player's screen
       const _eDist2 = dist2(e.x,e.y,P.x,P.y);
@@ -2833,7 +2918,12 @@ function update(dt){
         if(e.death && e.death.type==='ring'){ const n=e.death.n||4; for(let k=0;k<n;k++) fireEB(e.x,e.y,k*TAU/n,150,'#e58a3a'); }
         if(e.death && e.death.type==='split') spawnSplit(e);
         dropOrb(e.x, e.y, orbTier(e.xp));
-        if(Math.random()<0.03){ const a=rand(0,TAU), s=rand(90,210); gems.push({x:e.x,y:e.y,coin:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s}); }
+        const coinChance = Math.min(0.22, 0.04 + worldIdx * 0.0035);
+        if(Math.random()<coinChance){ const a=rand(0,TAU), s=rand(90,210); gems.push({x:e.x,y:e.y,coin:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s}); }
+        if(gameMode!=='practice'){
+          const kg = killGoldDrop(e);
+          if(kg>0){ gold+=kg; saveGold(); if(window.markDirty) window.markDirty(); floatText(e.x,e.y-18,'+'+fmtNum(kg),'#f5c542',11); }
+        }
         if(Math.random()<0.025){ const a=rand(0,TAU), s=rand(90,210); gems.push({x:e.x,y:e.y,heart:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s}); }
       }
     }
@@ -2924,7 +3014,7 @@ function update(dt){
     if(d < (P.r+12)*(P.r+12)){
       gems.splice(i,1);
       if(g.heart){ const h=g.heal||(g.big?50:25); P.hp=Math.min(P.maxHp,P.hp+h); floatText(P.x,P.y-24,'+'+h,'#e8556a',g.big?20:16); burst(P.x,P.y,'#ff97a6',g.big?14:8,140); sfx.coin(); }
-      else if(g.coin){ const v=Math.round(5*(P.goldMul||1)*coinMult()*worldCoinMul()*(gameMode==='challenger'?Math.min(3.5,1.3+worldIdx*0.3):1)); worldCoins+=v; if(gameMode!=='practice'){ gold+=v; saveGold(); if(window.markDirty) window.markDirty(); } setCoinHUD(); floatText(g.x,g.y,'+'+v,'#f5c542',13); sfx.coin(); }
+      else if(g.coin){ const v=Math.round(15*(P.goldMul||1)*coinMult()*worldCoinMul()*(gameMode==='challenger'?Math.min(3.5,1.3+worldIdx*0.3):1)); worldCoins+=v; if(gameMode!=='practice'){ gold+=v; saveGold(); if(window.markDirty) window.markDirty(); } setCoinHUD(); floatText(g.x,g.y,'+'+fmtNum(v),'#f5c542',13); sfx.coin(); }
       else if(g.magnet){ for(const o of gems) o.vac=true; floatText(P.x,P.y-24,'MAGNET','#9fe0ff',16); burst(P.x,P.y,'#9fe0ff',12,160); sfx.level(); }   // pull in every pickup on the map
       else { gainXp(g.v); sfx.gem(2); }
     }
@@ -3097,6 +3187,7 @@ function spawnMini(spr,x,y,summoner){
   enemies.push({ spr:def.spr, name:def.name||'', x:clamp(x,WALL,WORLD.w-WALL), y:clamp(y,WALL,WORLD.h-WALL),
     r:def.r||15, hp:(def.hp||3)*HP_MULT, maxHp:(def.hp||3)*HP_MULT, sp:def.sp||84, xp:def.xp||1, score:def.score||8,
     t:rand(0,TAU), wob:rand(2,4), shootCd:99, frz:0, iv:0, isBoss:false, hitT:0, sq:0, face:1, summoner });
+  resolveEnemyObstacles(enemies[enemies.length-1]);
 }
 function summonAdds(e,spr,n,cap){
   const live = enemies.filter(o=>o.summoner===e).length;
@@ -4262,6 +4353,8 @@ function updateBoss(e,dt){
   }
   e.x = clamp(e.x, WALL+e.r, WORLD.w-WALL-e.r); e.y = clamp(e.y, WALL+e.r, WORLD.h-WALL-e.r);
   if(arena){ e.x=clamp(e.x, arena.x+e.r, arena.x+arena.w-e.r); e.y=clamp(e.y, arena.y+e.r, arena.y+arena.h-e.r); }
+  resolveEnemyObstacles(e);
+  if(e.mate){ resolveEnemyObstacles(e.mate); }
 }
 
 function hurtPlayer(dmg, src){
@@ -4393,7 +4486,7 @@ function drawDebris(g,gx0,gy0,gx1,gy1){
 
 // Pre-render the whole-world ground (tiles + tufts + debris) to one offscreen canvas, ONCE per theme.
 // Per frame the renderer just blits this instead of re-looping every tile — a big win in DIRT DEPTHS.
-let groundCanvas=null, groundFor=null;
+let groundCanvas=null, groundForWorld=-1;
 let infiniteGroundCanvas=null, infiniteGroundFor=null;
 const INFINITE_GROUND_SPAN = TILE * 12;   // 960px: repeats checker + tuft offset cleanly
 function buildGround(){
@@ -4416,7 +4509,7 @@ function buildGround(){
   }
   if(curTheme.debris) drawDebris(g, 0,0, WORLD.w, WORLD.h);
   if(curObstacles.length && typeof WorldMapLayout!=='undefined') WorldMapLayout.drawObstacles(g, curObstacles, curTheme);
-  groundFor=curTheme;
+  groundForWorld=worldIdx;
 }
 function buildInfiniteGround(){
   if(!infiniteGroundCanvas){ infiniteGroundCanvas=document.createElement('canvas'); }
@@ -4486,22 +4579,6 @@ function drawTurretUnit(tu, ts, bodyCol, visorCol, hpFrac){
   }
 }
 
-function drawReadabilityRim(x, y, r) {
-  if (typeof state === 'undefined' || state === ST.MENU) return;
-  cx.save();
-  cx.strokeStyle = '#ffffff';
-  cx.lineWidth = Math.max(2, r * 0.11);
-  cx.globalAlpha = 0.9;
-  cx.beginPath();
-  cx.ellipse(x, y, r * 0.95, r * 1.02, 0, 0, TAU);
-  cx.stroke();
-  cx.strokeStyle = '#2a1c10';
-  cx.lineWidth = Math.max(1.2, r * 0.065);
-  cx.globalAlpha = 0.4;
-  cx.stroke();
-  cx.restore();
-}
-
 function render(){
   cx.save();
   let sx=0, sy=0;
@@ -4513,12 +4590,12 @@ function render(){
   const vx0=camera.x, vy0=camera.y, vx1=vx0+vw, vy1=vy0+vh;
 
   // --- ground ---
-  cx.fillStyle=curTheme.void;
+  cx.fillStyle=curTheme.bg || curTheme.tile1;
   cx.fillRect(vx0-40, vy0-40, vw+80, vh+80);
   if(infiniteMapMode()){
     renderInfiniteGround(vx0-40, vy0-40, vx1+40, vy1+40);
   } else {
-    if(!groundCanvas || groundFor!==curTheme) buildGround();
+    if(!groundCanvas || groundForWorld!==worldIdx) buildGround();
     const sx0=clamp(vx0-2,0,WORLD.w), sy0=clamp(vy0-2,0,WORLD.h);
     const sx1=clamp(vx1+2,0,WORLD.w), sy1=clamp(vy1+2,0,WORLD.h);
     if(sx1>sx0 && sy1>sy0) cx.drawImage(groundCanvas, sx0,sy0,sx1-sx0,sy1-sy0, sx0,sy0,sx1-sx0,sy1-sy0);
@@ -4697,20 +4774,6 @@ function render(){
     }
   }
 
-  if (state !== ST.MENU && _vis.length) {
-    cx.strokeStyle = '#ffffff';
-    cx.lineWidth = 2.4;
-    cx.globalAlpha = 0.78;
-    cx.beginPath();
-    for (const e of _vis) {
-      if (e.under) continue;
-      cx.moveTo(e.x + e.r * 1.02, e.y);
-      cx.ellipse(e.x, e.y, e.r * 1.02, e.r * 1.06, 0, 0, TAU);
-    }
-    cx.stroke();
-    cx.globalAlpha = 1;
-  }
-
   // batched status overlays: one state-set per effect type instead of per enemy
   cx.fillStyle='#bfe6ff';
   cx.globalAlpha=0.4; cx.beginPath();
@@ -4833,7 +4896,6 @@ function render(){
         const _lean = (_a.faceX||0)*0.16*(_a.walkAmt||0);
         drawPlayerGear(P.x, P.y, P.r*2.6, bob+(flip?-_lean:_lean), flip);
       }
-      drawReadabilityRim(P.x, P.y, P.r * 1.02);
     }
     // Phoenix burn aura
     if(P.burnAura>0){
@@ -5249,12 +5311,12 @@ document.body.style.background = curTheme.bg;
 // populate the main menu (world emblem on the Battle stage + saved gold)
 setStageEmblem(selWorld);
 $('goldicon').src = SP['coin'].toDataURL();
-$('goldtxt').textContent = gold;
+$('goldtxt').textContent = fmtNum(gold);
 // top resource bar: a "player level" badge from worlds unlocked + a progress fill + gold
 function refreshTopbar(){
   const lv=$('topLvl'); if(lv) lv.textContent = unlockedMax+1;
   const xf=$('topxpfill'); if(xf) xf.style.width = Math.round(((unlockedMax+1)/WORLDS.length)*100)+'%';
-  const gt=$('goldtxt'); if(gt) gt.textContent = gold;
+  const gt=$('goldtxt'); if(gt) gt.textContent = fmtNum(typeof gold!=='undefined'?gold:0);
 }
 refreshTopbar();
 // wire house-drawn icons into static markup (tab bar, kill counter, ...)

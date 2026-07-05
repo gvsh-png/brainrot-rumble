@@ -1,8 +1,15 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.53';
+const CURRENT_VERSION = '1.60';
 const CHANGELOG = [
+  { v: '1.60', notes: '12 new characters: 7 gem-shop heroes with unique abilities (Voltex, Mimic, Gambler, Bruiser, Artillery, Leech Lord, Eclipse) and 5 challenger unlocks (Tactician W5, Berserker W12, Paladin W20, Ironclad W28, Duelist W38). Daily character shop now shows 5 picks. Three premium crates added — Platinum, Diamond, and Vault — with endgame-tier loot and steep prices.' },
+  { v: '1.59', notes: 'Shop card UI cleanup: aligned tags, bonus, and buy button on every card. Restored original high-tier gear prices (shown as 139k / 178k). Much more gold from kills, coin gems, and world scaling so late-game gear is affordable.' },
+  { v: '1.58', notes: 'Economy rebalance: softer gear prices (~3.5k top tier vs 177k), coin income scales with world so you can afford your tier\'s gear, endgame dmg/HP gear buffed, and all numbers 10k+ show as 130k style compact format.' },
+  { v: '1.57', notes: 'Massive gear expansion: 39 rarity tiers spanning all 50 worlds (Common → Omniscient), 8 equipment slots (Cape/Helmet/Chest/Gloves/Belt/Pants/Ring/Boots), 12 stat types (+Attack Speed, Magnet, Regen, Gold, Vamp, Pierce), 4200+ items, and bigger daily shops in late worlds.' },
+  { v: '1.56', notes: 'Gear overhaul: 12 rarity tiers (Common → Common+ → Common++ → Uncommon → … → Mythic), 2 new stat types (Crit & Armor), 504 gear items. Daily shop stock now matches your selected world — World 1 sells Common gear, World 2 sells Common+, etc. Old Mythic power is now Epic tier.' },
+  { v: '1.55', notes: 'Extended enemies are now proper brainrot hybrids (Cappuccino, Trulimero, Bobritto, Sahur-style titans, etc.) drawn with the same sh/dot/eyes vector style as W1–W11. Enemies path around map obstacles. Final boss attacks wired up. 13 unique final boss designs.' },
+  { v: '1.54', notes: 'W8+ visual overhaul: removed all white gameplay circles around player/enemies, no more black void floors, 39 unique bright world palettes, 20 distinct enemy archetypes per extended world, unique map sizes/layouts, and world-select icons now show grunt + boss sprites.' },
   { v: '1.53', notes: 'Bright vivid worlds & characters — no muddy dark floors or gray/black heroes. Extended chars use bold distinct colors (cyan, gold, magenta, coral, etc.). W7–W11 and W12–50 floors brightened; light readability rims on player/enemies.' },
   { v: '1.52', notes: 'Content polish: unique W8–W11 enemy rosters, per-world map obstacles/layouts, removed gameplay circles, milestone pets/chars with gimmicks.' },
   { v: '1.51', notes: 'Longer immersive cutscenes (~9–14 sec): zone atmosphere lines, cinematic letterbox, hero/swarm entrance animations, victory reactions, and milestone twists still only every ~5 worlds.' },

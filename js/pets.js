@@ -501,7 +501,7 @@ const PETS = [
       let cd=3;
       onHook('petTick', (dt) => {
         if(typeof P==='undefined'||typeof enemies==='undefined') return;
-        cd-=dt;
+        cd-=typeof petCdDt==='function'?petCdDt(dt):dt;
         if(cd<=0){
           cd=3;
           let near=null, nd=Infinity;
@@ -535,7 +535,7 @@ const PETS = [
       let cd=8, killCount=0;
       onHook('petTick', (dt) => {
         if(typeof P==='undefined') return;
-        cd-=dt;
+        cd-=typeof petCdDt==='function'?petCdDt(dt):dt;
         if(cd<=0){
           cd=8;
           if(typeof bullets!=='undefined'){
