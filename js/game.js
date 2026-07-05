@@ -499,6 +499,76 @@ const BOSSES_W6 = [
   { spr:'girafassassina', name:'GIRAFASSASSINA AUTUNNALE',   hp:520, r:60, pattern:'chaos',  phased:true },
   { spr:'bobritto',       name:'BOBRITTO FOGLIAME',          hp:780, r:58, pattern:'chaos',  phased:true },
 ];
+// ============ WORLD 8 — SKYLAND (band 6): cloud flyers + swarm wasps ============
+const FOES_W8 = [
+  { spr:'pigeon',     name:'Piccione Nuvola',       hp:6,  sp:96, r:14, xp:1, score:12 },
+  { spr:'duck',       name:'Anatra Volante',        hp:6,  sp:88, r:15, xp:1, score:12, death:{type:'ring',n:4} },
+  { spr:'swarmwasp',  name:'Vespa del Cielo',       hp:5,  sp:102,r:14, xp:1, score:13, dash:true },
+  { spr:'flamingo',   name:'Fenicottero Azzurro',   hp:5,  sp:78, r:15, xp:1, score:14 },
+  { spr:'goose',      name:'Oca delle Nuvole',      hp:7,  sp:72, r:16, xp:2, score:16, range:310, shoot:{type:'aim',n:2,cd:2.6,spd:155,col:'#9fd0ff'} },
+  { spr:'swarmmite',  name:'Acaro Volante',         hp:8,  sp:90, r:15, xp:2, score:18, range:280, shoot:{type:'ring',n:5,cd:2.8,spd:120,col:'#a8d8ff',move:true} },
+  { spr:'bobrito',    name:'Bobrito delle Nubi',    hp:9,  sp:68, r:17, xp:2, score:22, range:340, shoot:{type:'aim',n:2,cd:2.4,spd:175,col:'#9fd0ff'} },
+  { spr:'trulimero',  name:'Trulimero Aereo',       hp:10, sp:70, r:16, xp:2, score:20, range:300, shoot:{type:'ring',n:6,cd:3.0,spd:125,col:'#b8e8ff',move:true} },
+  { spr:'jelly',      name:'Medusa Volante',        hp:12, sp:52, r:19, xp:3, score:30, cast:{kind:'sweep',cd:3.2,dur:1.6,col:'#9fd0ff'} },
+  { spr:'zibra',      name:'Zibra del Cielo',       hp:13, sp:58, r:20, xp:3, score:32, range:330, shoot:{type:'aim',n:2,cd:2.4,spd:160,col:'#cfeaff',split:true} },
+  { spr:'rhino',      name:'Rinoceronte Volante',   hp:24, sp:44, r:23, xp:4, score:46, aoe:{r:44,dps:16,life:1.4,tele:0.7,col:'#9fd0ff',cd:3.2} },
+  { spr:'swarmbeetle',name:'Scarabeo Aereo',        hp:22, sp:48, r:22, xp:4, score:42, dash:true },
+  { spr:'tiger',      name:'Tigre delle Nuvole',    hp:22, sp:72, r:20, xp:4, score:46, dash:true, range:360, shoot:{type:'aim',n:4,cd:3.0,spd:165,col:'#9fd0ff',move:true} },
+  { spr:'bicus',      name:'Bicus Aereo',           hp:18, sp:52, r:20, xp:4, score:46, cast:{kind:'summon',cd:5,spr:'swarmwasp',n:2,cap:4} },
+];
+// ============ WORLD 9 — CRYSTAL CAVES (band 7) ============
+const FOES_W9 = [
+  { spr:'swarmmoth',  name:'Falena di Cristallo',   hp:6,  sp:84, r:15, xp:1, score:12 },
+  { spr:'glorbo',     name:'Glorbo di Ametista',    hp:7,  sp:58, r:16, xp:2, score:16, cast:{kind:'geyser',cd:3.0,range:380,n:5,col:'#c898f0'} },
+  { spr:'octopus',    name:'Polpo di Quarzo',       hp:8,  sp:54, r:17, xp:2, score:18, cast:{kind:'debris',cd:2.8,n:3,col:'#b06ff0'} },
+  { spr:'jelly',      name:'Medusa di Prisma',      hp:7,  sp:62, r:16, xp:2, score:16, cast:{kind:'sweep',cd:3.0,dur:1.7,col:'#d8b0ff'} },
+  { spr:'lirili',     name:'Lirili di Cristallo',   hp:16, sp:46, r:21, xp:3, score:30, range:320, shoot:{type:'aim',n:3,cd:2.8,spd:140,col:'#c898f0'} },
+  { spr:'patapim',    name:'Patapim Spezzato',      hp:15, sp:48, r:21, xp:3, score:28, range:300, shoot:{type:'aim',n:2,cd:3.0,spd:130,col:'#a878d8'} },
+  { spr:'ananasini',  name:'Ananasini di Gemma',    hp:12, sp:54, r:20, xp:3, score:32, range:340, shoot:{type:'aim',n:2,cd:2.6,spd:160,col:'#e8c0ff',arc:true} },
+  { spr:'espresso',   name:'Espresso di Zaffiro',   hp:13, sp:58, r:17, xp:3, score:32, range:300, shoot:{type:'ring',n:5,cd:2.0,spd:140,col:'#9a78c8'} },
+  { spr:'zibra',      name:'Zibra di Cristallo',    hp:14, sp:56, r:20, xp:4, score:34, range:340, shoot:{type:'aim',n:2,cd:2.4,spd:165,col:'#e8d8ff',split:true} },
+  { spr:'burbaloni',  name:'Burbaloni di Prisma',    hp:26, sp:36, r:24, xp:5, score:52, aoe:{r:52,dps:11,life:1.8,tele:0.6,slow:true,col:'#c898f0',cd:3.2} },
+  { spr:'turtle',     name:'Tartarughini di Gemma', hp:40, sp:26, r:24, xp:5, score:58, shell:true },
+  { spr:'hippo',      name:'Ippopotamo di Quarzo',  hp:34, sp:30, r:25, xp:5, score:56, range:330, shoot:{type:'ring',n:7,cd:3.2,spd:130,col:'#b06ff0'} },
+  { spr:'ambalabu',   name:'Ambalabu di Cristallo', hp:19, sp:46, r:20, xp:4, score:46, cast:{kind:'geyser',cd:3.2,range:420,n:6,lines:3,col:'#c898f0'} },
+  { spr:'panda',      name:'Pandaccini di Gemma',   hp:22, sp:50, r:20, xp:4, score:44, aoe:{r:46,dps:5,life:1.8,tele:0.5,slow:true,col:'#d8b0ff',cd:2.8} },
+];
+// ============ WORLD 10 — VOLCANO (band 8) ============
+const FOES_W10 = [
+  { spr:'baraboom',   name:'Baraboom di Lava',      hp:6,  sp:76, r:15, xp:1, score:13, death:{type:'ring',n:4} },
+  { spr:'frula',      name:'Fruli di Cenere',       hp:5,  sp:82, r:15, xp:1, score:14, death:{type:'split',n:2} },
+  { spr:'swarmmite',  name:'Acaro Ardente',         hp:7,  sp:88, r:15, xp:2, score:16, dash:true },
+  { spr:'orangutan',  name:'Orangutini di Magma',   hp:14, sp:52, r:20, xp:3, score:34, range:330, shoot:{type:'aim',n:2,cd:2.2,spd:155,col:'#ff6020',arc:true} },
+  { spr:'goose',      name:'Bombombini Ardente',    hp:13, sp:70, r:18, xp:3, score:32, range:330, shoot:{type:'aim',n:3,cd:2.4,spd:165,col:'#f04820'}, death:{type:'ring',n:4} },
+  { spr:'bobrito',    name:'Bobrito di Cenere',     hp:10, sp:66, r:17, xp:2, score:22, range:340, shoot:{type:'aim',n:3,cd:2.2,spd:180,col:'#ff7840'} },
+  { spr:'glorbo',     name:'Glorbo di Lava',        hp:13, sp:50, r:19, xp:3, score:32, cast:{kind:'geyser',cd:3.0,range:390,n:5,col:'#e84820'} },
+  { spr:'rhino',      name:'Rinoceronte di Magma',  hp:26, sp:40, r:23, xp:4, score:48, aoe:{r:46,dps:20,life:1.4,tele:0.7,col:'#ff6020',cd:3.4} },
+  { spr:'girafa',     name:'Girafa di Cenere',      hp:32, sp:30, r:26, xp:5, score:58, dash:true, kb:true },
+  { spr:'cocofanto',  name:'Cocofanto di Lava',     hp:30, sp:32, r:25, xp:5, score:58, pullAura:60, trail:{cd:0.4,r:36,life:1.8,dps:10,col:'#6a2010'} },
+  { spr:'forzutoorsino',name:'Orsino di Magma',     hp:36, sp:32, r:40, xp:5, score:64, front:0.5, death:{type:'ring',n:5}, aoe:{r:48,tele:0.55,life:0.7,dps:20,cd:4.0}, pullAura:38 },
+  { spr:'tiger',      name:'Tigre di Lava',         hp:23, sp:66, r:20, xp:4, score:48, dash:true, range:360, shoot:{type:'aim',n:5,cd:3.0,spd:170,col:'#ff4020',move:true} },
+  { spr:'dindin',     name:'Din Din di Cenere',     hp:22, sp:38, r:22, xp:5, score:50, death:{type:'split',n:2} },
+];
+// ============ WORLD 11 — DIRT DEPTHS (band 9) ============
+const FOES_W11 = [
+  { spr:'golubiro',   name:'Spijuniro delle Profondità', hp:6, sp:82, r:15, xp:1, score:12 },
+  { spr:'swarmbeetle',name:'Scarabeo del Buio',     hp:7,  sp:74, r:16, xp:2, score:16, shell:true },
+  { spr:'swarmmite',  name:'Acaro del Buio',        hp:5,  sp:90, r:14, xp:1, score:13, dash:true },
+  { spr:'cappuccino', name:'Cappuccino Profondo',   hp:9,  sp:68, r:16, xp:2, score:20, front:0.35 },
+  { spr:'trulimero',  name:'Trulimero Sotterraneo', hp:11, sp:62, r:16, xp:2, score:20, range:270, shoot:{type:'ring',n:6,cd:3.0,spd:130,col:'#9a6028',move:true} },
+  { spr:'lirili',     name:'Lirili del Buio',       hp:18, sp:42, r:22, xp:3, score:30, range:320, shoot:{type:'aim',n:3,cd:2.8,spd:140,col:'#8a5020'} },
+  { spr:'octopus',    name:'Polpo del Buio',        hp:13, sp:50, r:19, xp:3, score:30, cast:{kind:'debris',cd:2.8,n:3,col:'#6a4828'} },
+  { spr:'camel',      name:'Frigo del Buio',        hp:33, sp:30, r:24, xp:5, score:54, aoe:{r:58,dps:12,life:1.8,tele:0.7,slow:true,col:'#9a6028',cd:3.0} },
+  { spr:'turtle',     name:'Tartarughini Profondo', hp:44, sp:22, r:24, xp:5, score:60, shell:true },
+  { spr:'hippo',      name:'Ippopotamo del Buio',   hp:36, sp:28, r:25, xp:5, score:58, range:330, shoot:{type:'ring',n:8,cd:3.2,spd:130,col:'#7a4820'} },
+  { spr:'burbaloni',  name:'Burbaloni del Buio',    hp:28, sp:34, r:24, xp:5, score:54, aoe:{r:54,dps:12,life:1.8,tele:0.6,slow:true,col:'#9a6028',cd:3.2} },
+  { spr:'bicus',      name:'Bicus del Buio',        hp:19, sp:48, r:20, xp:4, score:46, cast:{kind:'summon',cd:5,spr:'swarmmite',n:3,cap:4} },
+  { spr:'ambalabu',   name:'Ambalabu del Buio',     hp:20, sp:44, r:20, xp:4, score:46, cast:{kind:'geyser',cd:3.2,range:430,n:6,lines:3,col:'#7a4820'} },
+  { spr:'dindin',     name:'Din Din del Buio',      hp:22, sp:36, r:22, xp:5, score:50, death:{type:'split',n:2} },
+];
+const BOSSES_W9  = [BOSSES_DIRT[2], BOSSES_DIRT[0], BOSSES_DIRT[3], BOSSES_DIRT[1]];
+const BOSSES_W10 = [BOSSES_DIRT[1], BOSSES_DIRT[3], BOSSES_DIRT[0], BOSSES_DIRT[4]];
+const BOSSES_W11 = [BOSSES_DIRT[3], BOSSES_DIRT[2], BOSSES_DIRT[4], BOSSES_DIRT[5]];
 // ---- worlds: each = theme + roster + boss list + wave target (boss wave). ----
 // ---- 10 worlds: gradual difficulty bands (0..9), distinct map shapes, per-world enemy tints. ----
 // Phase 1 reuses the grass roster (W1-5) and dirt roster (W6-10) recolored via enemyTint; dedicated
@@ -539,21 +609,21 @@ const WORLDS = [
   { id:'sky', name:'SKYLAND', band:6, waveTarget:20, endless:false, map:{w:3000,h:3000}, enemyTint:'#a8d8ff',
     theme:{ void:'#78b8e0', tile1:'#c8eeff', tile2:'#b4e4ff', tuft:'rgba(120,190,230,0.32)',
             wall:null, post:null, bg:'#b8e8ff', tint:'#a8d8ff', music:'world_sky' },
-    foes:FOES_DIRT, bosses:BOSSES_SKY },
+    foes:FOES_W8, bosses:BOSSES_SKY },
   { id:'crystal', name:'CRYSTAL CAVES', band:7, waveTarget:20, endless:false, map:{w:1100,h:4400}, enemyTint:'#c898f0',
     theme:{ void:'#3c1e60', tile1:'#7a4eaa', tile2:'#6c3e98', tuft:'rgba(160,120,220,0.34)',
             wall:'#301848', post:'#624090', postDark:'#1e1038', bg:'#623890', tint:'#c898f0', music:'world_crystal' },
-    foes:FOES_DIRT, bosses:BOSSES_DIRT },
+    foes:FOES_W9, bosses:BOSSES_W9 },
   { id:'volcano', name:'VOLCANO', band:8, waveTarget:20, endless:false, map:{w:3400,h:3400}, enemyTint:'#f04820',
     theme:{ void:'#421208', tile1:'#943828', tile2:'#84301e', tuft:'rgba(80,20,8,0.40)',
             wall:'#300a04', post:'#803028', postDark:'#200800', bg:'#7c2818', tint:'#f04820', music:'world_volcano',
             debris:0.8 },
-    foes:FOES_DIRT, bosses:BOSSES_DIRT },
+    foes:FOES_W10, bosses:BOSSES_W10 },
   { id:'dirt', name:'DIRT DEPTHS', band:9, waveTarget:20, endless:false, map:{w:1000,h:5000}, enemyTint:null,
     theme:{ void:'#6a3c1e', tile1:'#8c5a2e', tile2:'#7e5028', tuft:'rgba(50,28,10,0.38)',
             wall:'#543018', post:'#8a5e30', postDark:'#402410', bg:'#7a4e28', tint:'#9a6028', music:'world_dirt',
             debris:0.8, edgeDark:0.15 },
-    foes:FOES_DIRT, bosses:BOSSES_DIRT },
+    foes:FOES_W11, bosses:BOSSES_W11 },
 ];
 let worldIdx = 0;
 // Practice's single "world" — a mutable stand-in whose foes/bosses get overwritten by the
@@ -567,6 +637,7 @@ function curWorld(){ return gameMode==='practice' ? TRAINING_WORLD : WORLDS[worl
 let curFoes   = WORLDS[0].foes;
 let curBosses = WORLDS[0].bosses;
 let curTheme  = WORLDS[0].theme;
+let curObstacles = [];
 let unlockedMax = clamp(Math.floor(+(localStorage.getItem('br_unlocked')||0)), 0, WORLDS.length-1);
 let selWorld = Math.min(unlockedMax, WORLDS.length-1);
 function loadWorld(idx){
@@ -580,6 +651,8 @@ function loadWorld(idx){
   document.body.style.background = curTheme.bg;
   // Free tinted-sprite cache between worlds (significant memory win across world changes)
   for(const k of Object.keys(TINTED)) delete TINTED[k];
+  if(typeof WorldMapLayout!=='undefined') curObstacles = WorldMapLayout.getObstacles(w, worldIdx, WORLD.w, WORLD.h);
+  else curObstacles = [];
   buildGround();   // pre-render this world's ground once (avoids per-frame tile loops)
 }
 let cut = null;   // cutscene state
@@ -2011,6 +2084,10 @@ function update(dt){
   P.x = clamp(P.x, WALL+P.r, WORLD.w-WALL-P.r);
   P.y = clamp(P.y, WALL+P.r, WORLD.h-WALL-P.r);
   if(arena){ P.x=clamp(P.x, arena.x+P.r, arena.x+arena.w-P.r); P.y=clamp(P.y, arena.y+P.r, arena.y+arena.h-P.r); }
+  if(curObstacles.length && typeof WorldMapLayout!=='undefined'){
+    const resolved = WorldMapLayout.resolveCircle(P.x, P.y, P.r, curObstacles);
+    P.x = resolved.x; P.y = resolved.y;
+  }
   if(P.petId){
     const ml2=Math.hypot(mx,my);
     const fdx = ml2>0.05 ? -mx/ml2 : -Math.cos(P.face);
@@ -2946,6 +3023,7 @@ function damageEnemy(e,dmg,fx,fy,crit){
   if(P.stealthAggro && !e.isBoss) e.aggroT=Math.max(e.aggroT||0,3);   // getting shot wakes the enemy up
   if(P.freeze && !e.isBoss) e.frz=1.2;
   if(P.chillHit && !e.isBoss && e.frz<=0) e.chillT = Math.max(e.chillT||0, 0.8 + 0.25*P.chillHit);   // Permafrost: chill-on-hit
+  if(P.burnHit && !e.isBoss && !e.fire) e.fire={dur:2,dmg:3,tickCd:0.5};   // Ember Sage: burn-on-hit
   sfx.hit();
   const _dvx=(Math.random()-0.5)*120;
   // spread simultaneous hits (piercing/multishot) apart from spawn so they don't stack into illegible overlap
@@ -4337,6 +4415,7 @@ function buildGround(){
     }
   }
   if(curTheme.debris) drawDebris(g, 0,0, WORLD.w, WORLD.h);
+  if(curObstacles.length && typeof WorldMapLayout!=='undefined') WorldMapLayout.drawObstacles(g, curObstacles, curTheme);
   groundFor=curTheme;
 }
 function buildInfiniteGround(){
@@ -4577,12 +4656,8 @@ function render(){
     const pulse=0;
     if(e.cut && cut){ cx.globalAlpha = cut.alpha; }
     if(!e.under){
-      cx.strokeStyle='rgba(0,0,0,0.62)'; cx.lineWidth=Math.max(2.2, e.r*0.2);
-      cx.beginPath(); cx.arc(e.x,e.y,e.r*1.14,0,TAU); cx.stroke();
-      if(!e.isBoss){
-        cx.strokeStyle='rgba(255,255,255,0.22)'; cx.lineWidth=1.6;
-        cx.beginPath(); cx.arc(e.x,e.y,e.r*1.04,0,TAU); cx.stroke();
-      }
+      cx.fillStyle='rgba(0,0,0,0.28)';
+      cx.beginPath(); cx.ellipse(e.x, e.y+e.r*0.85, e.r*0.85, e.r*0.32, 0, 0, TAU); cx.fill();
     }
     if(RIG[e.spr]){
       // part-based rig draw — pose driven by movement/hit/knockback state
@@ -4723,10 +4798,6 @@ function render(){
     {
       const bob=Math.sin(P.walk)*0.06;
       const flip = Math.cos(P.face)<0;
-      cx.strokeStyle='rgba(0,0,0,0.72)'; cx.lineWidth=3.2;
-      cx.beginPath(); cx.arc(P.x,P.y,P.r*1.12,0,TAU); cx.stroke();
-      cx.strokeStyle='rgba(255,255,255,0.38)'; cx.lineWidth=2;
-      cx.beginPath(); cx.arc(P.x,P.y,P.r*1.02,0,TAU); cx.stroke();
       if(typeof drawCharacter==='function') drawCharacter(P.charId||'gianni', P.x, P.y, P.r*2.6, bob, flip);
       else drawSprite('player', P.x, P.y, P.r*2.6, bob, 0, 0, flip);
       cx.globalAlpha=1;

@@ -38,10 +38,10 @@ function extHex(h, s, l) {
 
 function extTheme(i, band) {
   const h = extHue(i);
-  const voidC = extHex(h, 42, 36);
-  const tile1 = extHex(h, 52, 64);
-  const tile2 = extHex(h, 50, 50);
-  const bg = extHex(h, 48, 52);
+  const voidC = extHex(h, 42, 30);
+  const tile1 = extHex(h, 52, 54);
+  const tile2 = extHex(h, 50, 44);
+  const bg = extHex(h, 48, 46);
   const tint = extHex((h + 165) % 360, 78, 58);
   const music = band < 15 ? 'world_ext_low' : band < 25 ? 'world_ext_mid' : band < 35 ? 'world_ext_high' : 'world_ext_final';
   return {
@@ -142,6 +142,7 @@ function buildExtendedWorlds(startIdx, endIdx) {
     const name = EXT_WORLD_NAMES[wi - startIdx] || ('SWARM SECTOR ' + (wi + 1));
     const map = EXT_MAP_SHAPES[wi % EXT_MAP_SHAPES.length];
     const theme = extTheme(wi, band);
+    const mapLayout = typeof WorldMapLayout !== 'undefined' ? WorldMapLayout.pickLayout({ id: 'ext_' + wi }, wi) : null;
     const foes = buildFoes(wi, band, name);
     const bosses = buildBosses(wi, band, name);
     const hpMul = 1 + Math.max(0, band - 9) * 0.12;
@@ -153,6 +154,7 @@ function buildExtendedWorlds(startIdx, endIdx) {
       waveTarget: 20,
       endless: false,
       map: Object.assign({}, map),
+      mapLayout,
       enemyTint: theme.tint,
       hpMul,
       dmgMul,
