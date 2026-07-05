@@ -1069,6 +1069,15 @@ makeSprite('ic_hp', 64, (g,u)=>{   // heart with a white cross = bonus max HP
   });
   g.fillStyle='#fff'; g.fillRect(-2.6*u,-7*u,5.2*u,15*u); g.fillRect(-8*u,-1.4*u,16*u,5.2*u);
 });
+makeSprite('ic_crit', 64, (g,u)=>{
+  sh(g,'#ffd24a',3*u,(g)=>{ g.moveTo(0,-24*u); g.lineTo(7*u,-8*u); g.lineTo(24*u,-6*u); g.lineTo(12*u,6*u); g.lineTo(16*u,24*u); g.lineTo(0,14*u); g.lineTo(-16*u,24*u); g.lineTo(-12*u,6*u); g.lineTo(-24*u,-6*u); g.lineTo(-7*u,-8*u); g.closePath(); });
+  dot(g,0,0,5*u,'#e0392e');
+});
+makeSprite('ic_armor', 64, (g,u)=>{
+  sh(g,'#7a8aa0',3*u,(g)=>{ g.roundRect(-20*u,-18*u,40*u,36*u,6*u); });
+  sh(g,'#9fb0c8',0,(g)=>{ g.roundRect(-14*u,-12*u,28*u,24*u,4*u); });
+  g.strokeStyle=OUT; g.lineWidth=2.6*u; g.beginPath(); g.moveTo(-14*u,-2*u); g.lineTo(14*u,-2*u); g.stroke();
+});
 makeSprite('ic_crate', 64, (g,u)=>{
   sh(g,'#b98248',3.6*u,(g)=>{ g.rect(-25*u,-20*u,50*u,44*u); });
   g.strokeStyle='#8a5d2c'; g.lineWidth=3*u;

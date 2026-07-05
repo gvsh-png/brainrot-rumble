@@ -3,40 +3,47 @@
 // Loaded after game.js so it shares the globals `gold`, `P`, sprite helpers, sfx, $.
 // Items boost STARTING stats — damage (FLAT +N) / move speed (%) / attack range (%). 4 typed slots:
 // the equipped piece's SLOT picks the on-character silhouette + rarity tint, its STAT picks the bonus.
-// Catalog = 4 stats × 6 rarities × 7 named variants = 168 items (28 per rarity).
+// Catalog = 6 stats × 12 rarities × 7 named variants = 504 items (42 per rarity).
+// Daily shop stock matches your selected world: W1 = Common, W2 = Common+, … W12+ = Mythic.
 
 const GEAR_CATS = ['helmet','chest','pants','shoes'];
 const CAT_LABEL = { helmet:'Helmet', chest:'Chestplate', pants:'Pants', shoes:'Shoes' };
 const CAT_NOUN  = { helmet:'Helm', chest:'Plate', pants:'Greaves', shoes:'Boots' };
 
-// rarity: border color + base price (prices cut to ~1/3 of the old shop)
-// prices scale ~3-4x per tier so the next rarity costs "about one world of grinding"
-// (tied to the rarity-banded gear gate — see docs/specs/2026-06-14-worlds-expansion-design.md)
+// 12-tier ladder — old Mythic power now sits at Epic; Mythic is endgame.
 const RAR = {
-  common:    { name:'COMMON',    color:'#9aa3af', price:30    },
-  uncommon:  { name:'UNCOMMON',  color:'#5fbf52', price:120   },
-  rare:      { name:'RARE',      color:'#4aa3df', price:450   },
-  epic:      { name:'EPIC',      color:'#b06ff0', price:1500  },
-  legendary: { name:'LEGENDARY', color:'#e0a92e', price:4500  },
-  mythic:    { name:'MYTHIC',    color:'#ff3b5c', price:13500 },
+  common:    { name:'COMMON',     color:'#9aa3af', price:25   },
+  cplus:     { name:'COMMON+',    color:'#8d97a4', price:35   },
+  cpp:       { name:'COMMON++',   color:'#808b98', price:48   },
+  uncommon:  { name:'UNCOMMON',   color:'#5fbf52', price:65   },
+  uplus:     { name:'UNCOMMON+',  color:'#52ad48', price:88   },
+  rare:      { name:'RARE',       color:'#4aa3df', price:120  },
+  rplus:     { name:'RARE+',      color:'#3d94d0', price:165  },
+  epic:      { name:'EPIC',       color:'#b06ff0', price:225  },
+  eplus:     { name:'EPIC+',      color:'#a060e8', price:310  },
+  legendary: { name:'LEGENDARY',  color:'#e0a92e', price:425  },
+  lplus:     { name:'LEGENDARY+', color:'#d09a28', price:580  },
+  mythic:    { name:'MYTHIC',     color:'#ff3b5c', price:800  },
 };
-const RAR_ORDER = ['common','uncommon','rare','epic','legendary','mythic'];
+const RAR_ORDER = ['common','cplus','cpp','uncommon','uplus','rare','rplus','epic','eplus','legendary','lplus','mythic'];
 
-// stat lines: damage adds a FLAT amount; speed/range add a fraction of the starting stat.
-// `flat:true` marks a stat whose vals are absolute numbers (shown "+N") rather than percentages.
+// stat lines: damage/HP are flat; speed/range/crit/armor are fractional bonuses.
 const STAT = {
-  dmg:   { label:'damage',       short:'DMG', icon:'coin',  flat:true, vals:{common:2,uncommon:4,rare:7,epic:12,legendary:20,mythic:32} },
-  hp:    { label:'max HP',       short:'HP',  icon:'heart', flat:true, vals:{common:8,uncommon:15,rare:25,epic:40,legendary:65,mythic:100} },
-  speed: { label:'move speed',   short:'SPD', icon:'heart', vals:{common:0.03,uncommon:0.05,rare:0.08,epic:0.12,legendary:0.18,mythic:0.27} },
-  range: { label:'attack range', short:'RNG', icon:'gem',   vals:{common:0.05,uncommon:0.09,rare:0.14,epic:0.20,legendary:0.30,mythic:0.45} },
+  dmg:   { label:'damage',       short:'DMG', icon:'coin',  flat:true, vals:{common:2,cplus:3,cpp:4,uncommon:5,uplus:7,rare:9,rplus:12,epic:32,eplus:42,legendary:55,lplus:72,mythic:95} },
+  hp:    { label:'max HP',       short:'HP',  icon:'heart', flat:true, vals:{common:8,cplus:12,cpp:16,uncommon:20,uplus:28,rare:36,rplus:48,epic:100,eplus:130,legendary:165,lplus:210,mythic:270} },
+  speed: { label:'move speed',   short:'SPD', icon:'heart', vals:{common:0.02,cplus:0.025,cpp:0.03,uncommon:0.035,uplus:0.04,rare:0.05,rplus:0.06,epic:0.08,eplus:0.10,legendary:0.12,lplus:0.15,mythic:0.20} },
+  range: { label:'attack range', short:'RNG', icon:'gem',   vals:{common:0.04,cplus:0.05,cpp:0.06,uncommon:0.07,uplus:0.08,rare:0.10,rplus:0.12,epic:0.16,eplus:0.20,legendary:0.25,lplus:0.32,mythic:0.42} },
+  crit:  { label:'crit chance',  short:'CRT', icon:'coin',  armor:false, vals:{common:0.01,cplus:0.015,cpp:0.02,uncommon:0.025,uplus:0.03,rare:0.035,rplus:0.04,epic:0.05,eplus:0.065,legendary:0.08,lplus:0.10,mythic:0.13} },
+  armor: { label:'damage resist',short:'ARM', icon:'turtle',armor:true, vals:{common:0.015,cplus:0.02,cpp:0.025,uncommon:0.03,uplus:0.035,rare:0.04,rplus:0.045,epic:0.055,eplus:0.065,legendary:0.08,lplus:0.095,mythic:0.12} },
 };
-const STAT_ORDER = ['dmg','hp','speed','range'];
-// 7 flavour adjectives per stat -> 7 variants per (stat,rarity)
+const STAT_ORDER = ['dmg','hp','speed','range','crit','armor'];
 const ITEM_ADJ = {
   dmg:   ['Brawler','Berserker','Warlord','Crusher','Onslaught','Ravager','Titan'],
   hp:    ['Stalwart','Guardian','Bulwark','Ironhide','Bastion','Colossus','Immortal'],
   speed: ['Swift','Sprinter','Gale','Dasher','Quicksilver','Zephyr','Tempo'],
   range: ['Hawkeye','Marksman','Farsight','Sniper','Longshot','Eagle','Horizon'],
+  crit:  ['Keen','Sharp','Lethal','Deadly','Fatal','Killer','Assassin'],
+  armor: ['Padded','Plated','Reinforced','Ironclad','Steelbound','Fortress','Titanplate'],
 };
 
 // id = "<stat>_<rarity>_<variant>"  e.g. "range_epic_3"
@@ -49,8 +56,14 @@ function itemPrice(id){ return RAR[itemRar(id)].price; }
 function itemName(id){ return ITEM_ADJ[itemStat(id)][itemVar(id)] + ' ' + CAT_NOUN[itemCat(id)]; }
 // short "+N" (flat stats) or "+N%" (percent stats) badge used on tiles/slots
 function statIsFlat(stat){ return !!STAT[stat].flat; }
-function itemBonusShort(id){ const s=itemStat(id); return statIsFlat(s) ? '+'+itemBonus(id) : '+'+Math.round(itemBonus(id)*100)+'%'; }
-function itemBonusTxt(id){ const s=itemStat(id); return (statIsFlat(s) ? '+'+itemBonus(id) : '+'+Math.round(itemBonus(id)*100)+'%') + ' ' + STAT[s].label; }
+function statIsArmor(stat){ return !!STAT[stat].armor; }
+function itemBonusShort(id){
+  const s=itemStat(id), v=itemBonus(id);
+  if(statIsFlat(s)) return '+'+v;
+  if(statIsArmor(s)) return '-'+Math.round(v*100)+'%';
+  return '+'+Math.round(v*100)+'%';
+}
+function itemBonusTxt(id){ return itemBonusShort(id)+' '+STAT[itemStat(id)].label; }
 
 const GEAR_CATALOG = [];
 for(const s of STAT_ORDER) for(const r of RAR_ORDER) for(let i=0;i<7;i++) GEAR_CATALOG.push(s+'_'+r+'_'+i);
@@ -58,9 +71,9 @@ function catalogByRarity(r){ return GEAR_CATALOG.filter(id=>itemRar(id)===r); }
 
 // crates: weighted random pulls. cheaper crate = mostly low rarity, pricier = better odds.
 const CRATES = {
-  wood:   { name:'Wooden Crate', price:40,   glow:'#9aa3af', odds:{common:60,uncommon:30,rare:8, epic:2, legendary:0, mythic:0} },
-  silver: { name:'Silver Crate', price:240,  glow:'#bcd0e0', odds:{common:6, uncommon:30,rare:36,epic:20,legendary:7, mythic:1} },
-  gold:   { name:'Gold Crate',   price:1200, glow:'#e0a92e', odds:{common:0, uncommon:5, rare:25,epic:38,legendary:23,mythic:9} },
+  wood:   { name:'Wooden Crate', price:35,   glow:'#9aa3af', odds:{common:28,cplus:22,cpp:18,uncommon:14,uplus:10,rare:5,rplus:2,epic:1,eplus:0,legendary:0,lplus:0,mythic:0} },
+  silver: { name:'Silver Crate', price:200,  glow:'#bcd0e0', odds:{common:2,cplus:4,cpp:6,uncommon:10,uplus:14,rare:18,rplus:16,epic:14,eplus:10,legendary:4,lplus:1,mythic:1} },
+  gold:   { name:'Gold Crate',   price:900,  glow:'#e0a92e', odds:{common:0,cplus:0,cpp:1,uncommon:2,uplus:4,rare:8,rplus:12,epic:18,eplus:20,legendary:18,lplus:12,mythic:5} },
 };
 const CRATE_ORDER = ['wood','silver','gold'];
 const GEAR_UID_KEY = 'br_gear_uid_seq';
@@ -69,10 +82,11 @@ const FUSE_BASE = 20;
 const FUSE_STEP = 10;
 const FUSE_CAP = 100;
 
-// ---- persistent state (one-time wipe when the item-id scheme changed to stat-based) ----
-if(!localStorage.getItem('br_gear_reset_v2')){
+// ---- persistent state (one-time wipe when rarity tiers expanded) ----
+if(!localStorage.getItem('br_gear_reset_v3')){
   localStorage.removeItem('br_items_owned'); localStorage.removeItem('br_gear_equipped');
-  localStorage.setItem('br_gear_reset_v2','1');
+  localStorage.removeItem('br_gear_seen');
+  localStorage.setItem('br_gear_reset_v3','1');
 }
 function makeGearUid(){ return 'g'+Date.now().toString(36)+(Math.random()*1e8>>>0).toString(36); }
 function isGearInstance(v){ return !!v && typeof v==='object' && typeof v.itemId==='string'; }
@@ -215,18 +229,38 @@ function equippedFlatDmg(){   return equippedStatBonus('dmg');   }   // consumed
 function equippedHp(){        return equippedStatBonus('hp');    }   // consumed by game.js startGame() (flat +max HP)
 function equippedSpeedMult(){ return equippedStatMult('speed'); }
 function equippedRangeMult(){ return equippedStatMult('range'); }
+function equippedCrit(){ return equippedStatBonus('crit'); }
+function equippedArmorMult(){
+  let m=1; for(const c of GEAR_CATS){ const uid=gearEquip[c], id=uid&&gearInstanceItem(uid); if(id && itemStat(id)==='armor') m*=(1-itemBonus(id)); }
+  return m;
+}
 
-// ---- daily featured rotation: deterministic by UTC date, discounted ----
+// ---- daily featured rotation: deterministic by UTC date, discounted, world-tier stock ----
 function dayKey(){ const d=new Date(); return d.getUTCFullYear()+'-'+(d.getUTCMonth()+1)+'-'+d.getUTCDate(); }
 function hashStr(s){ let h=2166136261>>>0; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
 function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 const FEATURED_OFF = 0.25;   // 25% off featured items
 function featuredPrice(id){ return Math.max(5, Math.round(itemPrice(id)*(1-FEATURED_OFF))); }
-function dailyShop(n=6){
-  const rng = mulberry32(hashStr(dayKey()));
-  const pool = GEAR_CATALOG.slice();
+function primaryShopRarity(worldIdx){
+  const w = Math.max(0, worldIdx|0);
+  return RAR_ORDER[Math.min(w, RAR_ORDER.length-1)];
+}
+function shopRaritiesForWorld(worldIdx){
+  const pri = primaryShopRarity(worldIdx);
+  const i = RAR_ORDER.indexOf(pri);
+  const out = new Set();
+  if(i>=0) out.add(RAR_ORDER[i]);
+  if(i>0) out.add(RAR_ORDER[i-1]);
+  if(i<RAR_ORDER.length-1) out.add(RAR_ORDER[i+1]);
+  return out;
+}
+function dailyShop(n=6, worldIdx){
+  const w = typeof worldIdx==='number' ? worldIdx : (typeof selWorld!=='undefined' ? selWorld : 0);
+  const allowed = shopRaritiesForWorld(w);
+  const rng = mulberry32(hashStr(dayKey()+'|w'+w));
+  const pool = GEAR_CATALOG.filter(id=>allowed.has(itemRar(id)));
   for(let i=pool.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
-  return pool.slice(0,n);
+  return pool.slice(0, Math.min(n, pool.length));
 }
 
 // ---- gear icon (tinted silhouette on transparent bg) ----
@@ -277,7 +311,7 @@ let _coinURL='';
 function coinTag(){ if(!_coinURL && SP['coin']) _coinURL=SP['coin'].toDataURL(); return '<img class="coinico" src="'+_coinURL+'" alt="">'; }
 const _ICURL={};   // cached data-URLs for the house-drawn UI icons
 function icURL(n){ if(!_ICURL[n] && SP[n]) _ICURL[n]=SP[n].toDataURL(); return _ICURL[n]||''; }
-const STAT_IC = { dmg:'ic_dmg', hp:'ic_hp', speed:'ic_spd', range:'ic_rng' };
+const STAT_IC = { dmg:'ic_dmg', hp:'ic_hp', speed:'ic_spd', range:'ic_rng', crit:'ic_crit', armor:'ic_armor' };
 function rtagHTML(rar){ return '<span class="rtag r-'+rar+'">'+RAR[rar].name+'</span>'; }
 function statTag(stat){ return '<span class="stag s-'+stat+'">'+STAT[stat].short+'</span>'; }
 
@@ -309,8 +343,11 @@ function shopCardHTML(id, price){
 function renderShop(){
   const grid=$('shopgrid'); if(!grid) return;
   let html = '';
-  // ---- DAILY SHOP (rotating, discounted) ----
-  html += '<div class="banner"><span>DAILY SHOP</span></div><div class="shopsub">Resets at midnight (UTC) · up to -25%</div>';
+  // ---- DAILY SHOP (rotating, discounted, tier matches selected world) ----
+  const shopRar = primaryShopRarity(typeof selWorld!=='undefined' ? selWorld : 0);
+  const shopWorld = (typeof selWorld!=='undefined' ? selWorld : 0) + 1;
+  html += '<div class="banner"><span>DAILY SHOP</span></div>'+
+    '<div class="shopsub">World '+shopWorld+' stock · '+RAR[shopRar].name+' tier · resets midnight UTC · up to -25%</div>';
   html += '<div class="ggrid">';
   for(const id of dailyShop(6)) html += shopCardHTML(id, featuredPrice(id));
   html += '</div>';
@@ -440,6 +477,8 @@ function renderInventory(){
         '<span class="eqstat"><img class="ei" src="'+icURL('ic_hp')+'">+'+equippedHp()+'</span>'+
         '<span class="eqstat"><img class="ei" src="'+icURL('ic_spd')+'">+'+pct('speed')+'%</span>'+
         '<span class="eqstat"><img class="ei" src="'+icURL('ic_rng')+'">+'+pct('range')+'%</span>'+
+        '<span class="eqstat"><img class="ei" src="'+icURL('ic_crit')+'">+'+Math.round(equippedCrit()*100)+'%</span>'+
+        '<span class="eqstat"><img class="ei" src="'+icURL('ic_armor')+'">-'+Math.round((1-equippedArmorMult())*100)+'%</span>'+
       '</div></div>'+
     '<div class="eqside right">'+eqSlotHTML('pants')+eqSlotHTML('shoes')+'</div>';
   stage.querySelectorAll('.eqslot[data-cat]').forEach(el=>el.addEventListener('click',()=>{

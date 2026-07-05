@@ -984,6 +984,8 @@ function refreshWorldSel(){
   $('wprev').disabled = selWorld<=0 || gameMode==='practice';
   $('wnext').disabled = gameMode==='practice' || selWorld>=(gameMode==='challenger' ? chalUnlocked : unlockedMax);
   setStageEmblem(selWorld);
+  const shopPane=$('tab-shop');
+  if(shopPane && !shopPane.classList.contains('hidden') && typeof renderShop==='function') renderShop();
 }
 function triggerUnlockReveal(){
   refreshWorldSel();
@@ -1346,6 +1348,8 @@ function _doStartGame(wi){
   if(typeof equippedHp==='function'){ const h=equippedHp(); P.maxHp += h; P.hp = P.maxHp; }
   if(typeof equippedSpeedMult==='function') P.speed *= equippedSpeedMult();
   if(typeof equippedRangeMult==='function') P.range *= equippedRangeMult();
+  if(typeof equippedCrit==='function') P.crit = Math.min(0.8, P.crit + equippedCrit());
+  if(typeof equippedArmorMult==='function') P.armor *= equippedArmorMult();
   if(typeof registerActiveChar==='function') registerActiveChar();
   if(typeof registerActivePet==='function') registerActivePet();
   P.startDmg = P.dmg;   // damage at run start (char base + gear + passives); non-engineer turrets scale off this

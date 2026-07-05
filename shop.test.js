@@ -94,7 +94,7 @@ function loadShop(seed = {}) {
 
 test('instance helpers exist and legacy owned ids migrate to instance records', () => {
   const { sandbox, localStorage } = loadShop({
-    br_gear_reset_v2: '1',
+    br_gear_reset_v3: '1',
     br_items_owned: JSON.stringify(['dmg_common_0', 'hp_rare_2']),
     br_gear_equipped: JSON.stringify({ helmet: 'dmg_common_0' }),
     br_gear_seen: JSON.stringify(['dmg_common_0']),
@@ -115,7 +115,7 @@ test('instance helpers exist and legacy owned ids migrate to instance records', 
 
 test('a cloud restore with higher uids does not collide with newly minted uids', () => {
   const { sandbox } = loadShop({
-    br_gear_reset_v2: '1',
+    br_gear_reset_v3: '1',
     br_gear_uid_seq: '1',
     br_items_owned: JSON.stringify([{ uid: 'g9', itemId: 'dmg_common_0' }]),
   });
@@ -128,14 +128,29 @@ test('a cloud restore with higher uids does not collide with newly minted uids',
 });
 
 test('selling one duplicate removes only one copy and pays 40 percent refund', () => {
-  const { sandbox } = loadShop({ br_gear_reset_v2: '1' });
+  const { sandbox } = loadShop({ br_gear_reset_v3: '1' });
   sandbox.gold = 0;
   const a = sandbox.addGearInstance('dmg_common_0');
   sandbox.addGearInstance('dmg_common_0');
   sandbox.sellGearInstance(a.uid);
 
-  assert.equal(sandbox.gold, 12);
+  assert.equal(sandbox.gold, 10);
   const owned = sandbox.ownedGearList();
   assert.equal(owned.length, 1);
   assert.equal(owned[0].itemId, 'dmg_common_0');
+});
+
+test('daily shop stock matches selected world tier', () => {
+  const { sandbox } = loadShop({ br_gear_reset_v3: '1' });
+  assert.equal(sandbox.primaryShopRarity(0), 'common');
+  assert.equal(sandbox.primaryShopRarity(1), 'cplus');
+  assert.equal(sandbox.primaryShopRarity(11), 'mythic');
+  assert.equal(sandbox.primaryShopRarity(40), 'mythic');
+
+  const w3 = sandbox.dailyShop(6, 3);
+  assert.equal(w3.length, 6);
+  for (const id of w3) {
+    const rar = id.split('_')[1];
+    assert.ok(['cpp', 'uncommon', 'uplus'].includes(rar), 'world 4 shop should be uncommon tier ±1');
+  }
 });

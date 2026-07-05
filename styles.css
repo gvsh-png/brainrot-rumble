@@ -320,7 +320,10 @@ html.is-native-android body { padding-top:env(safe-area-inset-top); padding-bott
   background:#5fbf52; border:3px solid #2a1c10; border-radius:50%; color:#fff; font-size:clamp(18px,3.4vmin,28px); }
 .scard.owned { background:#eef6e8; }
 .scard.r-uncommon{ border-color:#3f9a36; } .scard.r-rare{ border-color:#2f86c8; }
-.scard.r-epic{ border-color:#8a47d8; } .scard.r-legendary{ border-color:#c47f12; }
+.scard.r-cplus,.scard.r-cpp{ border-color:#8892a0; }
+.scard.r-uplus{ border-color:#48a040; } .scard.r-rplus{ border-color:#3580b8; }
+.scard.r-epic{ border-color:#8a47d8; } .scard.r-eplus{ border-color:#7a3fc8; }
+.scard.r-legendary{ border-color:#c47f12; } .scard.r-lplus{ border-color:#b87210; }
 .scard.r-mythic{ border-color:#d61f48; box-shadow:0 5px 0 rgba(214,31,72,.35); }
 .sribbon { position:absolute; top:8px; right:-30px; width:108px; text-align:center; transform:rotate(38deg);
   background:#4aa3df; color:#fff; font-weight:900; font-size:clamp(10px,1.8vmin,14px); padding:2px 0; border:2px solid rgba(0,0,0,.25); }
@@ -344,7 +347,10 @@ html.is-native-android body { padding-top:env(safe-area-inset-top); padding-bott
   font-size:clamp(8px,1.5vmin,12px); font-weight:900; color:#2a1c10; padding:0 5px; white-space:nowrap; }
 .eqslot .eqempty { font-size:clamp(20px,4vmin,32px); color:rgba(255,255,255,.5); }
 .eqslot.r-uncommon{ background:linear-gradient(#62c455,#3f9a36); } .eqslot.r-rare{ background:linear-gradient(#56b1ef,#2f86c8); }
-.eqslot.r-epic{ background:linear-gradient(#b67cf2,#8a47d8); } .eqslot.r-legendary{ background:linear-gradient(#f1c14a,#d8961f); }
+.eqslot.r-cplus,.eqslot.r-cpp{ background:linear-gradient(#8a95a4,#6e7888); }
+.eqslot.r-uplus{ background:linear-gradient(#58c84c,#3a9234); } .eqslot.r-rplus{ background:linear-gradient(#48a8e8,#2a78b8); }
+.eqslot.r-epic{ background:linear-gradient(#b67cf2,#8a47d8); } .eqslot.r-eplus{ background:linear-gradient(#a86ef0,#7a3fc8); }
+.eqslot.r-legendary{ background:linear-gradient(#f1c14a,#d8961f); } .eqslot.r-lplus{ background:linear-gradient(#e8b440,#c88818); }
 .eqslot.r-mythic{ background:linear-gradient(#ff6e86,#d61f48); }
 
 /* owned-items grid (equipment) — rarity-framed square tiles */
@@ -358,7 +364,10 @@ html.is-native-android body { padding-top:env(safe-area-inset-top); padding-bott
 .itile.selected { box-shadow:0 0 0 3px #7fe7ff, 0 3px 0 rgba(0,0,0,.28); transform:translateY(-1px); }
 .itile.fusemode { cursor:pointer; }
 .itile.r-uncommon{ background:linear-gradient(#62c455,#3f9a36); } .itile.r-rare{ background:linear-gradient(#56b1ef,#2f86c8); }
-.itile.r-epic{ background:linear-gradient(#b67cf2,#8a47d8); } .itile.r-legendary{ background:linear-gradient(#f1c14a,#d8961f); }
+.itile.r-cplus,.itile.r-cpp{ background:linear-gradient(#8a95a4,#6e7888); }
+.itile.r-uplus{ background:linear-gradient(#58c84c,#3a9234); } .itile.r-rplus{ background:linear-gradient(#48a8e8,#2a78b8); }
+.itile.r-epic{ background:linear-gradient(#b67cf2,#8a47d8); } .itile.r-eplus{ background:linear-gradient(#a86ef0,#7a3fc8); }
+.itile.r-legendary{ background:linear-gradient(#f1c14a,#d8961f); } .itile.r-lplus{ background:linear-gradient(#e8b440,#c88818); }
 .itile.r-mythic{ background:linear-gradient(#ff6e86,#d61f48); }
 #invowned.ggrid { grid-template-columns:repeat(5,1fr); gap:clamp(6px,1.4vmin,11px); }
 .invhint { grid-column:1/-1; text-align:center; color:#fff; font-weight:800; font-size:clamp(12px,2vmin,16px); padding:14px; text-shadow:0 1px 0 rgba(0,0,0,.35); }
@@ -443,13 +452,18 @@ html.is-native-android body { padding-top:env(safe-area-inset-top); padding-bott
 .stag { display:inline-block; font-size:clamp(9px,1.5vmin,12px); font-weight:900; letter-spacing:.04em;
   padding:1px 7px; border-radius:6px; margin:0 0 3px 4px; border:2px solid currentColor; }
 .stag.s-dmg{ color:#d98a2b; } .stag.s-hp{ color:#d61f48; } .stag.s-speed{ color:#3f9a36; } .stag.s-range{ color:#2f86c8; }
+.stag.s-crit{ color:#e0a92e; } .stag.s-armor{ color:#7a8aa0; }
 .sbonus { font-size:clamp(10px,1.7vmin,13px); font-weight:900; color:#3a2d22; margin:0 0 3px 2px; }
 .sbonus { margin-top:3px; }
 /* rarity tag chip (shop cards + crate reveal) */
 .rtag { display:inline-block; font-size:clamp(9px,1.6vmin,13px); font-weight:900; letter-spacing:.05em;
   padding:1px 7px; border-radius:6px; border:2px solid currentColor; }
-.rtag.r-common{ color:#8a93a0; } .rtag.r-uncommon{ color:#3f9a36; } .rtag.r-rare{ color:#2f86c8; }
-.rtag.r-epic{ color:#8a47d8; } .rtag.r-legendary{ color:#c47f12; } .rtag.r-mythic{ color:#d61f48; } .rtag.syn{ color:#0fb5c9; }
+.rtag.r-common{ color:#8a93a0; } .rtag.r-cplus,.rtag.r-cpp{ color:#7a8490; }
+.rtag.r-uncommon{ color:#3f9a36; } .rtag.r-uplus{ color:#389030; }
+.rtag.r-rare{ color:#2f86c8; } .rtag.r-rplus{ color:#2878b8; }
+.rtag.r-epic{ color:#8a47d8; } .rtag.r-eplus{ color:#7a3fc8; }
+.rtag.r-legendary{ color:#c47f12; } .rtag.r-lplus{ color:#b87210; }
+.rtag.r-mythic{ color:#d61f48; } .rtag.syn{ color:#0fb5c9; }
 .gbonus { font-size:clamp(11px,1.9vmin,16px); color:#7a6a4a; font-weight:700; margin-top:2px; }
 
 /* crate opening overlay */
@@ -462,13 +476,21 @@ html.is-native-android body { padding-top:env(safe-area-inset-top); padding-bott
   background:#fbf3df; display:flex; align-items:center; justify-content:center; }
 .reelitem img { width:70%; height:70%; }
 .reelitem.r-uncommon{ border-color:#5fbf52; } .reelitem.r-rare{ border-color:#4aa3df; }
-.reelitem.r-epic{ border-color:#b06ff0; } .reelitem.r-legendary{ border-color:#e0a92e; box-shadow:0 0 12px rgba(224,169,46,.6); }
+.reelitem.r-cplus,.reelitem.r-cpp{ border-color:#8d97a4; }
+.reelitem.r-uplus{ border-color:#52ad48; } .reelitem.r-rplus{ border-color:#3d94d0; }
+.reelitem.r-epic{ border-color:#b06ff0; } .reelitem.r-eplus{ border-color:#a060e8; }
+.reelitem.r-legendary{ border-color:#e0a92e; box-shadow:0 0 12px rgba(224,169,46,.6); }
+.reelitem.r-lplus{ border-color:#d09a28; box-shadow:0 0 12px rgba(224,169,46,.5); }
 .reelitem.r-mythic{ border-color:#ff3b5c; box-shadow:0 0 14px rgba(255,59,92,.7); }
 .crresult { display:flex; align-items:center; gap:14px; background:#fbf3df; border:4px solid #cbd2da;
   border-radius:14px; padding:12px 16px; color:#3a2d22; text-align:left; }
 .crresult img { width:clamp(46px,8vmin,64px); height:clamp(46px,8vmin,64px); flex:0 0 auto; }
 .crresult.r-uncommon{ border-color:#5fbf52; } .crresult.r-rare{ border-color:#4aa3df; }
-.crresult.r-epic{ border-color:#b06ff0; } .crresult.r-legendary{ border-color:#e0a92e; box-shadow:0 0 16px rgba(224,169,46,.5); }
+.crresult.r-cplus,.crresult.r-cpp{ border-color:#8d97a4; }
+.crresult.r-uplus{ border-color:#52ad48; } .crresult.r-rplus{ border-color:#3d94d0; }
+.crresult.r-epic{ border-color:#b06ff0; } .crresult.r-eplus{ border-color:#a060e8; }
+.crresult.r-legendary{ border-color:#e0a92e; box-shadow:0 0 16px rgba(224,169,46,.5); }
+.crresult.r-lplus{ border-color:#d09a28; box-shadow:0 0 14px rgba(224,169,46,.45); }
 .crresult.r-mythic{ border-color:#ff3b5c; box-shadow:0 0 18px rgba(255,59,92,.6); }
 .crwname { font-size:clamp(16px,2.8vmin,24px); font-weight:900; }
 .crnew { color:#3f9a36; font-weight:900; margin-top:3px; }
