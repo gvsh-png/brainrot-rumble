@@ -234,6 +234,27 @@ function continueSuspendedRun(){
   }
 
   selWorld = worldIdx;
+  resetZoom();
   if(typeof refreshRunResumeUI === 'function') refreshRunResumeUI();
   return true;
 }
+
+let _runSaveAccum = 0;
+function tickRunAutosave(dt){
+  if(!canSuspendRun()){ _runSaveAccum = 0; return; }
+  _runSaveAccum += dt;
+  if(_runSaveAccum >= 5){ _runSaveAccum = 0; saveSuspendedRun(); }
+}
+
+function _persistRunOnExit(){
+  if(canSuspendRun()) saveSuspendedRun();
+}
+
+window.addEventListener('pagehide', _persistRunOnExit);
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden) _persistRunOnExit();
+});
+
+(function initRunResume(){
+  if(typeof refreshRunResumeUI === 'function') refreshRunResumeUI();
+})();

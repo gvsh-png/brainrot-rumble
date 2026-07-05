@@ -44,6 +44,12 @@
       }
     });
 
+    App.addListener('pause', () => {
+      if(typeof saveSuspendedRun === 'function' && typeof canSuspendRun === 'function' && canSuspendRun()){
+        saveSuspendedRun();
+      }
+    });
+
     App.addListener('backButton', ({ canGoBack })=>{
       const login = document.getElementById('login');
       const inGame = typeof state !== 'undefined' && state === 'play';

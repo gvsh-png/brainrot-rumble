@@ -1485,6 +1485,7 @@ function startGame(idx){
 }
 function _doStartGame(wi){
   if(typeof clearSuspendedRun === 'function') clearSuspendedRun();
+  resetZoom();
   loadWorld(wi);
   if(infiniteMapMode()){ WORLD.w=999999; WORLD.h=999999; }   // effectively infinite; ground drawn per-frame
   initAudio();
@@ -2274,6 +2275,7 @@ function clampEnemyWorld(e){
 // ============ UPDATE ============
 
 function update(dt){
+  if(typeof tickRunAutosave === 'function') tickRunAutosave(dt);
   elapsed += dt;
   // Challenger/practice-timer-based: advance separate timer (paused during boss), trigger milestones
   if(timerMode() && state===ST.PLAY){

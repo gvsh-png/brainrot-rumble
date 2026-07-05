@@ -86,11 +86,24 @@ const TAU = Math.PI*2;
 const WORLD = { w:2600, h:2600 };
 const WALL = 46;                 // fence thickness
 const camera = { x:0, y:0 };
-// camera zoom: <1 = zoomed out (see more), >1 = zoomed in
-let zoom = 1;
-const ZMIN = 0.85, ZMAX = 2.2;   // max zoom-out (0.85 = a small step out) / max zoom-in
-function setZoom(z){ zoom = clamp(z, ZMIN, ZMAX); }
-function zoomBy(d){ setZoom(+(zoom + d).toFixed(3)); }
+// camera zoom: discrete steps — default 1.0, one modest zoom-in, two zoom-out levels
+const ZOOM_LEVELS = [0.70, 0.85, 1.0, 1.12];
+const ZOOM_DEFAULT = 2;
+let zoomLevel = ZOOM_DEFAULT;
+let zoom = ZOOM_LEVELS[zoomLevel];
+function resetZoom(){ zoomLevel = ZOOM_DEFAULT; zoom = ZOOM_LEVELS[zoomLevel]; }
+function zoomInStep(){ if(zoomLevel < ZOOM_LEVELS.length - 1){ zoomLevel++; zoom = ZOOM_LEVELS[zoomLevel]; } }
+function zoomOutStep(){ if(zoomLevel > 0){ zoomLevel--; zoom = ZOOM_LEVELS[zoomLevel]; } }
+function setZoom(z){
+  let bi = 0, bd = Infinity;
+  for(let i = 0; i < ZOOM_LEVELS.length; i++){
+    const d = Math.abs(ZOOM_LEVELS[i] - z);
+    if(d < bd){ bd = d; bi = i; }
+  }
+  zoomLevel = bi;
+  zoom = ZOOM_LEVELS[zoomLevel];
+}
+function zoomBy(d){ setZoom(zoom + d); }   // legacy helper; snaps to nearest step
 function computeCamera(){
   // always keep the player dead-centre — follow them at every zoom level, never lock to world edges/centre
   const vw = W/zoom, vh = H/zoom;
