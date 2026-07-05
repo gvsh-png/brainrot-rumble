@@ -46,8 +46,8 @@ function hasMoreMilestones(){ return gameMode==='practice' ? true : chalBossIdx<
 // Challenger needs story world 3 cleared; its own progression is independent after that
 const _storyP = +(localStorage.getItem('br_unlocked')||0);
 let chalUnlocked = _storyP >= 3
-  ? Math.max(0, Math.min(10, +(localStorage.getItem('br_ch_unlocked')||0)))
-  : -1;   // -1 = fully locked (need story world 3 first)
+  ? Math.max(0, +(localStorage.getItem('br_ch_unlocked')||0))
+  : -1;   // -1 = fully locked (need story world 3 first); cap applied after WORLDS expands
 function setCoinHUD(){ const c=$('coincount'); if(c){ const s=c.querySelector('span'); if(s) s.textContent=worldCoins; } }
 function setKillHUD(){ const k=$('killtag'); if(k && k.lastElementChild) k.lastElementChild.textContent=kills; }
 function fmtTime(s){ s=Math.max(0,Math.floor(s)); const m=Math.floor(s/60), q=s%60; return (m<10?'0':'')+m+':'+(q<10?'0':'')+q; }
@@ -255,10 +255,13 @@ function foeIsHazard(d){ return !!d.aoe || (d.cast && (d.cast.kind==='geyser'||d
 function foeIsBurst(d){ return !!d.shoot && (d.shoot.type==='ring' || (d.shoot.n||1)>=3); }
 function foeIsSpecial(d){ return foeIsHazard(d) || foeIsBurst(d); }
 function worldBand(){ return curWorld().band||0; }       // 0-indexed difficulty band (drives macro scaling)
-function worldDmgMul(){ return (curWorld().dmgMul||1) * (1 + worldBand()*0.12); }   // per-world enemy damage (band ramp)
+function worldDmgMul(){
+  const b = worldBand(), bandMul = typeof extBandMul==='function' ? extBandMul(0.12, 9) : 1 + b*0.12;
+  return (curWorld().dmgMul||1) * bandMul;
+}
 function chalDmgMul(){ return gameMode==='challenger' ? 1.3 + worldBand()*0.08 : 1; }   // challenger: enemies hit harder, ramps with world
-function worldHpBand(){ return 1 + worldBand()*0.42; }   // enemy HP multiplier per world band
-function worldCoinMul(){ return 1 + worldBand()*0.22; }   // later worlds pay out more (gentle ramp, ~3x by W10 — funds the gear grind)
+function worldHpBand(){ return typeof extBandMul==='function' ? extBandMul(0.42, 9) : 1 + worldBand()*0.42; }
+function worldCoinMul(){ return typeof extBandMul==='function' ? extBandMul(0.22, 9) : 1 + worldBand()*0.22; }
 // coins are scarce early; from wave 20 on they pay out a little more (capped at 3x)
 function coinMult(){ return Math.min(3, wave < 20 ? 1 : 1 + (wave-19)*0.1); }
 // ---- enemy archetypes (ordered easy -> hard) ----
@@ -628,7 +631,9 @@ function cutsceneUpdate(dt){
   for(let i=texts.length-1;i>=0;i--){ const tx=texts[i]; tx.t=(tx.t||0)+dt; tx.x+=(tx.vx||0)*dt; tx.y+=(tx.vy||0)*dt; tx.life-=dt; if(tx.life<=0) texts.splice(i,1); }
   if(cut.t > 2.5){
     cut=null;
-    if(_clearData && _clearData.isW1 && !localStorage.getItem('br_seen_w1outro')){
+    if(typeof WorldCine!=='undefined'){
+      WorldCine.afterClear(_clearData, toMenuFromClear);
+    } else if(_clearData && _clearData.isW1 && !localStorage.getItem('br_seen_w1outro')){
       localStorage.setItem('br_seen_w1outro','1');
       startW1Outro(toMenuFromClear);
     } else {
@@ -2402,7 +2407,7 @@ function update(dt){
           const critC = P.crit + (P.overdrive ? (P.frenzy||0)*0.001 : 0) + (P.foeClose ? 0.09*(P.daredevil||0) : 0);
           const isCrit = b.luckyCrit ? true : (P.noCrit ? false : Math.random()<critC);
           const rngMul = P.noCrit ? (0.5+Math.random()*0.75) : 1;
-          const dmg = P.dmg * (b.dmgMul||1) * (P.abyssalMul||1) * (1 + (P.frenzy||0)*0.002) * (isCrit?(P.critMul||3):1) * rngMul;
+          const dmg = P.dmg * (b.dmgMul||1) * (P.abyssalMul||1) * (1 + (P.frenzy||0)*0.002) * (isCrit?(P.critMul||3):1) * rngMul * (P._waspDmg||1) * (typeof swarmFuryMul==='function'?swarmFuryMul():1);
           b.hit.add(e);
           hitSpark(b.x,b.y,isCrit?'#ffe14d':'#ff9f3a',isCrit);
           damageEnemy(e,dmg,b.x,b.y,isCrit);
@@ -5101,9 +5106,17 @@ function loop(t){
     update(dt*timeScale);
   } else if(state===ST.MENU) menuUpdate(dt);
   else if(state===ST.CUTSCENE) cutsceneUpdate(dt);
-  else if(state===ST.INTRO) introUpdate(dt);
-  else if(state===ST.OUTRO) w1OutroUpdate(dt);
-  if(state===ST.INTRO) introRender(); else if(state===ST.OUTRO) w1OutroRender(); else render();
+  else if(state===ST.INTRO){
+    if(typeof WorldCine!=='undefined' && WorldCine.isActive()) WorldCine.update(dt);
+    else introUpdate(dt);
+  } else if(state===ST.OUTRO){
+    if(typeof WorldCine!=='undefined' && WorldCine.isActive()) WorldCine.update(dt);
+    else w1OutroUpdate(dt);
+  }
+  if(typeof WorldCine!=='undefined' && WorldCine.isActive()) WorldCine.render();
+  else if(state===ST.INTRO) introRender();
+  else if(state===ST.OUTRO) w1OutroRender();
+  else render();
 }
 
 // menu: gentle drifting enemies around the player anchor for vibes
@@ -5269,14 +5282,23 @@ requestAnimationFrame(loop);
 $('startbtn').addEventListener('click', ()=>{
   if(gameMode==='practice'){ openPracticeSetup(); return; }
   const m=$('menu'); m.classList.add('leaving');
-  const wantsIntro = gameMode==='story' && selWorld===0 && !localStorage.getItem('br_seen_intro');
+  const wi = selWorld, mode = gameMode;
   setTimeout(()=>{
     m.classList.remove('leaving');
-    if(wantsIntro) startIntro(()=>startGame(0));
-    else startGame(selWorld);
+    if(typeof WorldCine!=='undefined'){
+      WorldCine.beforeStart(wi, mode, ()=>startGame(wi));
+    } else if(mode==='story' && wi===0 && !localStorage.getItem('br_seen_intro')){
+      startIntro(()=>startGame(0));
+    } else {
+      startGame(wi);
+    }
   }, 190);
 });
-$('introskip').addEventListener('click', finishIntro);
+$('introskip').addEventListener('click', ()=>{
+  if(typeof WorldCine!=='undefined' && WorldCine.isActive()) WorldCine.skip();
+  else if(state===ST.OUTRO) finishW1Outro();
+  else finishIntro();
+});
 
 // ===== GAMEMODE POPUP =====
 (function(){

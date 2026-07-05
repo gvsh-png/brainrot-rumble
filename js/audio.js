@@ -114,6 +114,15 @@ const TRACKS = {
                     prog:[45,45,41,41, 43,43,40,40, 45,45,43,43, 41,41,40,40,  43,43,45,45, 40,40,41,41, 43,43,40,40, 45,45,41,41] },
   world_dirt:    { bpm:108, density:0.28, drums:true,  lt:'triangle', bt:'sawtooth', lv:0.042, bv:0.065, scale:[0,3,5,7,8,10],
                     prog:[40,40,40,40, 38,38,36,36, 33,33,33,33, 36,36,38,38,  40,40,38,38, 36,36,33,33, 36,36,38,38, 40,40,40,40] },
+  // Extended worlds W12–W50 (procedural bands)
+  world_ext_low:  { bpm:118, density:0.32, drums:true,  lt:'square',   bt:'triangle', lv:0.040, bv:0.052, scale:[0,2,4,7,9],
+                    prog:[52,52,55,55, 57,57,52,52, 50,50,52,52, 55,55,57,57,  55,55,52,52, 50,50,48,48, 52,52,55,55, 57,57,55,55] },
+  world_ext_mid:  { bpm:126, density:0.38, drums:true,  lt:'sawtooth', bt:'square',   lv:0.038, bv:0.054, scale:[0,1,3,5,7,8,10],
+                    prog:[45,45,43,43, 41,41,40,40, 43,43,45,45, 48,48,43,43,  45,45,41,41, 40,40,43,43, 45,45,48,48, 43,41,40,40] },
+  world_ext_high: { bpm:134, density:0.44, drums:true,  lt:'square',   bt:'sawtooth', lv:0.036, bv:0.056, scale:[0,1,4,5,7,8,11],
+                    prog:[48,48,50,50, 52,52,48,48, 45,45,43,43, 48,48,50,50,  52,52,55,55, 50,50,48,48, 45,45,43,43, 48,48,45,45] },
+  world_ext_final:{ bpm:148, density:0.52, drums:true,  lt:'sawtooth', bt:'sawtooth', lv:0.034, bv:0.060, scale:[0,1,3,5,6,8,10],
+                    prog:[40,40,38,38, 36,36,33,33, 36,36,38,38, 40,40,43,43,  45,45,43,43, 40,40,38,38, 36,36,33,33, 40,40,40,40] },
   // ---- Final-boss themes (one per world) ----
   // W1: Ting Ting Ting Bahur — war-drum chaos, phrygian aggression
   final_sahur:          { bpm:164, density:0.60, drums:true, lt:'square',   bt:'sawtooth', lv:0.046, bv:0.058, scale:[0,1,3,5,7,8,10],

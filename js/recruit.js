@@ -139,7 +139,7 @@ function dailyFeaturedPet() {
 function recruitPet() {
   if(!spendGems(PET_PULL_COST)) return null;
   const rarity=weightedRarityRoll(PET_WEIGHTS);
-  const pool=PETS.filter(p=>p.rarity===rarity&&!isPetOwned(p.id));
+  const pool=PETS.filter(p=>p.rarity===rarity&&!isPetOwned(p.id)&&p.worldUnlock==null);
   if(!pool.length){
     const anyPool=PETS.filter(p=>p.rarity===rarity);
     const picked=anyPool[Math.floor(Math.random()*anyPool.length)];
