@@ -64,12 +64,14 @@ const WorldCine = (function () {
     cx.translate(-W / 2, -H / 2);
   }
 
-  function isAct1Cine() {
-    return wi >= 0 && wi <= 4 && !isChal;
+  function isArcCine() {
+    if (isChal) return false;
+    if (typeof isArcWorld === 'function') return isArcWorld(wi);
+    return wi >= 0 && wi < 50;
   }
 
   function scenePhase() {
-    if (!isAct1Cine()) return 'default';
+    if (!isArcCine()) return 'default';
     const outro = kind === 'outro';
     if (outro) {
       if (t < 3.2) return 'victory';
@@ -90,7 +92,7 @@ const WorldCine = (function () {
 
   function applySceneShake() {
     const ph = scenePhase();
-    if (ph !== 'chaos' || !isAct1Cine()) return;
+    if (ph !== 'chaos' || !isArcCine()) return;
     const ramp = Math.min(1, Math.max(0, (t - 7) / 2.5));
     const amt = ramp * 9;
     if (amt > 0 && typeof rand === 'function') {
@@ -153,6 +155,56 @@ const WorldCine = (function () {
       for (let i = 0; i < 8; i++) cx.fillRect(W * 0.2 + i * (W * 0.075), H * 0.28 + (i % 2) * 14, W * 0.037, 14);
       cx.strokeStyle = '#fff'; cx.lineWidth = 3;
       cx.beginPath(); cx.moveTo(W * 0.5, H * 0.28); cx.lineTo(W * 0.5, H * 0.62); cx.stroke();
+    } else if (id === 'autumn') {
+      cx.fillStyle = '#c87828';
+      for (let i = 0; i < 7; i++) {
+        const tx = W * (0.1 + i * 0.13);
+        cx.beginPath(); cx.arc(tx, H * 0.4, 16, 0, TAU); cx.fill();
+        cx.fillStyle = i % 2 ? '#e89030' : '#a05818';
+        cx.fillRect(tx - 3, H * 0.4, 6, H * 0.2);
+        cx.fillStyle = '#c87828';
+      }
+    } else if (id === 'swamp') {
+      cx.fillStyle = 'rgba(60,120,40,0.45)';
+      for (let i = 0; i < 5; i++) {
+        cx.beginPath(); cx.ellipse(W * (0.15 + i * 0.17), H * 0.62, 55, 18, 0, 0, TAU); cx.fill();
+      }
+    } else if (id === 'sky') {
+      cx.fillStyle = 'rgba(255,255,255,0.35)';
+      for (let i = 0; i < 4; i++) {
+        const cxp = W * (0.2 + i * 0.2);
+        const cyp = H * (0.35 + (i % 2) * 0.12);
+        cx.beginPath(); cx.ellipse(cxp, cyp, 48, 22, 0, 0, TAU); cx.fill();
+      }
+    } else if (id === 'crystal') {
+      cx.fillStyle = 'rgba(180,120,255,0.5)';
+      for (let i = 0; i < 6; i++) {
+        const bx = W * (0.12 + i * 0.15);
+        cx.beginPath();
+        cx.moveTo(bx, H * 0.32); cx.lineTo(bx - 14, H * 0.62); cx.lineTo(bx + 14, H * 0.62);
+        cx.closePath(); cx.fill();
+      }
+    } else if (id === 'volcano') {
+      cx.fillStyle = '#e85030';
+      cx.beginPath();
+      cx.moveTo(W * 0.5, H * 0.3); cx.lineTo(W * 0.32, H * 0.68); cx.lineTo(W * 0.68, H * 0.68);
+      cx.closePath(); cx.fill();
+      cx.fillStyle = 'rgba(255,180,60,0.35)';
+      cx.beginPath(); cx.ellipse(W * 0.5, H * 0.58, 40, 14, 0, 0, TAU); cx.fill();
+    } else if (id === 'dirt') {
+      cx.fillStyle = 'rgba(100,70,30,0.45)';
+      for (let i = 0; i < 4; i++) {
+        cx.fillRect(W * (0.15 + i * 0.2), H * 0.35, 28, H * 0.35);
+        cx.beginPath(); cx.arc(W * (0.15 + i * 0.2) + 14, H * 0.35, 18, Math.PI, 0); cx.fill();
+      }
+    } else if (wi >= 11) {
+      cx.fillStyle = th.accent || th.tint || '#b06ff0';
+      for (let i = 0; i < 7; i++) {
+        const tx = W * (0.08 + i * 0.13);
+        const hgt = 50 + (i % 4) * 22;
+        cx.fillRect(tx, H * 0.68 - hgt, 16, hgt);
+        cx.beginPath(); cx.moveTo(tx - 8, H * 0.68 - hgt); cx.lineTo(tx + 8, H * 0.68 - hgt - 20); cx.lineTo(tx + 24, H * 0.68 - hgt); cx.fill();
+      }
     } else {
       cx.fillStyle = 'rgba(90,150,50,0.35)';
       for (let i = 0; i < 8; i++) {
@@ -538,7 +590,7 @@ const WorldCine = (function () {
   }
 
   function durFor(k) {
-    if (isAct1Cine()) {
+    if (isArcCine()) {
       if (k === 'intro') return DUR.act1In;
       if (k === 'outro') return DUR.act1Out;
     }
@@ -569,9 +621,9 @@ const WorldCine = (function () {
     const st = storyFor(w);
     cx.save();
 
-    if (isAct1Cine() && kind === 'intro') {
+    if (isArcCine() && kind === 'intro') {
       renderAct1Intro(w, st);
-    } else if (isAct1Cine() && kind === 'outro') {
+    } else if (isArcCine() && kind === 'outro') {
       renderAct1Outro(w, st);
     } else {
       backdrop(w);

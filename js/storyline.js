@@ -9,9 +9,37 @@
     { start: 40, end: 49, title: 'PART 4 — FINAL FIGHT', tag: 'Stop the hive mind for good!' },
   ];
 
-  const ACT1_END = 4; // Worlds 1–5 (0-indexed) share one connected arc + full cutscenes.
+  const ARC_SIZE = 5;
+  const ARC_COUNT = 10; // Worlds 1–50 in ten five-world chapters.
 
-  // Connected Part 1 storyline — each world picks up where the last left off.
+  // Chapter headers — one per 5-world block.
+  const ARC_CHAPTERS = [
+    { title: 'PART 1 — SWARM ATTACK!', tag: 'Brainrot monsters invade your home!', endMsg: 'Act 2 begins now!' },
+    { title: 'PART 1 — WILD DEPTHS', tag: 'The swarm spreads through nature\'s extremes.', endMsg: 'The hive stirs underground…' },
+    { title: 'PART 2 — HIVE DOORSTEP', tag: 'The dirt depths open — new sectors beyond.', endMsg: 'Strange lights blink on the map…' },
+    { title: 'PART 2 — OUTER SECTORS', tag: 'Procedural zones pulse with brainrot.', endMsg: 'The rift zones call you deeper.' },
+    { title: 'PART 2 — RIFT ZONES', tag: 'Reality bends. The swarm adapts.', endMsg: 'You\'re nearing the hive edge.' },
+    { title: 'PART 3 — HIVE EDGE', tag: 'Tougher bands. Weirder bosses.', endMsg: 'The deep hive opens below.' },
+    { title: 'PART 3 — DEEP HIVE', tag: 'Walls pulse like they\'re alive.', endMsg: 'Core sectors ahead — stay sharp!' },
+    { title: 'PART 3 — CORE SECTORS', tag: 'The swarm fights like it knows you.', endMsg: 'The void ring surrounds the throne.' },
+    { title: 'PART 4 — VOID RING', tag: 'Almost there. Don\'t stop now.', endMsg: 'The final push begins!' },
+    { title: 'PART 4 — LAST STAND', tag: 'Stop the hive mind for good!', endMsg: 'You did it. The swarm is beaten!' },
+  ];
+
+  const CHAPTER_TEASES = [
+    null,
+    'Ash settles — tunnel mouths open below. The DIRT DEPTHS beckon…',
+    'The hive map unlocks — glowing sectors stretch to the horizon!',
+    'Rift energy spikes — the outer ring is breached!',
+    'Gravity warps — you\'re at the hive\'s front door.',
+    'Chittering echoes from miles below. The deep hive awaits.',
+    'Organic walls pulse faster. The core is close.',
+    'Static fills the air — the void ring surrounds the throne.',
+    'Every boss was practice. The hive mind is next.',
+    'Victory! But will the swarm stay down…?',
+  ];
+
+  // Connected Part 1 storyline — Worlds 1–5 (chunk 0).
   const ACT1_ARC = [
     {
       peace: 'Green hills stretch as far as you can see.',
@@ -65,40 +93,148 @@
     },
   ];
 
+  // Worlds 6–10 (chunk 1) — autumn through volcano.
+  const ARC2 = [
+    {
+      peace: 'Orange leaves drift down. Campfires crackle in quiet woods.',
+      invasion: 'The swarm tunneled up from below — AUTUMN WOODS is crawling with bugs!',
+      chaos: 'Leaves rot mid-air as brainrot swarms every trail!',
+      hero: 'Scout the camps and burn a path through!',
+      outVictory: 'AUTUMN WOODS — SAVED!',
+      outCelebrate: 'Campers wave flags — no more bugs in the soup!',
+      outTease: 'Wet footprints head south… the SWAMP stirs.',
+      outNext: 'WORLD 7 — SWAMP lies ahead!',
+    },
+    {
+      peace: 'Fog hangs low over green reeds and still water.',
+      invasion: 'Toxic bubbles rise — brainrot owns the SWAMP!',
+      chaos: 'Glowing eyes watch from the reeds. Now they charge!',
+      hero: 'Drain the rot before it spreads to the rivers!',
+      outVictory: 'SWAMP — SAVED!',
+      outCelebrate: 'Fireflies blink in relief. The swamp smells normal again.',
+      outTease: 'Wings beat overhead — they took to the SKY!',
+      outNext: 'WORLD 8 — SKYLAND floats above!',
+    },
+    {
+      peace: 'Cloud islands drift in a calm blue sky.',
+      invasion: 'Flying brainrot blocks out the sun over SKYLAND!',
+      chaos: 'Swarm scouts dive from every cloud — nowhere to hide!',
+      hero: 'Clear the air lanes before they nest on the islands!',
+      outVictory: 'SKYLAND — SAVED!',
+      outCelebrate: 'Cloud people wave from the islands above. You\'re a hero!',
+      outTease: 'A purple glow pulses from caves below the clouds…',
+      outNext: 'WORLD 9 — CRYSTAL CAVES awaits!',
+    },
+    {
+      peace: 'Purple crystals hum with a soft, peaceful light.',
+      invasion: 'Brainrot creeps up the walls of CRYSTAL CAVES!',
+      chaos: 'Shards crack and fall — bugs burst from every fracture!',
+      hero: 'Shatter the corruption before the caves collapse!',
+      outVictory: 'CRYSTAL CAVES — SAVED!',
+      outCelebrate: 'Crystal sprites hum a thank-you song as the caves brighten.',
+      outTease: 'Heat rises from a crack in the floor — VOLCANO!',
+      outNext: 'WORLD 10 — VOLCANO rumbles below!',
+    },
+    {
+      peace: 'Warm stone radiates heat. The caldera looks quiet…',
+      invasion: 'Ash and brainrot rain from VOLCANO — the swarm made it their forge!',
+      chaos: 'Lava bugs burst from fissures on every side!',
+      hero: 'Cool the caldera and crush their last surface stronghold!',
+      outVictory: 'VOLCANO — SILENCED!',
+      outCelebrate: 'Lava cools to warm stone. Miners cheer your name!',
+      outTease: 'Ash clears — tunnel mouths open below. The DIRT DEPTHS beckon…',
+      outNext: 'WORLD 11 — DIRT DEPTHS. Part 2 begins!',
+    },
+  ];
+
   const STORY_MILESTONES = new Set([0, 4, 9, 14, 19, 24, 29, 34, 39, 44, 49]);
 
-  function isAct1(wi) { return wi >= 0 && wi <= ACT1_END; }
+  function arcChunk(wi) { return Math.floor(wi / ARC_SIZE); }
+  function arcSlot(wi) { return wi % ARC_SIZE; }
+  function isArcWorld(wi) { return wi >= 0 && wi < ARC_COUNT * ARC_SIZE; }
+  function isAct1(wi) { return isArcWorld(wi); } // legacy alias
 
-  function act1Arc(wi) { return ACT1_ARC[wi] || ACT1_ARC[0]; }
+  function getArcLines(wi, world, boss, allyLine) {
+    const chunk = arcChunk(wi);
+    const slot = arcSlot(wi);
+    if (chunk === 0 && ACT1_ARC[slot]) return ACT1_ARC[slot];
+    if (chunk === 1 && ARC2[slot]) return ARC2[slot];
+    return generateArcLines(wi, world, boss, allyLine);
+  }
 
-  function buildAct1Intro(wi, name, boss, midBoss, allyLine) {
-    const arc = act1Arc(wi);
+  function generateArcLines(wi, world, boss, allyLine) {
+    const name = world && world.name ? world.name : ('WORLD ' + (wi + 1));
+    const atmo = atmosphereFor(wi, world);
+    const invasion = invasionLine(wi, world);
+    const victory = victoryFor(wi, world);
+    const impact = impactFor(wi, world);
+    const slot = arcSlot(wi);
+    const chunk = arcChunk(wi);
+    const prevW = typeof WORLDS !== 'undefined' && wi > 0 ? WORLDS[wi - 1] : null;
+    const nextW = typeof WORLDS !== 'undefined' && wi < 49 ? WORLDS[wi + 1] : null;
+    const prevNm = prevW ? prevW.name : ('Zone ' + wi);
+    const nextNm = nextW ? nextW.name : ('Zone ' + (wi + 2));
+    const twist = MILESTONE_TWISTS[wi];
+    const peace = slot === 0 && chunk > 0
+      ? 'Pushing on from ' + prevNm + ' — ' + name + ' lies ahead.'
+      : (atmo[0] || name + ' feels calm… for now.');
+    const chaos = twist || atmo[1] || ('The swarm wreaks havoc across ' + name + '!');
+    const hero = allyLine || (slot === 4
+      ? 'Chapter finale — beat ' + boss + '!'
+      : 'Fight through ' + name + ' and win!');
+    const tease = slot === 4 && CHAPTER_TEASES[chunk]
+      ? CHAPTER_TEASES[chunk]
+      : ('Bug tracks lead toward ' + nextNm + '…');
+    return {
+      peace,
+      invasion,
+      chaos,
+      hero,
+      outVictory: name + ' — SAVED!',
+      outCelebrate: impact || victory,
+      outTease: tease,
+      outNext: wi < 49 ? ('WORLD ' + (wi + 2) + ' — ' + nextNm + '!') : 'THE HIVE MIND. Save everyone!',
+    };
+  }
+
+  function buildArcIntro(wi, world, name, boss, midBoss, ally, allyLine) {
+    const chunk = arcChunk(wi);
+    const slot = arcSlot(wi);
+    const chapter = ARC_CHAPTERS[chunk] || ARC_CHAPTERS[ARC_CHAPTERS.length - 1];
+    const arc = getArcLines(wi, world, boss, allyLine);
+    const titleText = slot === 0 ? chapter.title : ('WORLD ' + (wi + 1));
+    const subText = slot === 0 ? chapter.tag : chapter.title;
     const beats = [
-      { t0: 0.2, t1: 3.2, y: 0.12, text: wi === 0 ? 'PART 1 — SWARM ATTACK!' : ('WORLD ' + (wi + 1)), big: true, title: true },
-      { t0: 0.8, t1: 3.8, y: 0.2, text: wi === 0 ? 'Brainrot monsters invade your home!' : 'PART 1 — SWARM ATTACK!', dim: true },
+      { t0: 0.2, t1: 3.2, y: 0.12, text: titleText, big: true, title: true },
+      { t0: 0.8, t1: 3.8, y: 0.2, text: subText, dim: true },
       { t0: 1.4, t1: 4.6, y: 0.3, text: name, big: true },
       { t0: 2.0, t1: 5.5, y: 0.4, text: arc.peace, dim: true, scene: 'peace' },
       { t0: 3.6, t1: 7.5, y: 0.5, text: arc.invasion, brainrot: true, scene: 'invasion' },
       { t0: 7.0, t1: 10.8, y: 0.6, text: arc.chaos, scene: 'chaos' },
       { t0: 10.2, t1: 13.8, y: 0.72, text: arc.hero, scene: 'hero' },
     ];
-    if (allyLine && wi === 3) beats.push({ t0: 10.8, t1: 14.2, y: 0.8, text: allyLine, ally: true, scene: 'hero' });
+    if (allyLine && ally) beats.push({ t0: 10.8, t1: 14.2, y: 0.8, text: allyLine, ally: true, scene: 'hero' });
     if (midBoss) beats.push({ t0: 11.2, t1: 14.4, y: 0.86, text: 'Watch out for ' + midBoss + ' at wave 5!', dim: true, scene: 'hero' });
     beats.push({ t0: 12.0, t1: 14.8, y: 0.9, text: 'Beat ' + boss + ' to clear this zone!', dim: true, scene: 'hero' });
     return beats;
   }
 
-  function buildAct1Outro(wi, boss) {
-    const arc = act1Arc(wi);
+  function buildArcOutro(wi, world, boss) {
+    const chunk = arcChunk(wi);
+    const slot = arcSlot(wi);
+    const chapter = ARC_CHAPTERS[chunk] || ARC_CHAPTERS[ARC_CHAPTERS.length - 1];
+    const arc = getArcLines(wi, world, boss, null);
+    const endFade = slot === 4 ? chapter.endMsg : 'The story continues…';
     return [
       { t0: 0.2, t1: 3.2, y: 0.14, text: arc.outVictory, big: true, title: true, scene: 'victory' },
       { t0: 1.0, t1: 4.2, y: 0.28, text: boss + ' is defeated!', scene: 'victory' },
       { t0: 2.4, t1: 5.8, y: 0.42, text: arc.outCelebrate, applause: true, scene: 'celebrate' },
       { t0: 4.0, t1: 7.6, y: 0.56, text: arc.outTease, dim: true, scene: 'tease' },
       { t0: 6.0, t1: 9.8, y: 0.7, text: arc.outNext, scene: 'tease' },
-      { t0: 8.8, t1: 12.0, y: 0.84, text: wi < ACT1_END ? 'The story continues…' : 'Act 2 begins now!', dim: true, scene: 'fade' },
+      { t0: 8.8, t1: 12.0, y: 0.84, text: endFade, dim: true, scene: 'fade' },
     ];
   }
+
 
   const QUICK_INTROS = [
     'The swarm is here. Time to fight!',
@@ -321,11 +457,11 @@
 
     let introBeats;
     let outroBeats;
-    const act1 = isAct1(wi);
+    const arcWorld = isArcWorld(wi);
 
-    if (act1) {
-      introBeats = buildAct1Intro(wi, name, boss, midBoss, allyLine);
-      outroBeats = buildAct1Outro(wi, boss);
+    if (arcWorld) {
+      introBeats = buildArcIntro(wi, world, name, boss, midBoss, ally, allyLine);
+      outroBeats = buildArcOutro(wi, world, boss);
     } else if (milestone) {
       introBeats = [
         { t0: 0.2, t1: 3.0, y: 0.12, text: isActStart(wi) ? act.title : ('WORLD ' + (wi + 1)), big: true, title: true },
@@ -356,6 +492,7 @@
       }
     }
 
+    if (!arcWorld) {
     if (milestone) {
       outroBeats = [
         { t0: 0.2, t1: 3.0, y: 0.16, text: name + ' — SAVED!', big: true, title: true },
@@ -375,6 +512,7 @@
         { t0: 5.8, t1: 8.6, y: 0.8, text: wi < 49 ? 'World ' + (wi + 2) + ' is waiting…' : 'Final zone next!', dim: true },
       ];
     }
+    }
 
     const chalIntroBeats = [
       { t0: 0.3, t1: 3.0, y: 0.18, text: 'CHALLENGER — ' + name, big: true, title: true },
@@ -393,8 +531,9 @@
     return {
       act,
       milestone,
-      act1,
-      fullCutscene: act1,
+      arcWorld,
+      act1: arcWorld,
+      fullCutscene: arcWorld,
       vis: visFor(wi, world),
       introBeats,
       outroBeats,
@@ -410,5 +549,6 @@
   }
 
   window.getWorldStory = worldStory;
+  window.isArcWorld = isArcWorld;
   window.isAct1World = isAct1;
 })();
