@@ -1982,10 +1982,17 @@ function openLevelUp(){
         if(i===2) c.style.setProperty('--rej-rot',(12+Math.random()*10)+'deg');
         c.classList.add(rejClass[i]);
       });
+      const lv = $('levelup');
+      lv.classList.add('leaving');
       setTimeout(()=>{
-        $('levelup').classList.add('hidden');
+        lv.classList.add('hidden');
+        lv.classList.remove('leaving');
+        allCards.forEach(c => {
+          c.classList.remove('card-selected','card-rejected-left','card-rejected-mid','card-rejected-right');
+          c.style.removeProperty('--rej-rot');
+        });
         state=ST.PLAY;
-      }, 220);
+      }, 860);
     };
     wrap.appendChild(d);
   });

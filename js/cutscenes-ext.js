@@ -64,11 +64,19 @@ const WorldCine = (function () {
     cx.translate(-W / 2, -H / 2);
   }
 
-  function drawLetterbox() {
-    const bar = Math.round(H * 0.06);
-    cx.fillStyle = '#000';
-    cx.fillRect(0, 0, W, bar);
-    cx.fillRect(0, H - bar, W, bar);
+  function drawEdgeVignette(w) {
+    const th = w && w.theme ? w.theme : { void: '#1a2838' };
+    const c = th.void || th.bg || '#1a2838';
+    const g = cx.createLinearGradient(0, 0, 0, H * 0.14);
+    g.addColorStop(0, c + '55');
+    g.addColorStop(1, c + '00');
+    cx.fillStyle = g;
+    cx.fillRect(0, 0, W, H * 0.14);
+    const g2 = cx.createLinearGradient(0, H, 0, H * 0.86);
+    g2.addColorStop(0, c + '55');
+    g2.addColorStop(1, c + '00');
+    cx.fillStyle = g2;
+    cx.fillRect(0, H * 0.86, W, H * 0.14);
   }
 
   function backdrop(w) {
@@ -364,11 +372,12 @@ const WorldCine = (function () {
       renderBeats(isChal ? st.chalOutroBeats : st.outroBeats);
     }
 
-    drawLetterbox();
+    drawEdgeVignette(w);
 
     if (t > maxFadeStart()) {
+      const th = w && w.theme ? w.theme : { void: '#1a2838' };
       cx.globalAlpha = Math.min(1, (t - maxFadeStart()) / 1.1);
-      cx.fillStyle = '#000';
+      cx.fillStyle = th.void || th.bg || '#1a2838';
       cx.fillRect(0, 0, W, H);
     }
     cx.restore();
