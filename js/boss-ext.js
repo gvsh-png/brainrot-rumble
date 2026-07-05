@@ -262,3 +262,8 @@
     for (let i = 0; i < MID_ARCH.length; i++) GIMMICK['extmid' + i] = MID_ARCH[i].gimmick;
     for (let i = 0; i < FIN_ARCH.length; i++) GIMMICK['extfin' + i] = FIN_ARCH[i].gimmick;
   }
+
+  window.extBossMoves = extBossMoves;
+  window.extExecMove = extExecMove;
+  window.extGimmickUpdate = extGimmickUpdate;
+})();
