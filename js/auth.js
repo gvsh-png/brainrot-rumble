@@ -186,6 +186,7 @@ function showLogin(){ const o=$('login'); if(o) o.classList.remove('hidden'); }
 function hideLogin(){
   const o=$('login'); if(o) o.classList.add('hidden');
   if(typeof refreshRunResumeUI === 'function') refreshRunResumeUI();
+  if(typeof refreshDailyBountiesUI === 'function') refreshDailyBountiesUI();
 }
 function loginMsg(t){ const m=$('loginmsg'); if(m){ m.textContent=t; m.classList.remove('hidden'); } }
 function updateAcctUI(){

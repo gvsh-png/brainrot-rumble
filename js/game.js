@@ -718,6 +718,7 @@ function worldCleared(boss){
   hitstop=0.25; shake=Math.max(shake,16);
   stopMusic(); sfx.win();
   if(typeof haptic === 'function') haptic('win');
+  if(typeof finishRunEngagement === 'function') finishRunEngagement('clear');
   bigText(isPractice ? 'TRAINING COMPLETE' : 'WORLD CLEARED', '#ffd24a');
 }
 function cutsceneUpdate(dt){
@@ -1485,6 +1486,7 @@ function startGame(idx){
 }
 function _doStartGame(wi){
   if(typeof clearSuspendedRun === 'function') clearSuspendedRun();
+  if(typeof resetRunEngagement === 'function') resetRunEngagement();
   resetZoom();
   loadWorld(wi);
   if(infiniteMapMode()){ WORLD.w=999999; WORLD.h=999999; }   // effectively infinite; ground drawn per-frame
@@ -2110,6 +2112,8 @@ function openLevelUp(){
     d.onclick = ()=>{
       m.evolve ? sfx.evolve() : sfx.pick();
       if(typeof haptic === 'function') haptic(m.evolve ? 'evolve' : 'pick');
+      if(m.evolve && typeof engageOnEvolve === 'function') engageOnEvolve();
+      if(u.req && u.req.length && typeof engageSynergyUnlock === 'function') engageSynergyUnlock(m.name);
       m.apply(); P.up[u.id]=(P.up[u.id]||0)+1;
       const allCards = [...$('cards').querySelectorAll('.card')];
       allCards.forEach(c => { c.style.pointerEvents='none'; });
@@ -2149,6 +2153,7 @@ function gameOver(){
   $('fwave').textContent = timerMode() ? 'time '+fmtTime(chalElapsed) : 'wave '+wave;
   $('fcoins').textContent = worldCoins;
   $('fkills').textContent = kills;
+  if(typeof showRunDebrief === 'function') showRunDebrief('over');
   $('hud').classList.add('hidden');
   $('dashbtn').classList.add('hidden');
   $('zoomctl').classList.add('hidden');
@@ -2276,6 +2281,7 @@ function clampEnemyWorld(e){
 
 function update(dt){
   if(typeof tickRunAutosave === 'function') tickRunAutosave(dt);
+  if(typeof engageTick === 'function') engageTick(dt);
   elapsed += dt;
   // Challenger/practice-timer-based: advance separate timer (paused during boss), trigger milestones
   if(timerMode() && state===ST.PLAY){
@@ -3104,10 +3110,12 @@ function update(dt){
     if(e.hp<=0 && !e.lead){   // duo partner (e.lead) is never killed on its own -> damage routes to the lead
       enemies.splice(i,1);
       kills++; setKillHUD();
+      if(typeof engageOnKill === 'function') engageOnKill();
       if(typeof fireHook==='function') fireHook('onKill', e);
       sfx.hit();
       if(deathShakeOn) shake=Math.max(shake,e.isBoss?16:8);
       if(e.isBoss && typeof haptic === 'function') haptic('boss');
+      if(e.isBoss && typeof engageOnBossKill === 'function') engageOnBossKill();
       // Hit-stop only on boss kills. Normal kills are constant in a survivor game, so freezing the
       // sim 50ms each one stacked into near-continuous choppiness — feedback comes from burst+sfx instead.
       hitstop=Math.max(hitstop,e.isBoss?0.06:0);
@@ -3384,6 +3392,7 @@ function damageEnemy(e,dmg,fx,fy,crit){
     if(P.showstopper && !crit){ dmg *= P.critMul; crit=true; }                // Showstopper: jackpots also crit
     floatText(e.x,e.y-e.r-20,'JACKPOT!','#ffd24a',16);
     if(typeof haptic === 'function') haptic('jackpot');
+    if(typeof engageOnJackpot === 'function') engageOnJackpot();
   }
   e.hp -= dmg; e.hitT=0.12; e.sq=1;
   if(!e.isBoss && !e.under && fx!=null && fy!=null && !(fx===e.x && fy===e.y)){   // small knockback away from the hit source
@@ -5626,8 +5635,11 @@ $('goldicon').src = SP['coin'].toDataURL();
 $('goldtxt').textContent = fmtNum(gold);
 // top resource bar: a "player level" badge from worlds unlocked + a progress fill + gold
 function refreshTopbar(){
-  const lv=$('topLvl'); if(lv) lv.textContent = unlockedMax+1;
-  const xf=$('topxpfill'); if(xf) xf.style.width = Math.round(((unlockedMax+1)/WORLDS.length)*100)+'%';
+  if(typeof refreshSwarmRankUI === 'function') refreshSwarmRankUI();
+  else {
+    const lv=$('topLvl'); if(lv) lv.textContent = unlockedMax+1;
+    const xf=$('topxpfill'); if(xf) xf.style.width = Math.round(((unlockedMax+1)/WORLDS.length)*100)+'%';
+  }
   const gt=$('goldtxt'); if(gt) gt.textContent = fmtNum(typeof gold!=='undefined'?gold:0);
 }
 refreshTopbar();
@@ -5999,6 +6011,7 @@ $('wnext').addEventListener('click', ()=>{
 });
 refreshWorldSel();
 refreshRunResumeUI();
+if(typeof refreshDailyBountiesUI === 'function') refreshDailyBountiesUI();
 $('retrybtn').addEventListener('click', startGame);
 $('wc-continue').addEventListener('click', ()=>{
   $('world-cleared').classList.add('hidden');

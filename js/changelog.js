@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.71';
+const CURRENT_VERSION = '1.72';
 const CHANGELOG = [
+  { v: '1.72', notes: 'Retention update: kill combos (MULTI-KILL → SWARM GOD) with bonus coins, mid-run milestones, synergy unlock fanfare, Swarm Rank meta XP on the top bar, daily bounties on the Battle tab, achievements, and a richer game-over debrief with personal bests.' },
   { v: '1.71', notes: 'Zoom fix: + now gives one modest step in from default (no more extreme zoom). Extra zoom-out level added. Run continue now survives fully closing the app — autosaves every 5s and on app kill, and the Continue button shows correctly on cold start.' },
   { v: '1.70', notes: 'Haptic feedback on dash, hits, level-up, evolve, jackpot, boss kills, and more — toggle in Settings → Gameplay. Quit to menu or background the app mid-run and your progress is saved: Battle tab shows Continue or Start New.' },
   { v: '1.69', notes: 'Full UI polish: menus, shop, characters, equipment, pets, settings, and popups now use the same dark survivor card theme as in-round skill picks. Unified design tokens, Baloo 2 font, richer menu gradient, slate topbar, and improved tablet/desktop layouts (wider grids, larger modals).' },

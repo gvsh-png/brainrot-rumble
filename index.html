@@ -50,6 +50,10 @@
     <div class="xpbar"><div id="xpfill"></div></div>
     <div id="lvbadge">1</div>
   </div>
+  <div id="comborow" class="hidden">
+    <div class="combobar"><div id="combofill"></div></div>
+    <span id="combotag">0 COMBO</span>
+  </div>
   <div id="bossbar" class="hidden">
     <div id="bossname">BOSS</div>
     <div class="bar"><div id="bossfill"></div></div>
@@ -58,6 +62,8 @@
 </div>
 <div id="bosswarn" class="hidden">BOSS!</div>
 <div id="chaos-announce" class="hidden"></div>
+<div id="synergy-banner" class="hidden"></div>
+<div id="ach-toast" class="hidden"></div>
 <div id="dashbtn" class="hidden">DASH</div>
 <div id="zoomctl" class="hidden">
   <button id="zoomin" type="button">+</button>
@@ -140,6 +146,10 @@
   <div id="tabview">
     <!-- BATTLE -->
     <div id="tab-battle" class="tabpanel">
+      <div id="daily-bounties" class="daily-bounties">
+        <div class="db-title">DAILY BOUNTIES <span class="db-sub">resets midnight UTC</span></div>
+        <div id="daily-bounty-list"></div>
+      </div>
       <div id="worldsel">
         <button id="wprev" type="button" aria-label="Previous world">◀</button>
         <span id="wname">WORLD 1 · GRASSLANDS</span>
@@ -193,7 +203,7 @@
   <div id="tabbar">
     <button class="tabbtn" type="button" data-tab="shop"><img class="tabico" data-ic="ic_shop" alt=""><span class="tablbl">Shop</span><span class="tabbadge hidden" id="shopbadge">!</span></button>
     <button class="tabbtn" type="button" data-tab="pets"><img class="tabico" data-ic="ic_pet" alt=""><span class="tablbl">Pets</span><span class="tabbadge hidden" id="petbadge">0</span></button>
-    <button class="tabbtn center active" type="button" data-tab="battle"><img class="tabico" data-ic="ic_battle" alt=""><span class="tablbl">Battle</span></button>
+    <button class="tabbtn center active" type="button" data-tab="battle"><img class="tabico" data-ic="ic_battle" alt=""><span class="tablbl">Battle</span><span class="tabbadge hidden" id="bountybadge">!</span></button>
     <button class="tabbtn" type="button" data-tab="character"><img class="tabico" data-ic="ic_char" alt=""><span class="tablbl">Character</span><span class="tabbadge hidden" id="charbadge">0</span></button>
     <button class="tabbtn" type="button" data-tab="inventory"><img class="tabico" data-ic="ic_bag" alt=""><span class="tablbl">Equipment</span><span class="tabbadge hidden" id="invbadge">0</span></button>
   </div>
@@ -226,6 +236,8 @@
       reached <b id="fwave">wave 1</b><br>
       coins collected <b id="fcoins">0</b><br>
       enemies cleared <b id="fkills">0</b>
+      <div id="go-extra" class="go-extra hidden"></div>
+      <div id="go-rank" class="go-rank hidden"></div>
     </div>
     <button class="bigbtn green" id="retrybtn">PLAY AGAIN</button>
   </div>
@@ -345,6 +357,7 @@
 <script src="js/characters.js"></script>
 <script src="js/pets.js"></script>
 <script src="js/recruit.js"></script>
+<script src="js/engagement.js"></script>
 
 <!-- Game scripts: classic (non-module) so they share globals and run from file:// too.
      Load order matters: core defines shared helpers/state used by the rest. -->
