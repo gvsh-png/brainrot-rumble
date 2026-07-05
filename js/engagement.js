@@ -1,13 +1,6 @@
 'use strict';
-// Retention loops: kill combos, daily bounties, swarm rank, achievements, run debrief.
+// Retention loops: daily bounties, swarm rank, achievements, run debrief.
 
-const COMBO_WINDOW = 1.35;
-const COMBO_TIERS = [
-  { n: 5,  label: 'MULTI-KILL!',  col: '#9fe0ff', coins: 8 },
-  { n: 10, label: 'RAMPAGE!',     col: '#ffe08a', coins: 15 },
-  { n: 20, label: 'UNSTOPPABLE!', col: '#ff7a3a', coins: 30 },
-  { n: 35, label: 'SWARM GOD!',   col: '#ff5acd', coins: 50 },
-];
 const RANK_TITLES = ['Hatchling','Swarmling','Hunter','Stinger','Reaper','Apex','Overlord','Legend'];
 
 const BOUNTY_POOL = [
@@ -18,15 +11,13 @@ const BOUNTY_POOL = [
   { id: 'w12',   label: 'Reach wave 12 in a run',   track: 'wave',    target: 12,  reward: { gems: 2 } },
   { id: 'boss1', label: 'Defeat a boss today',      track: 'bosses',  target: 1,   reward: { gold: 200 } },
   { id: 'boss3', label: 'Defeat 3 bosses today',    track: 'bosses',  target: 3,   reward: { gems: 3 } },
-  { id: 'combo12', label: 'Hit a 12-kill combo',    track: 'combo',   target: 12,  reward: { gold: 240 } },
+  { id: 'k75',   label: 'Slay 75 foes today',       track: 'kills',   target: 75,  reward: { gold: 240 } },
   { id: 'coins600', label: 'Earn 600 coins today',  track: 'coins',   target: 600, reward: { gems: 2 } },
   { id: 'evo2',  label: 'Evolve 2 skills today',    track: 'evolves', target: 2,   reward: { gold: 280 } },
 ];
 
 const ACHIEVEMENTS = [
   { id: 'first_run',   name: 'First Blood',      desc: 'Finish your first run.', check: s => s.runs >= 1 },
-  { id: 'combo15',     name: 'Multi-Murderer',   desc: 'Reach a 15-kill combo.', check: s => s.bestCombo >= 15 },
-  { id: 'combo30',     name: 'Swarm Hurricane',  desc: 'Reach a 30-kill combo.', check: s => s.bestCombo >= 30 },
   { id: 'wave10',      name: 'Wave Rider',       desc: 'Reach wave 10.', check: s => s.bestWave >= 10 },
   { id: 'wave18',      name: 'Deep Diver',       desc: 'Reach wave 18.', check: s => s.bestWave >= 18 },
   { id: 'boss5',       name: 'Boss Bully',       desc: 'Defeat 5 bosses total.', check: s => s.totalBosses >= 5 },
@@ -38,11 +29,10 @@ const ACHIEVEMENTS = [
   { id: 'surv10',      name: 'Iron Will',        desc: 'Survive 10 minutes in one run.', check: s => s.bestSurvive >= 600 },
 ];
 
-let comboCount = 0, comboTimer = 0, comboAnnounced = 0;
-let runEng = { jackpots: 0, evolves: 0, bosses: 0, synergies: 0, maxCombo: 0 };
+let runEng = { jackpots: 0, evolves: 0, bosses: 0, synergies: 0 };
 let runMilestones = new Set();
 let swarmRank = 1, swarmXp = 0;
-let engageStats = { runs: 0, bestCombo: 0, bestWave: 0, bestSurvive: 0, totalBosses: 0, totalSynergies: 0, bountiesDone: 0 };
+let engageStats = { runs: 0, bestWave: 0, bestSurvive: 0, totalBosses: 0, totalSynergies: 0, bountiesDone: 0 };
 let unlockedAch = new Set();
 
 function _dailyKey(){
@@ -117,64 +107,13 @@ function grantSwarmXp(n){
 }
 
 function resetRunEngagement(){
-  comboCount = 0; comboTimer = 0; comboAnnounced = 0;
-  runEng = { jackpots: 0, evolves: 0, bosses: 0, synergies: 0, maxCombo: 0 };
+  runEng = { jackpots: 0, evolves: 0, bosses: 0, synergies: 0 };
   runMilestones = new Set();
-  const row = $('comborow'); if(row) row.classList.add('hidden');
-}
-
-function _updateComboHUD(){
-  const row = $('comborow'), fill = $('combofill'), tag = $('combotag');
-  if(!row) return;
-  if(comboCount < 2 || typeof state === 'undefined' || state !== ST.PLAY){
-    row.classList.add('hidden');
-    return;
-  }
-  row.classList.remove('hidden');
-  const tier = COMBO_TIERS[COMBO_TIERS.length - 1];
-  let next = COMBO_TIERS[0];
-  for(const t of COMBO_TIERS){ if(comboCount >= t.n) next = t; }
-  const prevN = COMBO_TIERS.filter(t => t.n <= comboCount).pop();
-  const prev = prevN ? prevN.n : 0;
-  const nxt = COMBO_TIERS.find(t => t.n > comboCount);
-  const denom = nxt ? (nxt.n - prev) : 1;
-  const num = nxt ? (comboCount - prev) : 1;
-  if(fill) fill.style.width = Math.round(Math.min(1, num / denom) * 100) + '%';
-  if(tag) tag.textContent = comboCount + ' COMBO';
-}
-
-function tickCombo(dt){
-  if(comboTimer > 0){
-    comboTimer -= dt;
-    if(comboTimer <= 0){ comboCount = 0; comboAnnounced = 0; }
-  }
-  _updateComboHUD();
 }
 
 function engageOnKill(){
   if(gameMode === 'practice') return;
-  comboCount++;
-  comboTimer = COMBO_WINDOW;
-  runEng.maxCombo = Math.max(runEng.maxCombo, comboCount);
-  engageStats.bestCombo = Math.max(engageStats.bestCombo, comboCount);
-  for(const t of COMBO_TIERS){
-    if(comboCount === t.n && comboAnnounced < t.n){
-      comboAnnounced = t.n;
-      if(typeof bigText === 'function') bigText(t.label, t.col);
-      if(typeof shake !== 'undefined') shake = Math.max(shake, 5 + t.n * 0.2);
-      if(typeof sfx !== 'undefined' && sfx.coin) sfx.coin();
-      if(typeof haptic === 'function') haptic('light');
-      if(typeof worldCoins !== 'undefined'){
-        worldCoins += t.coins;
-        if(typeof gold !== 'undefined'){ gold += t.coins; if(typeof saveGold === 'function') saveGold(); }
-        if(typeof setCoinHUD === 'function') setCoinHUD();
-        if(typeof floatText === 'function' && typeof P !== 'undefined') floatText(P.x, P.y - 50, '+' + t.coins + ' combo', t.col, 14);
-      }
-      tickDailyProgress('combo', comboCount, true);
-    }
-  }
   tickDailyProgress('kills', 1, false);
-  _updateComboHUD();
   checkRunMilestones();
 }
 
@@ -325,7 +264,6 @@ function toastAchievement(a){
 function checkAchievements(ctx){
   ctx = Object.assign({
     runs: engageStats.runs,
-    bestCombo: Math.max(engageStats.bestCombo, runEng.maxCombo),
     bestWave: engageStats.bestWave,
     bestSurvive: engageStats.bestSurvive,
     totalBosses: engageStats.totalBosses,
@@ -344,7 +282,6 @@ function checkAchievements(ctx){
 }
 
 function engageTick(dt){
-  tickCombo(dt);
   if(gameMode === 'practice' || typeof state === 'undefined' || state !== ST.PLAY) return;
   const surv = timerMode() ? (typeof chalElapsed !== 'undefined' ? chalElapsed : elapsed) : elapsed;
   engageStats.bestSurvive = Math.max(engageStats.bestSurvive, surv);
@@ -358,23 +295,21 @@ function finishRunEngagement(reason){
   const surv = timerMode() ? chalElapsed : elapsed;
   engageStats.bestSurvive = Math.max(engageStats.bestSurvive, surv);
   engageStats.bestWave = Math.max(engageStats.bestWave, wave);
-  engageStats.bestCombo = Math.max(engageStats.bestCombo, runEng.maxCombo);
 
   tickDailyProgress('coins', worldCoins, false);
 
   const bests = JSON.parse(localStorage.getItem('br_run_bests') || '{}');
   const modeKey = gameMode + '_w' + worldIdx;
-  const prev = bests[modeKey] || { kills: 0, wave: 0, survive: 0, combo: 0 };
+  const prev = bests[modeKey] || { kills: 0, wave: 0, survive: 0 };
   const curWave = timerMode() ? Math.floor(surv / 60) : wave;
   const lines = [];
   if(kills > prev.kills){ prev.kills = kills; lines.push('Kills — new best!'); }
   if(curWave > prev.wave){ prev.wave = curWave; lines.push(timerMode() ? 'Time — new best!' : 'Wave — new best!'); }
   if(surv > prev.survive){ prev.survive = surv; }
-  if(runEng.maxCombo > prev.combo){ prev.combo = runEng.maxCombo; lines.push('Combo — new best!'); }
   bests[modeKey] = prev;
   try{ localStorage.setItem('br_run_bests', JSON.stringify(bests)); }catch(e){}
 
-  const xp = Math.floor(kills * 2 + surv * 1.5 + wave * 6 + runEng.maxCombo * 3 + runEng.bosses * 25);
+  const xp = Math.floor(kills * 2 + surv * 1.5 + wave * 6 + runEng.bosses * 25);
   const gained = grantSwarmXp(xp);
 
   saveEngageStats();
@@ -384,7 +319,6 @@ function finishRunEngagement(reason){
     xp: gained,
     lines,
     stats: [
-      'Best combo: ' + runEng.maxCombo,
       runEng.jackpots ? ('Jackpots: ' + runEng.jackpots) : null,
       runEng.evolves ? ('Evolves: ' + runEng.evolves) : null,
       runEng.bosses ? ('Bosses: ' + runEng.bosses) : null,

@@ -248,25 +248,66 @@ html.is-native-android, html.is-native-android body {
   font-weight:900; font-size:clamp(17px,3.4vmin,28px); letter-spacing:.5px; box-shadow:var(--shadow-card); }
 .shopsub { text-align:center; color:var(--text); font-weight:800; font-size:clamp(11px,2vmin,16px); text-shadow:0 1px 0 rgba(0,0,0,.35); margin-top:-2px; }
 
-/* BATTLE tab — mobile-first grid: world header → hero stage → compact bounties → actions */
+/* BATTLE tab — mobile-first grid: centered header → hero stage → sidebar stack */
 #tab-battle {
   display:grid;
-  grid-template-rows:auto auto minmax(clamp(148px,34vh,320px),1fr) auto auto;
-  gap:clamp(4px,1vmin,8px);
+  grid-template-rows:auto minmax(clamp(140px,30vh,280px),1fr) auto;
+  gap:clamp(5px,1.1vmin,10px);
   flex:1; min-height:0; width:100%; align-content:stretch; align-items:stretch;
   padding-bottom:clamp(2px,0.8vmin,6px); overflow:hidden;
 }
-#worldsel { display:flex; align-items:center; gap:clamp(6px,1.6vmin,14px); margin-top:0; flex-shrink:0; }
+.world-header {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  width:100%; text-align:center; flex-shrink:0;
+}
+#worldsel {
+  display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center;
+  justify-content:center; width:100%; max-width:min(100%,520px);
+  gap:clamp(8px,2vmin,16px); margin:0;
+}
 #worldsel button { background:var(--slate-mid); color:var(--text); border:var(--border-card); border-radius:12px; cursor:pointer;
-  width:clamp(32px,5vmin,42px); height:clamp(32px,5vmin,42px); font-weight:900; font-size:clamp(14px,2.4vmin,20px); box-shadow:var(--shadow-card); }
+  width:clamp(34px,5.2vmin,44px); height:clamp(34px,5.2vmin,44px); font-weight:900; font-size:clamp(14px,2.4vmin,20px); box-shadow:var(--shadow-card); }
 #worldsel button:disabled { opacity:.4; cursor:default; box-shadow:none; }
-#wname { font-weight:900; color:var(--text); -webkit-text-stroke:1.2px var(--ink); text-shadow:0 3px 0 rgba(0,0,0,.35);
-  font-size:clamp(16px,3.8vmin,30px); text-align:center; width:clamp(140px,28vmin,280px); line-height:1.05;
-  min-height:2.2em; display:flex; align-items:center; justify-content:center; }
-.worldsub { color:var(--text-muted); font-weight:800; font-size:clamp(10px,1.9vmin,15px); text-shadow:0 2px 0 rgba(0,0,0,.3);
-  margin:0; white-space:nowrap; text-align:center; flex-shrink:0; }
+#wname {
+  font-weight:900; color:var(--text); -webkit-text-stroke:1.2px var(--ink); text-shadow:0 3px 0 rgba(0,0,0,.35);
+  font-size:clamp(15px,3.4vmin,28px); text-align:center; line-height:1.08;
+  min-height:0; display:flex; align-items:center; justify-content:center;
+  width:100%; min-width:0; padding:0 2px;
+}
+.worldsub { color:var(--text-muted); font-weight:800; font-size:clamp(10px,1.9vmin,14px); text-shadow:0 2px 0 rgba(0,0,0,.3);
+  margin:3px 0 0; white-space:nowrap; text-align:center; flex-shrink:0; }
+.battle-sidebar {
+  display:flex; flex-direction:column; align-items:center; gap:clamp(6px,1.2vmin,10px);
+  width:100%; flex-shrink:0;
+}
+.battle-hub {
+  width:100%; max-width:clamp(280px,92vmin,460px);
+  padding:8px 10px; border:2px solid #2a1c10; border-radius:14px;
+  background:linear-gradient(180deg, rgba(28,34,48,0.92), rgba(16,20,30,0.96));
+  box-shadow:0 3px 0 #0a0e14;
+}
+.hub-rank { margin-bottom:6px; }
+.hub-rank-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.hub-rank-lbl { font-weight:900; font-size:clamp(9px,1.7vmin,12px); color:#b06ff0; letter-spacing:.06em; }
+.hub-rank-num { font-weight:900; font-size:clamp(14px,2.6vmin,20px); color:#9fe0ff; }
+.hub-rank-title { font-weight:900; font-size:clamp(16px,3.2vmin,24px); color:var(--text); line-height:1.1; margin-top:2px; }
+.hub-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:6px; }
+.hub-chip {
+  background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.08); border-radius:10px;
+  padding:5px 4px; text-align:center;
+}
+.hub-chip-v { display:block; font-weight:900; font-size:clamp(13px,2.4vmin,18px); color:#ffe08a; line-height:1.1; }
+.hub-chip-l { display:block; font-weight:800; font-size:clamp(8px,1.5vmin,11px); color:var(--text-muted); margin-top:2px; }
+.hub-blurb { margin:0 0 6px; font-weight:700; font-size:clamp(10px,1.9vmin,13px); color:var(--text-muted); line-height:1.35; text-align:center; }
+.hub-quick { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; }
+.hub-link {
+  border:2px solid #2a1c10; border-radius:10px; padding:6px 2px;
+  background:var(--slate-mid); color:var(--text); font-weight:900;
+  font-size:clamp(9px,1.7vmin,12px); cursor:pointer; box-shadow:0 3px 0 rgba(0,0,0,0.35);
+}
+.hub-link:active { transform:translateY(2px); box-shadow:0 1px 0 rgba(0,0,0,0.35); }
 .daily-bounties {
-  width:100%; max-width:clamp(280px,92vmin,460px); margin:0 auto; flex-shrink:0;
+  width:100%; max-width:clamp(280px,92vmin,460px); margin:0; flex-shrink:0;
   padding:6px 10px; border:2px solid #2a1c10; border-radius:12px;
   background:linear-gradient(180deg, rgba(22,28,38,0.9), rgba(14,18,26,0.95));
   box-shadow:0 3px 0 #0a0e14;
@@ -289,7 +330,7 @@ html.is-native-android, html.is-native-android body {
 .db-reward { grid-column:2; grid-row:1 / span 2; font-size:clamp(9px,1.7vmin,11px); font-weight:900; color:#f5c542; white-space:nowrap; align-self:center; }
 #worldsel.reveal { animation:wreveal 1.4s ease; }
 @keyframes wreveal { 0%{ transform:scale(0.7); filter:brightness(2); } 40%{ transform:scale(1.12); } 100%{ transform:scale(1); } }
-#stage { position:relative; min-height:clamp(148px,34vh,320px); height:100%; margin:0; align-self:stretch;
+#stage { position:relative; min-height:clamp(140px,30vh,280px); height:100%; margin:0; align-self:stretch;
   display:flex; align-items:center; justify-content:center; border:var(--border-card); border-radius:var(--radius-lg); overflow:hidden;
   background:linear-gradient(180deg, rgba(43,53,80,.55), rgba(26,35,54,.75)); box-shadow:var(--shadow-panel), inset 0 0 0 2px rgba(255,255,255,.06); }
 #charplat { position:absolute; bottom:10%; width:clamp(100px,26vmin,220px); height:clamp(22px,5vmin,48px);
@@ -697,10 +738,6 @@ html.is-native-android, html.is-native-android body {
 #lvbadge { flex:0 0 auto; min-width:clamp(30px,5.4vmin,44px); height:clamp(26px,4.6vmin,38px); padding:0 8px;
   display:flex; align-items:center; justify-content:center; background:#fbf3df; border:3px solid #3a2d22; border-radius:11px;
   color:#3a2d22; font-weight:900; font-size:clamp(15px,2.7vmin,23px); box-shadow:0 3px 0 rgba(58,45,34,0.3); }
-#comborow { display:flex; align-items:center; gap:8px; margin-top:5px; max-width:clamp(380px,94vmin,760px); margin-left:auto; margin-right:auto; }
-.combobar { flex:1; height:10px; border-radius:8px; background:rgba(0,0,0,0.45); border:2px solid rgba(255,255,255,0.15); overflow:hidden; }
-#combofill { height:100%; width:0%; background:linear-gradient(90deg,#ff7a3a,#ffd24a); transition:width .1s; }
-#combotag { font-weight:900; font-size:clamp(11px,2vmin,16px); color:#ffd24a; text-shadow:0 1px 0 #3a2d22; white-space:nowrap; }
 #bossbar { margin-top:7px; pointer-events:none; max-width:clamp(380px,94vmin,760px); margin-left:auto; margin-right:auto; }
 #bossname { text-align:center; font-weight:900; color:#fff; -webkit-text-stroke:.5px #3a2d22; text-shadow:0 2px 0 rgba(58,45,34,0.6); font-size:clamp(13px,2.5vmin,23px); margin-bottom:3px; letter-spacing:.5px; }
 #bossbar .bar { border-color:#7a1f1f; }
@@ -1267,18 +1304,19 @@ html.is-native-android, html.is-native-android body {
   #tab-battle:not(.hidden) {
     display:grid;
     grid-template-areas:
-      "world  act"
-      "sub    act"
-      "stage  act"
-      "bount  act";
-    grid-template-columns:1fr clamp(220px,23vw,310px);
-    grid-template-rows:auto auto 1fr auto;
-    gap:clamp(10px,1.4vw,18px);
-    padding:clamp(22px,2.6vw,38px);
+      "head head"
+      "stage side";
+    grid-template-columns:minmax(0,1.1fr) minmax(240px,0.9fr);
+    grid-template-rows:auto minmax(clamp(260px,44vh,520px),1fr);
+    gap:clamp(12px,1.8vw,20px);
+    padding:clamp(14px,2.2vw,28px);
     flex:1; min-height:0;
   }
-
-  #daily-bounties { grid-area:bount; align-self:start; max-width:none; margin:0; }
+  .world-header { grid-area:head; }
+  #stage { grid-area:stage; min-height:clamp(260px,44vh,520px); margin:0; }
+  .battle-sidebar { grid-area:side; align-self:stretch; justify-content:flex-start; max-width:none; }
+  .battle-hub, .daily-bounties, .run-resume, .startbtn, .gamemodebtn { max-width:none; width:100%; }
+  #menubot { width:100%; }
 
   /* World selector — centered row above stage */
   #worldsel {

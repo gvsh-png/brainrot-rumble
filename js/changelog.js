@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.73';
+const CURRENT_VERSION = '1.74';
 const CHANGELOG = [
+  { v: '1.74', notes: 'Removed the kill combo system (MULTI-KILL tiers, combo bar, combo bounties/achievements, and combo debrief stats). Daily bounties, Swarm Rank, milestones, and the rest of the retention features stay.' },
   { v: '1.73', notes: 'Battle tab layout fix: world preview is the hero again (guaranteed min height), daily bounties are a compact strip below the stage, and Continue/New Run buttons sit side-by-side so nothing crushes the world emblem.' },
   { v: '1.72', notes: 'Retention update: kill combos (MULTI-KILL → SWARM GOD) with bonus coins, mid-run milestones, synergy unlock fanfare, Swarm Rank meta XP on the top bar, daily bounties on the Battle tab, achievements, and a richer game-over debrief with personal bests.' },
   { v: '1.71', notes: 'Zoom fix: + now gives one modest step in from default (no more extreme zoom). Extra zoom-out level added. Run continue now survives fully closing the app — autosaves every 5s and on app kill, and the Continue button shows correctly on cold start.' },

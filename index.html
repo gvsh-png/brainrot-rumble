@@ -50,10 +50,6 @@
     <div class="xpbar"><div id="xpfill"></div></div>
     <div id="lvbadge">1</div>
   </div>
-  <div id="comborow" class="hidden">
-    <div class="combobar"><div id="combofill"></div></div>
-    <span id="combotag">0 COMBO</span>
-  </div>
   <div id="bossbar" class="hidden">
     <div id="bossname">BOSS</div>
     <div class="bar"><div id="bossfill"></div></div>
@@ -146,21 +142,42 @@
   <div id="tabview">
     <!-- BATTLE -->
     <div id="tab-battle" class="tabpanel">
-      <div id="worldsel">
-        <button id="wprev" type="button" aria-label="Previous world">◀</button>
-        <span id="wname">WORLD 1 · GRASSLANDS</span>
-        <button id="wnext" type="button" aria-label="Next world">▶</button>
+      <div class="world-header">
+        <div id="worldsel">
+          <button id="wprev" type="button" aria-label="Previous world">◀</button>
+          <span id="wname">WORLD 1 · GRASSLANDS</span>
+          <button id="wnext" type="button" aria-label="Next world">▶</button>
+        </div>
+        <div class="worldsub" id="worldsub">survive the swarm</div>
       </div>
-      <div class="worldsub" id="worldsub">survive the swarm</div>
       <div id="stage">
         <div id="charplat"></div>
         <img id="charimg" draggable="false" alt="">
       </div>
-      <div id="daily-bounties" class="daily-bounties">
-        <div class="db-title">DAILY BOUNTIES <span class="db-sub">UTC midnight</span></div>
-        <div id="daily-bounty-list"></div>
-      </div>
-      <div id="menubot">
+      <div class="battle-sidebar">
+        <div id="battle-hub" class="battle-hub">
+          <div class="hub-rank">
+            <div class="hub-rank-top"><span class="hub-rank-lbl">SWARM RANK</span><span class="hub-rank-num" id="hub-rank-num">1</span></div>
+            <div class="hub-rank-title" id="hub-rank-title">Hatchling</div>
+          </div>
+          <div class="hub-stats">
+            <div class="hub-chip"><span class="hub-chip-v" id="hub-best-wave">0</span><span class="hub-chip-l">Best wave</span></div>
+            <div class="hub-chip"><span class="hub-chip-v" id="hub-bosses">0</span><span class="hub-chip-l">Bosses</span></div>
+            <div class="hub-chip"><span class="hub-chip-v" id="hub-bounties">0</span><span class="hub-chip-l">Bounties</span></div>
+          </div>
+          <p class="hub-blurb" id="hub-blurb">Rolling hills — learn the swarm.</p>
+          <div class="hub-quick">
+            <button type="button" class="hub-link" data-goto="shop">Shop</button>
+            <button type="button" class="hub-link" data-goto="character">Hero</button>
+            <button type="button" class="hub-link" data-goto="pets">Pets</button>
+            <button type="button" class="hub-link" data-goto="inventory">Gear</button>
+          </div>
+        </div>
+        <div id="daily-bounties" class="daily-bounties">
+          <div class="db-title">DAILY BOUNTIES <span class="db-sub">UTC midnight</span></div>
+          <div id="daily-bounty-list"></div>
+        </div>
+        <div id="menubot">
         <button class="gamemodebtn" id="gamemodebtn" type="button"><span class="gmlbl">GAMEMODE</span></button>
         <div id="run-resume" class="run-resume hidden">
           <div class="run-resume-box">
@@ -176,6 +193,7 @@
         </div>
         <button class="startbtn" id="startbtn"><span class="startlbl">START</span></button>
         <div class="hint">drag to move • auto-fire • survive the waves</div>
+        </div>
       </div>
     </div>
 
