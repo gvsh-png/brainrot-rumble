@@ -135,7 +135,7 @@ test('selling one duplicate removes only one copy and pays 40 percent refund', (
   sandbox.addGearInstance('dmg_common_0');
   sandbox.sellGearInstance(a.uid);
 
-  assert.equal(sandbox.gold, 8);
+  assert.equal(sandbox.gold, 4);
   const owned = sandbox.ownedGearList();
   assert.equal(owned.length, 1);
   assert.equal(owned[0].itemId, 'dmg_common_0');

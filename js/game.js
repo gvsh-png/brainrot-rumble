@@ -178,6 +178,12 @@ function dropOrb(x,y,tier,smin=90,smax=210){
 // global HP scale: enemies have 10x HP and the player does 10x damage, so the
 // numbers are big enough that % upgrades (e.g. +25%) visibly change the damage.
 const HP_MULT = 10;
+// Compact display for large economy numbers (shop prices, gold HUD, etc.)
+function fmtNum(n){
+  n = Math.round(+n || 0);
+  if(Math.abs(n) >= 10000) return Math.round(n / 1000) + 'k';
+  return String(n);
+}
 // ---- concurrency caps (perf + readability): keep specials few but make them buffy ----
 const MAX_ENEMIES  = IS_TOUCH ? 55 : 90;   // global hard cap on live actors (bosses are few, so this is ~enemies)
 const MAX_SHOOTERS = 14;                    // foes with any `shoot` attack
@@ -261,7 +267,13 @@ function worldDmgMul(){
 }
 function chalDmgMul(){ return gameMode==='challenger' ? 1.3 + worldBand()*0.08 : 1; }   // challenger: enemies hit harder, ramps with world
 function worldHpBand(){ return typeof extBandMul==='function' ? extBandMul(0.42, 9) : 1 + worldBand()*0.42; }
-function worldCoinMul(){ return typeof extBandMul==='function' ? extBandMul(0.22, 9) : 1 + worldBand()*0.22; }
+function worldCoinMul(){
+  const b = worldBand();
+  let mul = typeof extBandMul==='function' ? extBandMul(0.32, 9) : 1 + b * 0.32;
+  const wi = typeof worldIdx === 'number' ? worldIdx : 0;
+  if(wi > 10) mul *= 1 + (wi - 10) * 0.055;
+  return mul;
+}
 // coins are scarce early; from wave 20 on they pay out a little more (capped at 3x)
 function coinMult(){ return Math.min(3, wave < 20 ? 1 : 1 + (wave-19)*0.1); }
 // ---- enemy archetypes (ordered easy -> hard) ----
@@ -2991,7 +3003,7 @@ function update(dt){
     if(d < (P.r+12)*(P.r+12)){
       gems.splice(i,1);
       if(g.heart){ const h=g.heal||(g.big?50:25); P.hp=Math.min(P.maxHp,P.hp+h); floatText(P.x,P.y-24,'+'+h,'#e8556a',g.big?20:16); burst(P.x,P.y,'#ff97a6',g.big?14:8,140); sfx.coin(); }
-      else if(g.coin){ const v=Math.round(5*(P.goldMul||1)*coinMult()*worldCoinMul()*(gameMode==='challenger'?Math.min(3.5,1.3+worldIdx*0.3):1)); worldCoins+=v; if(gameMode!=='practice'){ gold+=v; saveGold(); if(window.markDirty) window.markDirty(); } setCoinHUD(); floatText(g.x,g.y,'+'+v,'#f5c542',13); sfx.coin(); }
+      else if(g.coin){ const v=Math.round(8*(P.goldMul||1)*coinMult()*worldCoinMul()*(gameMode==='challenger'?Math.min(3.5,1.3+worldIdx*0.3):1)); worldCoins+=v; if(gameMode!=='practice'){ gold+=v; saveGold(); if(window.markDirty) window.markDirty(); } setCoinHUD(); floatText(g.x,g.y,'+'+fmtNum(v),'#f5c542',13); sfx.coin(); }
       else if(g.magnet){ for(const o of gems) o.vac=true; floatText(P.x,P.y-24,'MAGNET','#9fe0ff',16); burst(P.x,P.y,'#9fe0ff',12,160); sfx.level(); }   // pull in every pickup on the map
       else { gainXp(g.v); sfx.gem(2); }
     }
@@ -5288,12 +5300,12 @@ document.body.style.background = curTheme.bg;
 // populate the main menu (world emblem on the Battle stage + saved gold)
 setStageEmblem(selWorld);
 $('goldicon').src = SP['coin'].toDataURL();
-$('goldtxt').textContent = gold;
+$('goldtxt').textContent = fmtNum(gold);
 // top resource bar: a "player level" badge from worlds unlocked + a progress fill + gold
 function refreshTopbar(){
   const lv=$('topLvl'); if(lv) lv.textContent = unlockedMax+1;
   const xf=$('topxpfill'); if(xf) xf.style.width = Math.round(((unlockedMax+1)/WORLDS.length)*100)+'%';
-  const gt=$('goldtxt'); if(gt) gt.textContent = gold;
+  const gt=$('goldtxt'); if(gt) gt.textContent = fmtNum(typeof gold!=='undefined'?gold:0);
 }
 refreshTopbar();
 // wire house-drawn icons into static markup (tab bar, kill counter, ...)

@@ -36,7 +36,7 @@ const RAR = {}, RAR_ORDER = [];
 for(let i=0;i<RAR_LADDER.length;i++){
   const [id,name]=RAR_LADDER[i];
   RAR_ORDER.push(id);
-  RAR[id] = { name, color:tierColor(i,RAR_LADDER.length), price:Math.round(20*Math.pow(1.28,i)) };
+  RAR[id] = { name, color:tierColor(i,RAR_LADDER.length), price:Math.round(10*Math.pow(1.145,i)) };
 }
 
 function buildTierVals(start, epicVal, maxVal, opts={}){
@@ -50,8 +50,8 @@ function buildTierVals(start, epicVal, maxVal, opts={}){
   return vals;
 }
 const STAT = {
-  dmg:   { label:'damage',        short:'DMG', icon:'coin',   flat:true, vals:buildTierVals(2,32,140) },
-  hp:    { label:'max HP',        short:'HP',  icon:'heart',  flat:true, vals:buildTierVals(8,100,400) },
+  dmg:   { label:'damage',        short:'DMG', icon:'coin',   flat:true, vals:buildTierVals(2,32,280) },
+  hp:    { label:'max HP',        short:'HP',  icon:'heart',  flat:true, vals:buildTierVals(8,100,520) },
   speed: { label:'move speed',    short:'SPD', icon:'heart',  vals:buildTierVals(0.02,0.08,0.28,{flat:false}) },
   range: { label:'attack range',  short:'RNG', icon:'gem',    vals:buildTierVals(0.04,0.16,0.55,{flat:false}) },
   crit:  { label:'crit chance',   short:'CRT', icon:'coin',   vals:buildTierVals(0.01,0.05,0.18,{flat:false}) },
@@ -113,9 +113,9 @@ function gaussOdds(center, spread){
   return odds;
 }
 const CRATES = {
-  wood:   { name:'Wooden Crate', price:35,   glow:'#9aa3af', odds:gaussOdds(4, 4.5) },
-  silver: { name:'Silver Crate', price:220,  glow:'#bcd0e0', odds:gaussOdds(16, 6) },
-  gold:   { name:'Gold Crate',   price:1100, glow:'#e0a92e', odds:gaussOdds(30, 7) },
+  wood:   { name:'Wooden Crate', price:25,   glow:'#9aa3af', odds:gaussOdds(4, 4.5) },
+  silver: { name:'Silver Crate', price:140,  glow:'#bcd0e0', odds:gaussOdds(16, 6) },
+  gold:   { name:'Gold Crate',   price:650,  glow:'#e0a92e', odds:gaussOdds(30, 7) },
 };
 const CRATE_ORDER = ['wood','silver','gold'];
 const GEAR_UID_KEY = 'br_gear_uid_seq';
@@ -364,8 +364,14 @@ function compositeCharURL(){
 // Inventory tab (#eqchar). Keep this as the world-emblem refresher so equipping gear doesn't clobber it.
 function refreshMenuChar(){ if(typeof setStageEmblem==='function' && typeof selWorld!=='undefined') setStageEmblem(selWorld); }
 
+function fmtGold(n){ return typeof fmtNum==='function' ? fmtNum(n) : String(Math.round(+n||0)); }
+function cratePrice(key){
+  const w = typeof selWorld!=='undefined' ? selWorld : 0;
+  return Math.round(CRATES[key].price * Math.pow(1.09, w / 5));
+}
+
 // ---- gold display + coin chip ----
-function refreshGoldUI(){ const t=$('goldtxt'); if(t) t.textContent=gold; }
+function refreshGoldUI(){ const t=$('goldtxt'); if(t) t.textContent=fmtGold(gold); }
 let _coinURL='';
 function coinTag(){ if(!_coinURL && SP['coin']) _coinURL=SP['coin'].toDataURL(); return '<img class="coinico" src="'+_coinURL+'" alt="">'; }
 const _ICURL={};   // cached data-URLs for the house-drawn UI icons
@@ -391,7 +397,7 @@ function shopCardHTML(id, price){
   const off = Math.round((1 - price/itemPrice(id))*100);
   const ribbon = off>0 ? '<div class="sribbon'+(off>=40?' big':'')+'">-'+off+'%</div>' : '';
   const action = owned ? '<div class="scheck">✓</div>'
-    : '<button class="sbuy'+(gold<price?' poor':'')+'" data-id="'+id+'" data-price="'+price+'">'+coinTag()+price+'</button>';
+    : '<button class="sbuy'+(gold<price?' poor':'')+'" data-id="'+id+'" data-price="'+price+'">'+coinTag()+fmtGold(price)+'</button>';
   return '<div class="scard r-'+rar+(owned?' owned':'')+'"'+rarBorderStyle(rar)+'>'+ribbon+
     '<div class="sname">'+itemName(id)+'</div>'+
     '<div class="sicon"><img src="'+gearIconURL(id)+'" alt=""></div>'+
@@ -413,11 +419,11 @@ function renderShop(){
   html += '</div>';
   // ---- CASES ----
   html += '<div class="banner"><span>CASES</span></div><div class="crates">';
-  for(const key of CRATE_ORDER){ const cr=CRATES[key]; const poor=gold<cr.price;
+  for(const key of CRATE_ORDER){ const cr=CRATES[key]; const price=cratePrice(key); const poor=gold<price;
     html += '<div class="crate c-'+key+'" style="--glow:'+cr.glow+'">'+
       '<button class="crinfo" data-crinfo="'+key+'" title="Drop chances" aria-label="Drop chances">i</button>'+
       '<div class="cratebox"><img src="'+icURL('ic_crate')+'" alt=""></div><div class="cratename">'+cr.name+'</div>'+
-      '<button class="sbuy cratebuy'+(poor?' poor':'')+'" data-crate="'+key+'">'+coinTag()+cr.price+'</button></div>';
+      '<button class="sbuy cratebuy'+(poor?' poor':'')+'" data-crate="'+key+'" data-cprice="'+price+'">'+coinTag()+fmtGold(price)+'</button></div>';
   }
   html += '</div>';
   // ---- CHARACTER SHOP ----
@@ -427,7 +433,7 @@ function renderShop(){
   grid.innerHTML = html;
 
   grid.querySelectorAll('button.sbuy[data-id]').forEach(b=>b.addEventListener('click',()=>buyItem(b.dataset.id, +b.dataset.price)));
-  grid.querySelectorAll('button[data-crate]').forEach(b=>b.addEventListener('click',()=>openCrate(b.dataset.crate)));
+  grid.querySelectorAll('button[data-crate]').forEach(b=>b.addEventListener('click',()=>openCrate(b.dataset.crate, +b.dataset.cprice)));
   grid.querySelectorAll('button[data-crinfo]').forEach(b=>b.addEventListener('click',(e)=>{ e.stopPropagation(); openCrateOdds(b.dataset.crinfo); }));
   if(typeof initRecruitUI==='function') initRecruitUI(grid);
 }
@@ -440,9 +446,9 @@ function rollCrateRarity(key){
 }
 function rollCrateItem(key){ const r=rollCrateRarity(key); const pool=catalogByRarity(r); return pool[Math.floor(Math.random()*pool.length)]; }
 
-function openCrate(key){
-  const cr=CRATES[key]; if(gold<cr.price) return;
-  gold-=cr.price; saveGold(); refreshGoldUI();
+function openCrate(key, price){
+  const cr=CRATES[key]; const pay=price||cratePrice(key); if(gold<pay) return;
+  gold-=pay; saveGold(); refreshGoldUI();
   if(typeof sfx!=='undefined') sfx.pick();
   const won = rollCrateItem(key);
   const dup = hasItemId(won);
@@ -476,7 +482,7 @@ function openCrate(key){
     res.innerHTML='<img src="'+gearIconURL(won)+'"><div><div class="crwname">'+itemName(won)+'</div>'+
       rtagHTML(itemRar(won))+statTag(itemStat(won))+'<div class="gbonus">'+itemBonusTxt(won)+'</div>'+
       (dup
-        ? '<div class="crdup">duplicate found</div><div class="cractrow"><button class="cract keep" id="crkeep">KEEP</button><button class="cract sell" id="crsell">SELL +'+sellValue(won)+'</button></div>'
+        ? '<div class="crdup">duplicate found</div><div class="cractrow"><button class="cract keep" id="crkeep">KEEP</button><button class="cract sell" id="crsell">SELL +'+fmtGold(sellValue(won))+'</button></div>'
         : '<div class="crnew">NEW!</div>')+'</div>';
     res.classList.remove('hidden');
     const claim=$('crclaim');
@@ -600,7 +606,7 @@ function openItemPop(uid){
       '<div class="ipslot">Slot · '+CAT_LABEL[cat]+'</div>'+
       '<div class="ipactions">'+
         '<button class="ipbtn'+(equipped?' un':'')+'" id="ipequip">'+(equipped?'UNEQUIP':'EQUIP')+'</button>'+
-        '<button class="ipbtn sell" id="ipsell">SELL +'+sellValue(id)+'</button>'+
+        '<button class="ipbtn sell" id="ipsell">SELL +'+fmtGold(sellValue(id))+'</button>'+
       '</div>'+
     '</div>';
   ov.classList.remove('hidden');
@@ -656,7 +662,7 @@ function openConfirmCard(title, body, yesText, onYes, tone){
 }
 function openSellConfirm(uid){
   const id=gearInstanceItem(uid); if(!id) return;
-  openConfirmCard('SELL ITEM', 'Sell '+itemName(id)+' for '+sellValue(id)+' coins?', 'YES', ()=>{
+  openConfirmCard('SELL ITEM', 'Sell '+itemName(id)+' for '+fmtGold(sellValue(id))+' coins?', 'YES', ()=>{
     sellGearInstance(uid);
   }, 'warn');
 }

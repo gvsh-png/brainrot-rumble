@@ -111,7 +111,7 @@ function rehydrate(){
   if(typeof updateCharBadge==='function')  updateCharBadge();
   if(typeof updatePetBadge==='function')   updatePetBadge();
   if(typeof refreshGemsUI==='function')    refreshGemsUI();
-  const gt=$('goldtxt'); if(gt) gt.textContent = (typeof gold!=='undefined'?gold:0);
+  const gt=$('goldtxt'); if(gt) gt.textContent = typeof fmtNum==='function' ? fmtNum(typeof gold!=='undefined'?gold:0) : (typeof gold!=='undefined'?gold:0);
 }
 
 const _ric = window.requestIdleCallback ? (fn)=>window.requestIdleCallback(fn,{timeout:2000}) : (fn)=>setTimeout(fn,0);

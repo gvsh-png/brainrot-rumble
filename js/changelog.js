@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.57';
+const CURRENT_VERSION = '1.58';
 const CHANGELOG = [
+  { v: '1.58', notes: 'Economy rebalance: softer gear prices (~3.5k top tier vs 177k), coin income scales with world so you can afford your tier\'s gear, endgame dmg/HP gear buffed, and all numbers 10k+ show as 130k style compact format.' },
   { v: '1.57', notes: 'Massive gear expansion: 39 rarity tiers spanning all 50 worlds (Common → Omniscient), 8 equipment slots (Cape/Helmet/Chest/Gloves/Belt/Pants/Ring/Boots), 12 stat types (+Attack Speed, Magnet, Regen, Gold, Vamp, Pierce), 4200+ items, and bigger daily shops in late worlds.' },
   { v: '1.56', notes: 'Gear overhaul: 12 rarity tiers (Common → Common+ → Common++ → Uncommon → … → Mythic), 2 new stat types (Crit & Armor), 504 gear items. Daily shop stock now matches your selected world — World 1 sells Common gear, World 2 sells Common+, etc. Old Mythic power is now Epic tier.' },
   { v: '1.55', notes: 'Extended enemies are now proper brainrot hybrids (Cappuccino, Trulimero, Bobritto, Sahur-style titans, etc.) drawn with the same sh/dot/eyes vector style as W1–W11. Enemies path around map obstacles. Final boss attacks wired up. 13 unique final boss designs.' },
