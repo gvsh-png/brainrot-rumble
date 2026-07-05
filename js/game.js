@@ -1350,6 +1350,12 @@ function _doStartGame(wi){
   if(typeof equippedRangeMult==='function') P.range *= equippedRangeMult();
   if(typeof equippedCrit==='function') P.crit = Math.min(0.8, P.crit + equippedCrit());
   if(typeof equippedArmorMult==='function') P.armor *= equippedArmorMult();
+  if(typeof equippedRateMult==='function') P.fireRate /= equippedRateMult();
+  if(typeof equippedMagnetMult==='function') P.magnet *= equippedMagnetMult();
+  if(typeof equippedRegen==='function') P.regen += equippedRegen();
+  if(typeof equippedGoldMult==='function'){ const g=equippedGoldMult(); P.goldMul *= g; P.xpMul *= g; }
+  if(typeof equippedVamp==='function') P.vamp += equippedVamp();
+  if(typeof equippedPierce==='function') P.pierce += equippedPierce();
   if(typeof registerActiveChar==='function') registerActiveChar();
   if(typeof registerActivePet==='function') registerActivePet();
   P.startDmg = P.dmg;   // damage at run start (char base + gear + passives); non-engineer turrets scale off this
