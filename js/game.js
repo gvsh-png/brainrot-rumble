@@ -5161,7 +5161,7 @@ function setDeathShake(v){
   const dsb=$('sdrop-deathshake'); if(dsb){ dsb.textContent='Death Shake: '+(deathShakeOn?'On':'Off'); dsb.classList.toggle('off', !deathShakeOn); }
 }
 // ---- Graphics / Performance settings (cycling toggles, persisted via GFX/saveGfx in core.js) ----
-const GFX_QUALITY   = [ {lbl:'Low',val:1.0}, {lbl:'Medium',val:1.25}, {lbl:'High',val:1.5} ];
+const GFX_QUALITY   = [ {lbl:'Low',val:1.0}, {lbl:'Medium',val:1.5}, {lbl:'High',val:2.0}, {lbl:'Ultra',val:2.5} ];
 const GFX_FPS       = [ {lbl:'30',val:33.4}, {lbl:'60',val:16}, {lbl:'120',val:8}, {lbl:'Max',val:0} ];
 const GFX_PARTICLES = [ {lbl:'Off',val:0}, {lbl:'Low',val:0.5}, {lbl:'Full',val:1} ];
 function gfxNearest(opts,v){ let bi=0,bd=Infinity; for(let i=0;i<opts.length;i++){ const d=Math.abs(opts[i].val-v); if(d<bd){bd=d;bi=i;} } return bi; }

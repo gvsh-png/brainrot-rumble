@@ -4,31 +4,38 @@ const cv = document.getElementById('game');
 // alpha:false -- the canvas is always fully repainted (void fill covers the whole viewport every
 // frame), so the browser can skip alpha-compositing this layer entirely. Costs nothing visually,
 // helps most on software-rendered canvases (common on Linux when GPU accel isn't available).
-const cx = cv.getContext('2d', { alpha:false });
+const cx = cv.getContext('2d', { alpha:false, desynchronized:true });
+cx.imageSmoothingEnabled = true;
+if(cx.imageSmoothingQuality) cx.imageSmoothingQuality = 'high';
 let W=0, H=0, DPR=1;
 
 // ============ GRAPHICS / PERFORMANCE SETTINGS ============
-// One knob set, persisted to localStorage, read by the resize + render + loop paths.
-//   dpr      = backing-resolution cap. Pixel-copy cost scales DPR^2, so this is the single
-//              biggest lever on low-end / software-rendered devices.
+//   dpr      = backing-resolution cap (min of device DPR and this value). Higher = sharper on
+//              retina phones; cost scales ~DPR^2.
 //   frameMin = min ms between rendered frames (fps cap). 0 = uncapped.
 //   particles= multiplier on the particle hard-cap (0 = off, 0.5 = low, 1 = full).
 //   shake    = master toggle for camera shake (separate from death-shake).
-// frameMin default 0 = render every animation frame (vsync). A skip-cap that sits between the
-// display's refresh multiples renders unevenly (e.g. ~48fps with judder on a 144Hz panel), which
-// reads as "not smooth". Vsync is the smoothest pacing; weak devices cut cost via dpr/particles.
-const GFX = { dpr:1.5, frameMin:0, particles:1, shake:true };
-function saveGfx(){ try{ localStorage.setItem('br_gfx', JSON.stringify(GFX)); }catch(e){} }
+const GFX = { dpr:2.0, frameMin:0, particles:1, shake:true };
+const GFX_MIGRATE_VER = 2;
+function deviceDpr(){ return window.devicePixelRatio || 1; }
+function isTouchDevice(){
+  return !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches);
+}
+function recommendGfxDpr(){
+  const dd = deviceDpr();
+  // Mobile screens are often 2.5–3x; old 0.85 cap rendered blurry upscaled buffers.
+  if(isTouchDevice()) return Math.min(Math.max(dd, 2), 2.5);
+  return Math.min(Math.max(dd, 1.5), 2);
+}
+function saveGfx(){
+  try{ localStorage.setItem('br_gfx', JSON.stringify(GFX)); localStorage.setItem('br_gfx_ver', String(GFX_MIGRATE_VER)); }catch(e){}
+}
 (function loadGfx(){
   const raw = (()=>{ try{ return localStorage.getItem('br_gfx'); }catch(e){ return null; } })();
+  const ver = +((()=>{ try{ return localStorage.getItem('br_gfx_ver'); }catch(e){ return 0; } })()) || 0;
   if(raw===null){
-    const cores = navigator.hardwareConcurrency || 4;
-    const coarse = !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches);
-    const nativeAndroid = typeof document !== 'undefined' && document.documentElement
-      && (document.documentElement.classList.contains('is-native-android')
-        || (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform()==='android'));
-    if(nativeAndroid){ GFX.dpr = 0.85; GFX.particles = 0.5; GFX.frameMin = 0; }
-    else if(cores <= 4 || coarse){ GFX.dpr = 0.85; GFX.particles = 0.5; }
+    GFX.dpr = recommendGfxDpr();
+    if(isTouchDevice()) GFX.particles = 0.75;
     saveGfx();
     return;
   }
@@ -38,19 +45,20 @@ function saveGfx(){ try{ localStorage.setItem('br_gfx', JSON.stringify(GFX)); }c
     if(typeof s.frameMin==='number')  GFX.frameMin = s.frameMin;
     if(typeof s.particles==='number') GFX.particles = s.particles;
     if(typeof s.shake==='boolean')    GFX.shake = s.shake;
-    // Migrate the old ~69fps skip-cap default (14.5) to vsync — it was the source of the judder.
     if(s.frameMin===14.5){ GFX.frameMin = 0; saveGfx(); }
+    // One-time upgrade: old mobile perf defaults (0.85 dpr) looked soft/blurry on retina screens.
+    if(ver < GFX_MIGRATE_VER || GFX.dpr < 1.5){
+      GFX.dpr = recommendGfxDpr();
+      saveGfx();
+    }
   }catch(e){}
 })();
 
 function resize(){
-  // DPR capped at the user's quality setting: profiling showed ~85% of active CPU time inside
-  // CanvasRenderingContext2D.drawImage's pixel-copy path, which scales with DPR^2. This is a
-  // chunky cartoon art style, not pixel-art needing retina sharpness, so capping low trades a
-  // small amount of crispness for a big cut in per-frame pixel volume.
-  DPR = Math.min(window.devicePixelRatio||1, GFX.dpr);
+  DPR = Math.min(deviceDpr(), GFX.dpr);
   W = window.innerWidth; H = window.innerHeight;
-  cv.width = W*DPR; cv.height = H*DPR;
+  cv.width = Math.max(1, Math.round(W * DPR));
+  cv.height = Math.max(1, Math.round(H * DPR));
   cv.style.width = W+'px'; cv.style.height = H+'px';
   cx.setTransform(DPR,0,0,DPR,0,0);
 }
