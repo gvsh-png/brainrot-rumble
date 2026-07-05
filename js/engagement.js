@@ -1,5 +1,5 @@
 'use strict';
-// Retention loops: daily bounties, swarm rank, achievements, run debrief.
+// Retention loops: daily bounties, achievements, run debrief. Juice via particles/haptics — no text popups.
 
 const RANK_TITLES = ['Hatchling','Swarmling','Hunter','Stinger','Reaper','Apex','Overlord','Legend'];
 
@@ -34,6 +34,7 @@ let runMilestones = new Set();
 let swarmRank = 1, swarmXp = 0;
 let engageStats = { runs: 0, bestWave: 0, bestSurvive: 0, totalBosses: 0, totalSynergies: 0, bountiesDone: 0 };
 let unlockedAch = new Set();
+let _killJuiceN = 0;
 
 function _dailyKey(){
   const d = new Date();
@@ -77,48 +78,60 @@ function saveAchievements(){
 }
 
 function swarmXpNext(lv){ return Math.floor(70 + lv * 40 + lv * lv * 6); }
-function rankTitle(lv){ return RANK_TITLES[Math.min(lv - 1, RANK_TITLES.length - 1)] || 'Legend'; }
 
-function refreshSwarmRankUI(){
-  const badge = $('topLvl');
-  const fill = $('topxpfill');
-  if(badge) badge.textContent = swarmRank;
-  if(fill){
-    const need = swarmXpNext(swarmRank);
-    fill.style.width = Math.round(Math.min(1, swarmXp / need) * 100) + '%';
+function _engageJuice(col, power){
+  power = power || 1;
+  const inPlay = typeof state !== 'undefined' && state === ST.PLAY && typeof P !== 'undefined';
+  if(inPlay){
+    const x = P.x, y = P.y;
+    if(typeof burst === 'function') burst(x, y, col || '#ffe08a', 6 + power * 8, 240 + power * 100);
+    if(typeof spawnPart === 'function') spawnPart(x, y, 0, 0, 0.32, 0.32, col || '#ffe08a', 16 + power * 14, 1, 360);
+    if(typeof shake !== 'undefined') shake = Math.max(shake, 2 + power * 2.5);
+    if(typeof hitFlash !== 'undefined') hitFlash = Math.max(hitFlash, 0.04 + power * 0.02);
   }
+  if(typeof haptic === 'function') haptic(power >= 3 ? 'win' : power >= 2 ? 'level' : 'light');
+}
+
+function _menuResourcePulse(){
+  const pill = document.querySelector('.respill');
+  if(!pill) return;
+  pill.classList.remove('juice-pulse');
+  void pill.offsetWidth;
+  pill.classList.add('juice-pulse');
 }
 
 function grantSwarmXp(n){
   if(!n || gameMode === 'practice') return 0;
   swarmXp += n;
-  let gained = n, ups = 0;
+  let gained = n;
   while(swarmXp >= swarmXpNext(swarmRank)){
     swarmXp -= swarmXpNext(swarmRank);
     swarmRank++;
-    ups++;
-    if(typeof bigText === 'function') bigText('RANK UP! ' + rankTitle(swarmRank), '#b06ff0');
+    _engageJuice('#b06ff0', 3);
     if(typeof sfx !== 'undefined' && sfx.level) sfx.level();
-    if(typeof haptic === 'function') haptic('level');
   }
   saveSwarmRank();
-  refreshSwarmRankUI();
   return gained;
 }
 
 function resetRunEngagement(){
   runEng = { jackpots: 0, evolves: 0, bosses: 0, synergies: 0 };
   runMilestones = new Set();
+  _killJuiceN = 0;
 }
 
 function engageOnKill(){
   if(gameMode === 'practice') return;
   tickDailyProgress('kills', 1, false);
   checkRunMilestones();
+  _killJuiceN++;
+  if(_killJuiceN % 20 === 0) _engageJuice('#9fe0ff', 1);
 }
 
 function engageOnJackpot(){
   runEng.jackpots++;
+  _engageJuice('#f5c542', 2);
+  if(typeof sfx !== 'undefined' && sfx.coin) sfx.coin();
 }
 
 function engageOnBossKill(){
@@ -126,47 +139,38 @@ function engageOnBossKill(){
   runEng.bosses++;
   engageStats.totalBosses++;
   tickDailyProgress('bosses', 1, false);
+  _engageJuice('#4aa3df', 2);
 }
 
 function engageOnEvolve(){
   if(gameMode === 'practice') return;
   runEng.evolves++;
   tickDailyProgress('evolves', 1, false);
+  _engageJuice('#c8a0ff', 2);
 }
 
 function engageSynergyUnlock(name){
   if(gameMode === 'practice') return;
   runEng.synergies++;
   engageStats.totalSynergies++;
-  if(typeof bigText === 'function') bigText('SYNERGY!', '#c8a0ff');
+  _engageJuice('#c8a0ff', 3);
   if(typeof sfx !== 'undefined' && sfx.evolve) sfx.evolve();
-  if(typeof haptic === 'function') haptic('evolve');
-  showSynergyBanner(name);
-}
-
-function showSynergyBanner(name){
-  const el = $('synergy-banner');
-  if(!el) return;
-  el.textContent = 'SYNERGY — ' + (name || 'UNLOCKED');
-  el.classList.remove('hidden');
-  el.classList.add('synergy-pop');
-  setTimeout(() => { el.classList.add('hidden'); el.classList.remove('synergy-pop'); }, 2200);
 }
 
 function checkRunMilestones(){
   if(typeof kills === 'undefined' || typeof elapsed === 'undefined') return;
   const marks = [
-    { k: 'k50',  test: () => kills >= 50,  text: '50 KILLS!', col: '#9fe0ff' },
-    { k: 'k100', test: () => kills >= 100, text: '100 KILLS!', col: '#ffe08a' },
-    { k: 'k250', test: () => kills >= 250, text: '250 KILLS!', col: '#ff9f3a' },
-    { k: 't3',   test: () => elapsed >= 180, text: '3:00 SURVIVED!', col: '#4ad0c0' },
-    { k: 't5',   test: () => elapsed >= 300, text: '5:00 SURVIVED!', col: '#4aa3df' },
-    { k: 't8',   test: () => elapsed >= 480, text: '8:00 SURVIVED!', col: '#b06ff0' },
+    { k: 'k50',  test: () => kills >= 50,  col: '#9fe0ff', power: 2 },
+    { k: 'k100', test: () => kills >= 100, col: '#ffe08a', power: 2 },
+    { k: 'k250', test: () => kills >= 250, col: '#ff9f3a', power: 3 },
+    { k: 't3',   test: () => elapsed >= 180, col: '#4ad0c0', power: 2 },
+    { k: 't5',   test: () => elapsed >= 300, col: '#4aa3df', power: 2 },
+    { k: 't8',   test: () => elapsed >= 480, col: '#b06ff0', power: 3 },
   ];
   for(const m of marks){
     if(runMilestones.has(m.k) || !m.test()) continue;
     runMilestones.add(m.k);
-    if(typeof bigText === 'function') bigText(m.text, m.col);
+    _engageJuice(m.col, m.power);
     if(typeof sfx !== 'undefined' && sfx.level) sfx.level();
   }
 }
@@ -216,7 +220,8 @@ function tryClaimBounty(day, id, def){
     if(typeof refreshTopbar === 'function') refreshTopbar();
   }
   if(def.reward.gems && typeof addGems === 'function') addGems(def.reward.gems);
-  if(typeof bigText === 'function' && typeof P !== 'undefined') bigText('BOUNTY DONE!', '#f5c542');
+  _engageJuice('#f5c542', 2);
+  _menuResourcePulse();
   if(typeof sfx !== 'undefined' && sfx.win) sfx.win();
 }
 
@@ -252,15 +257,6 @@ function refreshDailyBountiesUI(){
   }
 }
 
-function toastAchievement(a){
-  const el = $('ach-toast');
-  if(!el) return;
-  el.innerHTML = '<div class="ach-toast-title">🏆 ' + a.name + '</div><div class="ach-toast-desc">' + a.desc + '</div>';
-  el.classList.remove('hidden');
-  el.classList.add('ach-pop');
-  setTimeout(() => { el.classList.add('hidden'); el.classList.remove('ach-pop'); }, 2800);
-}
-
 function checkAchievements(ctx){
   ctx = Object.assign({
     runs: engageStats.runs,
@@ -277,7 +273,8 @@ function checkAchievements(ctx){
     if(!a.check(ctx)) continue;
     unlockedAch.add(a.id);
     saveAchievements();
-    toastAchievement(a);
+    _engageJuice('#f5c542', 2);
+    if(typeof sfx !== 'undefined' && sfx.win) sfx.win();
   }
 }
 
@@ -302,10 +299,9 @@ function finishRunEngagement(reason){
   const modeKey = gameMode + '_w' + worldIdx;
   const prev = bests[modeKey] || { kills: 0, wave: 0, survive: 0 };
   const curWave = timerMode() ? Math.floor(surv / 60) : wave;
-  const lines = [];
-  if(kills > prev.kills){ prev.kills = kills; lines.push('Kills — new best!'); }
-  if(curWave > prev.wave){ prev.wave = curWave; lines.push(timerMode() ? 'Time — new best!' : 'Wave — new best!'); }
-  if(surv > prev.survive){ prev.survive = surv; }
+  if(kills > prev.kills) prev.kills = kills;
+  if(curWave > prev.wave) prev.wave = curWave;
+  if(surv > prev.survive) prev.survive = surv;
   bests[modeKey] = prev;
   try{ localStorage.setItem('br_run_bests', JSON.stringify(bests)); }catch(e){}
 
@@ -315,35 +311,12 @@ function finishRunEngagement(reason){
   saveEngageStats();
   checkAchievements({ runJackpots: runEng.jackpots });
 
-  return {
-    xp: gained,
-    lines,
-    stats: [
-      runEng.jackpots ? ('Jackpots: ' + runEng.jackpots) : null,
-      runEng.evolves ? ('Evolves: ' + runEng.evolves) : null,
-      runEng.bosses ? ('Bosses: ' + runEng.bosses) : null,
-    ].filter(Boolean),
-  };
+  return { xp: gained, lines: [], stats: [] };
 }
 
 function showRunDebrief(reason){
-  const debrief = finishRunEngagement(reason);
-  const extra = $('go-extra');
-  const rank = $('go-rank');
-  if(extra){
-    const parts = debrief.lines.concat(debrief.stats);
-    extra.innerHTML = parts.length ? parts.map(s => '<div class="go-line">' + s + '</div>').join('') : '';
-    extra.classList.toggle('hidden', !parts.length);
-  }
-  if(rank){
-    if(debrief.xp > 0){
-      rank.textContent = '+' + debrief.xp + ' Swarm XP · Rank ' + swarmRank + ' ' + rankTitle(swarmRank);
-      rank.classList.remove('hidden');
-    } else rank.classList.add('hidden');
-  }
+  finishRunEngagement(reason);
   refreshDailyBountiesUI();
-  refreshSwarmRankUI();
 }
 
 loadEngagement();
-refreshSwarmRankUI();

@@ -5635,11 +5635,8 @@ $('goldicon').src = SP['coin'].toDataURL();
 $('goldtxt').textContent = fmtNum(gold);
 // top resource bar: a "player level" badge from worlds unlocked + a progress fill + gold
 function refreshTopbar(){
-  if(typeof refreshSwarmRankUI === 'function') refreshSwarmRankUI();
-  else {
-    const lv=$('topLvl'); if(lv) lv.textContent = unlockedMax+1;
-    const xf=$('topxpfill'); if(xf) xf.style.width = Math.round(((unlockedMax+1)/WORLDS.length)*100)+'%';
-  }
+  const lv=$('topLvl'); if(lv) lv.textContent = unlockedMax+1;
+  const xf=$('topxpfill'); if(xf) xf.style.width = Math.round(((unlockedMax+1)/WORLDS.length)*100)+'%';
   const gt=$('goldtxt'); if(gt) gt.textContent = fmtNum(typeof gold!=='undefined'?gold:0);
 }
 refreshTopbar();
@@ -5740,9 +5737,11 @@ if(typeof setHapticOn === 'function') setHapticOn(hapticOn);
 // ---- pause / resume / quit ----
 function refreshRunResumeUI(){
   const panel=$('run-resume'), start=$('startbtn'), meta=$('run-resume-meta');
+  const hint=document.querySelector('#menubot .hint');
   const has = typeof hasSuspendedRun === 'function' && hasSuspendedRun();
   if(panel) panel.classList.toggle('hidden', !has);
   if(start) start.classList.toggle('hidden', has);
+  if(hint) hint.classList.toggle('hidden', has);
   if(has && meta && typeof getSuspendedRunMeta === 'function'){
     const m=getSuspendedRunMeta();
     if(m) meta.textContent = m.world+' · '+m.progress+' · Lv '+m.lv;

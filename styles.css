@@ -248,13 +248,13 @@ html.is-native-android, html.is-native-android body {
   font-weight:900; font-size:clamp(17px,3.4vmin,28px); letter-spacing:.5px; box-shadow:var(--shadow-card); }
 .shopsub { text-align:center; color:var(--text); font-weight:800; font-size:clamp(11px,2vmin,16px); text-shadow:0 1px 0 rgba(0,0,0,.35); margin-top:-2px; }
 
-/* BATTLE tab — mobile-first grid: centered header → hero stage → sidebar stack */
+/* BATTLE tab — mobile-first: header → stage → PLAY → bounties */
 #tab-battle {
   display:grid;
-  grid-template-rows:auto minmax(clamp(140px,30vh,280px),1fr) auto;
-  gap:clamp(5px,1.1vmin,10px);
+  grid-template-rows:auto minmax(clamp(110px,22vh,200px),1fr) auto;
+  gap:clamp(4px,1vmin,8px);
   flex:1; min-height:0; width:100%; align-content:stretch; align-items:stretch;
-  padding-bottom:clamp(2px,0.8vmin,6px); overflow:hidden;
+  padding-bottom:clamp(2px,0.8vmin,6px); overflow-y:auto; -webkit-overflow-scrolling:touch;
 }
 .world-header {
   display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -277,35 +277,9 @@ html.is-native-android, html.is-native-android body {
 .worldsub { color:var(--text-muted); font-weight:800; font-size:clamp(10px,1.9vmin,14px); text-shadow:0 2px 0 rgba(0,0,0,.3);
   margin:3px 0 0; white-space:nowrap; text-align:center; flex-shrink:0; }
 .battle-sidebar {
-  display:flex; flex-direction:column; align-items:center; gap:clamp(6px,1.2vmin,10px);
+  display:flex; flex-direction:column; align-items:center; gap:clamp(5px,1vmin,8px);
   width:100%; flex-shrink:0;
 }
-.battle-hub {
-  width:100%; max-width:clamp(280px,92vmin,460px);
-  padding:8px 10px; border:2px solid #2a1c10; border-radius:14px;
-  background:linear-gradient(180deg, rgba(28,34,48,0.92), rgba(16,20,30,0.96));
-  box-shadow:0 3px 0 #0a0e14;
-}
-.hub-rank { margin-bottom:6px; }
-.hub-rank-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.hub-rank-lbl { font-weight:900; font-size:clamp(9px,1.7vmin,12px); color:#b06ff0; letter-spacing:.06em; }
-.hub-rank-num { font-weight:900; font-size:clamp(14px,2.6vmin,20px); color:#9fe0ff; }
-.hub-rank-title { font-weight:900; font-size:clamp(16px,3.2vmin,24px); color:var(--text); line-height:1.1; margin-top:2px; }
-.hub-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:6px; }
-.hub-chip {
-  background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.08); border-radius:10px;
-  padding:5px 4px; text-align:center;
-}
-.hub-chip-v { display:block; font-weight:900; font-size:clamp(13px,2.4vmin,18px); color:#ffe08a; line-height:1.1; }
-.hub-chip-l { display:block; font-weight:800; font-size:clamp(8px,1.5vmin,11px); color:var(--text-muted); margin-top:2px; }
-.hub-blurb { margin:0 0 6px; font-weight:700; font-size:clamp(10px,1.9vmin,13px); color:var(--text-muted); line-height:1.35; text-align:center; }
-.hub-quick { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; }
-.hub-link {
-  border:2px solid #2a1c10; border-radius:10px; padding:6px 2px;
-  background:var(--slate-mid); color:var(--text); font-weight:900;
-  font-size:clamp(9px,1.7vmin,12px); cursor:pointer; box-shadow:0 3px 0 rgba(0,0,0,0.35);
-}
-.hub-link:active { transform:translateY(2px); box-shadow:0 1px 0 rgba(0,0,0,0.35); }
 .daily-bounties {
   width:100%; max-width:clamp(280px,92vmin,460px); margin:0; flex-shrink:0;
   padding:6px 10px; border:2px solid #2a1c10; border-radius:12px;
@@ -330,14 +304,14 @@ html.is-native-android, html.is-native-android body {
 .db-reward { grid-column:2; grid-row:1 / span 2; font-size:clamp(9px,1.7vmin,11px); font-weight:900; color:#f5c542; white-space:nowrap; align-self:center; }
 #worldsel.reveal { animation:wreveal 1.4s ease; }
 @keyframes wreveal { 0%{ transform:scale(0.7); filter:brightness(2); } 40%{ transform:scale(1.12); } 100%{ transform:scale(1); } }
-#stage { position:relative; min-height:clamp(140px,30vh,280px); height:100%; margin:0; align-self:stretch;
+#stage { position:relative; min-height:clamp(110px,22vh,200px); height:100%; margin:0; align-self:stretch;
   display:flex; align-items:center; justify-content:center; border:var(--border-card); border-radius:var(--radius-lg); overflow:hidden;
   background:linear-gradient(180deg, rgba(43,53,80,.55), rgba(26,35,54,.75)); box-shadow:var(--shadow-panel), inset 0 0 0 2px rgba(255,255,255,.06); }
 #charplat { position:absolute; bottom:10%; width:clamp(100px,26vmin,220px); height:clamp(22px,5vmin,48px);
   background:radial-gradient(ellipse at center, rgba(0,0,0,0.32), rgba(0,0,0,0) 70%); }
 #charimg { width:auto; height:auto; max-height:88%; max-width:88%; object-fit:contain; position:relative; animation:charbob 2.2s ease-in-out infinite; }
 @keyframes charbob { 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-4%); } }
-#menubot { display:flex; flex-direction:column; align-items:center; gap:clamp(5px,1.2vmin,10px); width:100%; padding-bottom:0; flex-shrink:0; }
+#menubot { display:flex; flex-direction:column; align-items:center; gap:clamp(4px,1vmin,8px); width:100%; padding-bottom:0; flex-shrink:0; order:-1; }
 .run-resume { width:100%; max-width:clamp(280px,92vmin,460px); }
 .run-resume-box {
   display:flex; flex-direction:column; align-items:stretch; gap:6px;
@@ -352,17 +326,20 @@ html.is-native-android, html.is-native-android body {
 .run-resume .bigbtn { width:100%; font-size:clamp(12px,2.4vmin,16px); padding:9px 6px; box-shadow:0 4px 0 #3f8a36; }
 .run-resume .bigbtn.quit { background:#d9694a; box-shadow:0 4px 0 #a0412c; }
 .run-resume .bigbtn.quit:active { box-shadow:0 1px 0 #a0412c; }
-#run-resume:not(.hidden) ~ #startbtn { display:none !important; }
-#run-resume:not(.hidden) ~ .hint { display:none !important; }
-.gamemodebtn { width:clamp(160px,40vmin,280px); padding:clamp(6px,1.4vmin,10px) 0; border:3px solid #2a1c10; border-radius:14px;
+.gamemodebtn { width:clamp(140px,36vmin,240px); padding:clamp(5px,1.2vmin,8px) 0; border:3px solid #2a1c10; border-radius:12px;
   background:linear-gradient(#9a6be0,#7040c0); color:#fff; -webkit-text-stroke:1px #2a1c10; font-weight:900;
-  font-size:clamp(15px,3.2vmin,24px); letter-spacing:1.5px; cursor:pointer; box-shadow:0 5px 0 #4a2090; }
+  font-size:clamp(12px,2.6vmin,18px); letter-spacing:1px; cursor:pointer; box-shadow:0 4px 0 #4a2090; }
 .gamemodebtn:active { transform:translateY(3px); box-shadow:0 2px 0 #4a2090; }
-.startbtn { width:100%; max-width:clamp(280px,62vmin,460px); padding:clamp(13px,3vmin,22px) 0; border:4px solid #2a1c10; border-radius:18px;
+.startbtn { width:100%; max-width:clamp(280px,92vmin,460px); padding:clamp(14px,3.2vmin,20px) 0; border:4px solid #2a1c10; border-radius:18px;
   background:linear-gradient(#ffd24a,#f3a721); color:#fff; -webkit-text-stroke:1.4px #2a1c10; font-weight:900;
   font-size:clamp(24px,5.6vmin,44px); letter-spacing:1.5px; cursor:pointer; box-shadow:0 7px 0 #b87a1a; }
 .startbtn:active { transform:translateY(4px); box-shadow:0 3px 0 #b87a1a; }
-#menu .hint { color:var(--text-muted); font-weight:800; font-size:clamp(11px,2vmin,16px); text-shadow:0 1px 0 rgba(0,0,0,.35); text-align:center; margin:0; }
+#startbtn.hidden { display:none !important; }
+#run-resume:not(.hidden) ~ .gamemodebtn,
+#run-resume:not(.hidden) ~ .hint { display:none !important; }
+.respill.juice-pulse { animation:goldPulse .55s ease-out; }
+@keyframes goldPulse { 0%{ transform:scale(1); filter:brightness(1); } 40%{ transform:scale(1.06); filter:brightness(1.35); } 100%{ transform:scale(1); filter:brightness(1); } }
+#menu .hint { color:var(--text-muted); font-weight:800; font-size:clamp(10px,1.8vmin,14px); text-shadow:0 1px 0 rgba(0,0,0,.35); text-align:center; margin:0; }
 
 /* ===== Gamemode popup ===== */
 #gamemode-popup { z-index:35; background:rgba(16,22,18,.82); }
@@ -1315,7 +1292,7 @@ html.is-native-android, html.is-native-android body {
   .world-header { grid-area:head; }
   #stage { grid-area:stage; min-height:clamp(260px,44vh,520px); margin:0; }
   .battle-sidebar { grid-area:side; align-self:stretch; justify-content:flex-start; max-width:none; }
-  .battle-hub, .daily-bounties, .run-resume, .startbtn, .gamemodebtn { max-width:none; width:100%; }
+  .daily-bounties, .run-resume, .startbtn, .gamemodebtn { max-width:none; width:100%; }
   #menubot { width:100%; }
 
   /* World selector — centered row above stage */

@@ -58,8 +58,6 @@
 </div>
 <div id="bosswarn" class="hidden">BOSS!</div>
 <div id="chaos-announce" class="hidden"></div>
-<div id="synergy-banner" class="hidden"></div>
-<div id="ach-toast" class="hidden"></div>
 <div id="dashbtn" class="hidden">DASH</div>
 <div id="zoomctl" class="hidden">
   <button id="zoomin" type="button">+</button>
@@ -155,44 +153,26 @@
         <img id="charimg" draggable="false" alt="">
       </div>
       <div class="battle-sidebar">
-        <div id="battle-hub" class="battle-hub">
-          <div class="hub-rank">
-            <div class="hub-rank-top"><span class="hub-rank-lbl">SWARM RANK</span><span class="hub-rank-num" id="hub-rank-num">1</span></div>
-            <div class="hub-rank-title" id="hub-rank-title">Hatchling</div>
+        <div id="menubot">
+          <button class="startbtn" id="startbtn" type="button"><span class="startlbl">PLAY</span></button>
+          <div id="run-resume" class="run-resume hidden">
+            <div class="run-resume-box">
+              <div class="run-resume-head">
+                <div class="run-resume-title">RUN IN PROGRESS</div>
+                <div class="run-resume-meta" id="run-resume-meta">World 1 · Wave 3</div>
+              </div>
+              <div class="run-resume-actions">
+                <button class="bigbtn green" id="run-continue-btn" type="button">CONTINUE</button>
+                <button class="bigbtn quit" id="run-abandon-btn" type="button">NEW RUN</button>
+              </div>
+            </div>
           </div>
-          <div class="hub-stats">
-            <div class="hub-chip"><span class="hub-chip-v" id="hub-best-wave">0</span><span class="hub-chip-l">Best wave</span></div>
-            <div class="hub-chip"><span class="hub-chip-v" id="hub-bosses">0</span><span class="hub-chip-l">Bosses</span></div>
-            <div class="hub-chip"><span class="hub-chip-v" id="hub-bounties">0</span><span class="hub-chip-l">Bounties</span></div>
-          </div>
-          <p class="hub-blurb" id="hub-blurb">Rolling hills — learn the swarm.</p>
-          <div class="hub-quick">
-            <button type="button" class="hub-link" data-goto="shop">Shop</button>
-            <button type="button" class="hub-link" data-goto="character">Hero</button>
-            <button type="button" class="hub-link" data-goto="pets">Pets</button>
-            <button type="button" class="hub-link" data-goto="inventory">Gear</button>
-          </div>
+          <button class="gamemodebtn" id="gamemodebtn" type="button"><span class="gmlbl">GAMEMODE</span></button>
+          <div class="hint">drag to move • auto-fire • survive the waves</div>
         </div>
         <div id="daily-bounties" class="daily-bounties">
           <div class="db-title">DAILY BOUNTIES <span class="db-sub">UTC midnight</span></div>
           <div id="daily-bounty-list"></div>
-        </div>
-        <div id="menubot">
-        <button class="gamemodebtn" id="gamemodebtn" type="button"><span class="gmlbl">GAMEMODE</span></button>
-        <div id="run-resume" class="run-resume hidden">
-          <div class="run-resume-box">
-            <div class="run-resume-head">
-              <div class="run-resume-title">RUN IN PROGRESS</div>
-              <div class="run-resume-meta" id="run-resume-meta">World 1 · Wave 3</div>
-            </div>
-            <div class="run-resume-actions">
-              <button class="bigbtn green" id="run-continue-btn" type="button">CONTINUE</button>
-              <button class="bigbtn quit" id="run-abandon-btn" type="button">NEW RUN</button>
-            </div>
-          </div>
-        </div>
-        <button class="startbtn" id="startbtn"><span class="startlbl">START</span></button>
-        <div class="hint">drag to move • auto-fire • survive the waves</div>
         </div>
       </div>
     </div>
@@ -258,8 +238,6 @@
       reached <b id="fwave">wave 1</b><br>
       coins collected <b id="fcoins">0</b><br>
       enemies cleared <b id="fkills">0</b>
-      <div id="go-extra" class="go-extra hidden"></div>
-      <div id="go-rank" class="go-rank hidden"></div>
     </div>
     <button class="bigbtn green" id="retrybtn">PLAY AGAIN</button>
   </div>
