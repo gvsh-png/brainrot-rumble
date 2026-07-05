@@ -1,5 +1,4 @@
-# BRAINROT RUMBLE — Game Rework Plan
-### *(rebrand of "Brainrot Survivors" — the Italian Invasion)*
+# BRAINROT SWARM — Game Plan
 
 A full design plan to **rebrand and upgrade the existing brainrot game**: keep the
 survivor / bullet-hell loop and the **grassy daylight cartoon world**, but give the whole

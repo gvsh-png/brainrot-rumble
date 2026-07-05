@@ -1,5 +1,5 @@
 # Builds a debug APK you can install on your phone without publishing to Play Store.
-# Download: GitHub → Actions → latest run → Artifacts → brainrot-rumble-debug-apk
+# Download: GitHub → Actions → latest run → Artifacts → brainrot-swarm-debug-apk
 name: Android Debug APK
 
 on:
@@ -70,7 +70,7 @@ jobs:
       - name: Upload debug APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: brainrot-rumble-debug-apk
+          name: brainrot-swarm-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30

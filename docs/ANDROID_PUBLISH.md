@@ -1,4 +1,4 @@
-# Publishing Brainrot Rumble to Google Play (Android)
+# Publishing Brainrot Swarm to Google Play (Android)
 
 This project ships as a **Capacitor Android app**. Supabase auth was removed; cloud saves use **Google Play Games Saved Games** on Android. The web build keeps progress **on-device only** (guest mode).
 
@@ -27,10 +27,10 @@ A GitHub Action builds a **debug APK** on every push to `main` / `cursor/*` (or 
 
 1. On your phone, open GitHub in the browser and sign in
 2. Go to **Actions** → **Android Debug APK** → latest green run
-3. Scroll to **Artifacts** → download **brainrot-rumble-debug-apk**
+3. Scroll to **Artifacts** → download **brainrot-swarm-debug-apk**
 4. Open the downloaded `app-debug.apk`
 5. If prompted, allow **Install unknown apps** for your browser or Files app
-6. Install and launch **Brainrot Rumble**
+6. Install and launch **Brainrot Swarm**
 
 > **Note:** Google Play Games sign-in still needs Play Console setup (App ID + debug SHA-1). Guest mode works without that.
 
@@ -39,7 +39,7 @@ To trigger a build manually: **Actions** → **Android Debug APK** → **Run wor
 ## 1. Create the Play Console app
 
 1. Play Console → **Create app**
-2. Package name: `gg.brainrot.rumble` (must match `capacitor.config.json` / `android/app/build.gradle`)
+2. Package name: `gg.brainrot.swarm` (must match `capacitor.config.json` / `android/app/build.gradle`)
 3. Category: **Games** → Action / Arcade
 4. Content rating, privacy policy URL, and store listing assets (screenshots, feature graphic, 512×512 icon)
 
@@ -74,7 +74,7 @@ Play Games sign-in requires an Android OAuth client tied to your signing key.
    ```
 
 3. Play Console → Play Games Services → **Credentials** → add Android credential:
-   - Package: `gg.brainrot.rumble`
+   - Package: `gg.brainrot.swarm`
    - SHA-1: debug + release fingerprints
 
 4. Google Cloud Console (linked from Play Console) → create **OAuth client ID** → type **Android** with the same package + SHA-1.
@@ -129,8 +129,8 @@ Upload the `.aab` in Play Console → **Production** or **Internal testing**.
 
 | Item | Notes |
 |------|--------|
-| App name | Brainrot Rumble |
-| Package | `gg.brainrot.rumble` |
+| App name | Brainrot Swarm |
+| Package | `gg.brainrot.swarm` |
 | Min SDK | 24 (Android 7.0) |
 | Target SDK | 34 |
 | Orientation | Portrait locked |

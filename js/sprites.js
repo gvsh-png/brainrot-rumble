@@ -824,7 +824,7 @@ makeSprite('orcalero', 120, (g,u)=>{   // ORCALERO ORCALA: armoured killer-whale
   eyes(g,u,20*u,-8*u,4.5*u,2.8*u);
 });
 
-// ============ WORLD 2 — CITRUS COAST roster (real OG Italian Brainrots, recreated in house style) ============
+// ============ WORLD 2 — CITRUS COAST roster ============
 // Tralaleritos — baby blue shark in blue sneakers
 makeSprite('tralalerito', 96, (g,u)=>{
   sh(g,'#5aa9e0',3.2*u,(g)=>{ g.moveTo(-30*u,2*u); g.quadraticCurveTo(0,-18*u,28*u,-4*u); g.quadraticCurveTo(18*u,8*u,28*u,16*u); g.quadraticCurveTo(0,16*u,-30*u,2*u); g.closePath(); });

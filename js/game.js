@@ -261,7 +261,7 @@ function worldHpBand(){ return 1 + worldBand()*0.42; }   // enemy HP multiplier 
 function worldCoinMul(){ return 1 + worldBand()*0.22; }   // later worlds pay out more (gentle ramp, ~3x by W10 — funds the gear grind)
 // coins are scarce early; from wave 20 on they pay out a little more (capped at 3x)
 function coinMult(){ return Math.min(3, wave < 20 ? 1 : 1 + (wave-19)*0.1); }
-// ---- enemy archetypes: the Italian Brainrot bestiary (ordered easy -> hard) ----
+// ---- enemy archetypes (ordered easy -> hard) ----
 const FOES_GRASS = [
   // Tier I — fodder
   { spr:'pigeon',   name:'Spijuniro',     hp:3,  sp:80, r:15, xp:1, score:10 },
@@ -340,7 +340,7 @@ const BOSSES_DIRT = [
 // Sky (world 8): wave 15 = Orcalero Orcala, wave 20 (final) = Madudungdung — the two bosses that
 // otherwise never spawn (every other world only reaches the first 4 entries of its boss list).
 const BOSSES_SKY = [BOSSES_DIRT[0], BOSSES_DIRT[1], BOSSES_DIRT[4], BOSSES_DIRT[5]];
-// ============ WORLD 2 — CITRUS COAST roster (real OG Italian Brainrots, recreated). band 1: easy, mostly chasers. ============
+// ============ WORLD 2 — CITRUS COAST roster. band 1: easy, mostly chasers. ============
 const FOES_W2 = [
   // Tier I — fodder
   { spr:'tralalerito', name:'Tralaleritos',          hp:3, sp:92, r:14, xp:1, score:10 },
@@ -889,7 +889,7 @@ function setStageEmblem(i){
 }
 function refreshWorldSel(){
   $('wname').textContent = worldLabel(selWorld);
-  const ws=$('worldsub'); if(ws) ws.textContent = gameMode==='practice' ? 'sandbox · no rewards' : 'the italian invasion';
+  const ws=$('worldsub'); if(ws) ws.textContent = gameMode==='practice' ? 'sandbox · no rewards' : 'survive the swarm';
   $('wprev').disabled = selWorld<=0 || gameMode==='practice';
   $('wnext').disabled = gameMode==='practice' || selWorld>=(gameMode==='challenger' ? chalUnlocked : unlockedMax);
   setStageEmblem(selWorld);

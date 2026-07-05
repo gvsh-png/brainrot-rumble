@@ -1,6 +1,6 @@
 {
-  "appId": "gg.brainrot.rumble",
-  "appName": "Brainrot Rumble",
+  "appId": "gg.brainrot.swarm",
+  "appName": "Brainrot Swarm",
   "webDir": "www",
   "server": {
     "androidScheme": "https",
