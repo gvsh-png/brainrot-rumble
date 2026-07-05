@@ -54,15 +54,26 @@ function saveGfx(){
   }catch(e){}
 })();
 
+function viewportSize(){
+  const vv = window.visualViewport;
+  if(vv) return { w: Math.round(vv.width), h: Math.round(vv.height) };
+  return { w: window.innerWidth, h: window.innerHeight };
+}
 function resize(){
   DPR = Math.min(deviceDpr(), GFX.dpr);
-  W = window.innerWidth; H = window.innerHeight;
+  const vp = viewportSize();
+  W = vp.w; H = vp.h;
   cv.width = Math.max(1, Math.round(W * DPR));
   cv.height = Math.max(1, Math.round(H * DPR));
   cv.style.width = W+'px'; cv.style.height = H+'px';
   cx.setTransform(DPR,0,0,DPR,0,0);
 }
-window.addEventListener('resize', resize); resize();
+window.addEventListener('resize', resize);
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', resize);
+  window.visualViewport.addEventListener('scroll', resize);
+}
+resize();
 
 const $ = id => document.getElementById(id);
 const rand = (a,b) => a + Math.random()*(b-a);
