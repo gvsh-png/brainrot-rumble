@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.67';
+const CURRENT_VERSION = '1.68';
 const CHANGELOG = [
+  { v: '1.68', notes: 'Grounded world cards for W6–W50: Autumn, Swamp, Skyland, Crystal, Volcano, and Dirt Depths each get 3 themed abilities (Falling Leaves, Toxic Mire, Thunder Drop, Prism Edge, Lava Pool, Quake Dash, etc.) with real combat wiring. Replaced generic "Swarm Fury W12" procedural cards with 39 unique biome-themed skills for extended worlds (Neon Drift, Rust Thorns, Swarm Crown EVOLVE, and more).' },
   { v: '1.67', notes: 'Boss fights always get a clear arena: picks the best open spot on the map, strips obstacles inside the ring, moves you to center, and uses a larger 50% arena. Citrus Coast map no longer uses corridor lanes. Music overhaul: warmer low-pass tones, chord pads, structured melodies, softer drums.' },
   { v: '1.66', notes: 'Full multi-scene cutscenes for ALL 50 worlds in 5-world chapters (1–5, 6–10, 11–15…). Each chapter has a title, connected story beats, peace→invasion→chaos→hero scenes, and zone-specific props through extended sectors.' },
   { v: '1.65', notes: 'Part 1 storyline (Worlds 1–5): connected arc from Grasslands through Circo Brainrotto with peace → invasion → chaos → hero scenes (~15s intros, ~12.5s outros). Zone-specific props, marching swarms, chaos flashes, and victory retreats. Card blur only on the final exit frames.' },

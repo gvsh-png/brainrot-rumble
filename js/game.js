@@ -1229,6 +1229,103 @@ const UPGRADES = [
   { id:'showstopper', name:'Showstopper', icon:'coin', rarity:'epic', cap:1, req:['luckyspin','crit'],
     steps:[{desc:'SYNERGY — JACKPOT hits also critically strike.',f:()=>P.showstopper=true}] },
 
+  // 🍂 World 6 (AUTUMN WOODS)
+  { id:'leafdrift', name:'Falling Leaves', icon:'gem', rarity:'uncommon', cap:5, minWorld:5,
+    steps:[{desc:'your hits slow enemies like leaves in the wind. (+duration per level)',f:()=>P.leafDrift=(P.leafDrift||0)+1}] },
+  { id:'harvestmoon', name:'Harvest Moon', icon:'coin', rarity:'rare', cap:4, minWorld:5,
+    steps:[{desc:'each kill stacks +8% gold (up to 12), fading when you stop killing.',f:()=>{P.harvestGain=(P.harvestGain||0)+1;P.harvestMax=12;}}] },
+  { id:'embertrail', name:'Ember Trail', icon:'gembig', rarity:'epic', minWorld:5,
+    steps:[
+      {desc:'while moving, scatter burning leaves that scorch foes.',f:()=>{P.emberTrail=(P.emberTrail||0)+1;P.emberR=P.emberR||48;}},
+      {desc:'trail burns hotter & wider.',f:()=>{P.emberTrail=(P.emberTrail||0)+1;P.emberR=(P.emberR||48)+14;}},
+      {desc:'trail burns hotter & wider.',f:()=>{P.emberTrail=(P.emberTrail||0)+1;P.emberR=(P.emberR||62)+14;}},
+      {desc:'embers linger longer on the ground.',f:()=>{P.emberLife=(P.emberLife||1.1)+0.45;}},
+    ],
+    evo:{name:'Wildfire Canopy', icon:'gembig', desc:'EVOLVE — embers even when standing still, and burn much harder.',
+         f:()=>{P.emberTrail=(P.emberTrail||0)+2;P.emberAlways=true;P.emberR=(P.emberR||76)+22;P.emberLife=(P.emberLife||1.55)+0.5;}} },
+
+  // 🐸 World 7 (SWAMP)
+  { id:'bogmire', name:'Bog Mire', icon:'gem', rarity:'uncommon', cap:5, minWorld:6,
+    steps:[{desc:'nearby enemies sink in mud, moving slower. (+radius per level)',f:()=>{P.bogAura=(P.bogAura||0)+1;P.bogR=(P.bogR||88)+12;}}] },
+  { id:'toxicmire', name:'Toxic Mire', icon:'crocodilo', rarity:'rare', cap:5, minWorld:6,
+    steps:[{desc:'your hits poison enemies for damage over time. (+poison per level)',f:()=>P.toxicHit=(P.toxicHit||0)+1}] },
+  { id:'swampleech', name:'Swamp Leech', icon:'heart', rarity:'epic', minWorld:6,
+    steps:[
+      {desc:'standing still for a moment lets leeches restore your HP.',f:()=>{P.swampleech=(P.swampleech||0)+1;}},
+      {desc:'leeches heal faster.',f:()=>{P.swampleech=(P.swampleech||0)+1;}},
+      {desc:'leeches heal faster.',f:()=>{P.swampleech=(P.swampleech||0)+1;}},
+      {desc:'you begin healing sooner after moving.',f:()=>{P.swampleech=(P.swampleech||0)+1;P.swampStill=Math.max(0.25,(P.swampStill||0.5)-0.08);}},
+    ],
+    evo:{name:'Bog Heart', icon:'heart', desc:'EVOLVE — constant slow regen, and standing still heals much more.',
+         f:()=>{P.swampleech=(P.swampleech||0)+2;P.swampRegen=2;P.swampStill=0.2;}} },
+
+  // ☁️ World 8 (SKYLAND)
+  { id:'tailwind', name:'Tailwind', icon:'gem', rarity:'uncommon', cap:5, minWorld:7,
+    steps:[{desc:'+10% attack speed riding the sky currents.',f:()=>P.fireRate*=0.90}] },
+  { id:'thunderdrop', name:'Thunder Drop', icon:'gembig', rarity:'rare', minWorld:7,
+    steps:[
+      {desc:'every 5.5s, a bolt strikes your nearest foe.',f:()=>{P.thunder=true;P.thunderCdBase=5.5;P.thunderDmg=1.4;}},
+      {desc:'bolts strike more often & hit harder.',f:()=>{P.thunderCdBase=Math.max(3.8,P.thunderCdBase-0.7);P.thunderDmg=(P.thunderDmg||1.4)+0.25;}},
+      {desc:'bolts strike more often & hit harder.',f:()=>{P.thunderCdBase=Math.max(3.2,P.thunderCdBase-0.6);P.thunderDmg=(P.thunderDmg||1.65)+0.25;}},
+      {desc:'bolts chain to a second nearby enemy.',f:()=>{P.thunderChain=(P.thunderChain||0)+1;}},
+    ],
+    evo:{name:'Storm Caller', icon:'gembig', desc:'EVOLVE — rapid lightning that clears enemy bullets nearby.',
+         f:()=>{P.thunder=true;P.thunderEvo=true;P.thunderCdBase=2.8;P.thunderDmg=(P.thunderDmg||1.9)+0.5;P.thunderChain=(P.thunderChain||0)+2;}} },
+  { id:'updraft', name:'Updraft', icon:'gem', rarity:'uncommon', cap:4, minWorld:7,
+    steps:[{desc:'+15% attack range on the open sky.',f:()=>P.range*=1.15}] },
+
+  // 💎 World 9 (CRYSTAL CAVES)
+  { id:'prismedge', name:'Prism Edge', icon:'coin', rarity:'uncommon', cap:5, minWorld:8,
+    steps:[{desc:'+6% crit chance; critical hits split prism shards.',f:()=>{P.crit=Math.min(0.8,P.crit+0.06);P.prismCrit=(P.prismCrit||0)+1;}}] },
+  { id:'crystalshatter', name:'Crystal Shatter', icon:'gembig', rarity:'rare', minWorld:8,
+    steps:[
+      {desc:'chilled enemies shatter on death, damaging nearby foes.',f:()=>{P.crystalShatter=(P.crystalShatter||0)+1;}},
+      {desc:'shatter hits harder & reaches farther.',f:()=>{P.crystalShatter=(P.crystalShatter||0)+1;}},
+      {desc:'shatter hits harder & reaches farther.',f:()=>{P.crystalShatter=(P.crystalShatter||0)+1;}},
+      {desc:'your hits also chill enemies lightly.',f:()=>{P.leafDrift=(P.leafDrift||0)+1;}},
+    ],
+    evo:{name:'Prismatic Burst', icon:'gembig', desc:'EVOLVE — shatters also freeze foes briefly and drop crystal shards.',
+         f:()=>{P.crystalShatter=(P.crystalShatter||0)+2;P.crystalShatterEvo=true;}} },
+  { id:'shardfield', name:'Shard Field', icon:'gembig', rarity:'epic', minWorld:8,
+    steps:[
+      {desc:'every 6s, erupt a ring of crystal shards around you.',f:()=>{P.fieldPulse=true;P.fpCdBase=6;P.fpR=105;P.fpDps=11;P.fpCol='#c8e8ff';P.fpSlow=true;}},
+      {desc:'field grows & pulses more often.',f:()=>{P.fpR=(P.fpR||105)+22;P.fpCdBase=Math.max(4.2,P.fpCdBase-0.6);}},
+      {desc:'field grows & pulses more often.',f:()=>{P.fpR=(P.fpR||127)+22;P.fpCdBase=Math.max(3.5,P.fpCdBase-0.6);P.fpDps=(P.fpDps||11)+4;}},
+      {desc:'shards cut deeper.',f:()=>{P.fpDps=(P.fpDps||15)+5;}},
+    ],
+    evo:{name:'Crystal Storm', icon:'gembig', desc:'EVOLVE — constant crystal aura that shreds everything nearby.',
+         f:()=>{P.fieldPulse=true;P.fieldPulseEvo=true;P.fpR=(P.fpR||150)+35;P.fpDps=(P.fpDps||20)+8;P.fpCdBase=Math.max(2.8,P.fpCdBase-0.8);}} },
+
+  // 🌋 World 10 (VOLCANO)
+  { id:'scorchaura', name:'Scorch Aura', icon:'flamingo', rarity:'uncommon', cap:5, minWorld:9,
+    steps:[{desc:'a heat aura scorches nearby enemies. (+damage per level)',f:()=>P.burnAura+=5}] },
+  { id:'lavapool', name:'Lava Pool', icon:'rhino', rarity:'rare', cap:5, minWorld:9,
+    steps:[{desc:'kills leave a short-lived lava pool that burns foes.',f:()=>P.lavaKill=(P.lavaKill||0)+1}] },
+  { id:'moltenbloom', name:'Molten Bloom', icon:'gembig', rarity:'epic', minWorld:9,
+    steps:[
+      {desc:'every 5.5s, magma blooms at your feet.',f:()=>{P.fieldPulse=true;P.fpCdBase=5.5;P.fpR=115;P.fpDps=14;P.fpCol='#ff6a20';P.fpSlow=false;}},
+      {desc:'magma spreads wider & blooms faster.',f:()=>{P.fpR=(P.fpR||115)+24;P.fpCdBase=Math.max(4,P.fpCdBase-0.6);}},
+      {desc:'magma burns hotter.',f:()=>{P.fpDps=(P.fpDps||14)+5;}},
+      {desc:'magma lingers longer each bloom.',f:()=>{P.fpLife=(P.fpLife||1.5)+0.4;}},
+    ],
+    evo:{name:'Volcanic Heart', icon:'gembig', desc:'EVOLVE — permanent molten ring and eruptions on kill.',
+         f:()=>{P.fieldPulse=true;P.fieldPulseEvo=true;P.fpR=(P.fpR||139)+30;P.fpDps=(P.fpDps||19)+10;P.lavaKill=(P.lavaKill||0)+2;}} },
+
+  // ⛏️ World 11 (DIRT DEPTHS)
+  { id:'quakedash', name:'Quake Dash', icon:'tralalero', rarity:'uncommon', cap:4, minWorld:10,
+    steps:[{desc:'finishing a dash sends a ground shock through nearby foes. (+power per level)',f:()=>P.quakeDash=(P.quakeDash||0)+1}] },
+  { id:'buriedgold', name:'Buried Gold', icon:'coin', rarity:'rare', cap:4, minWorld:10,
+    steps:[{desc:'kills yank nearby coin drops toward you. (+pull per level)',f:()=>P.buriedGold=(P.buriedGold||0)+1}] },
+  { id:'earthward', name:'Earth Ward', icon:'turtle', rarity:'epic', minWorld:10,
+    steps:[
+      {desc:'rocky armor: -8% damage taken.',f:()=>P.armor*=0.92},
+      {desc:'thorns sprout from your shell.',f:()=>P.thorns+=8},
+      {desc:'thorns sprout harder.',f:()=>P.thorns+=8},
+      {desc:'nearby foes take quake damage when they touch you.',f:()=>{P.earthward=(P.earthward||0)+1;}},
+    ],
+    evo:{name:'Titan Shell', icon:'turtle', desc:'EVOLVE — heavy armor, strong thorns, and quakes when you dash.',
+         f:()=>{P.armor*=0.88;P.thorns+=14;P.quakeDash=(P.quakeDash||0)+2;P.earthward=(P.earthward||0)+2;}} },
+
   { id:'auramonster', name:'Aura Monster', icon:'gembig', rarity:'rare', minWorld:1, cap:3,
     steps:[
       {desc:'gain a green energy aura that damages nearby enemies.',    f:()=>{P.auraR=150; P.auraDmg=16;}},
@@ -1281,6 +1378,13 @@ const CARD_MINWORLD = {
   permafrost:3, coldblood:3, frostbloom:3, glacierheart:3,
   // World 5
   luckyspin:4, bouncy:4, showstopper:4, daredevil:4, knives:4,
+  // World 6–11
+  leafdrift:5, harvestmoon:5, embertrail:5,
+  bogmire:6, toxicmire:6, swampleech:6,
+  tailwind:7, thunderdrop:7, updraft:7,
+  prismedge:8, crystalshatter:8, shardfield:8,
+  scorchaura:9, lavapool:9, moltenbloom:9,
+  quakedash:10, buriedgold:10, earthward:10,
 };
 for(const u of UPGRADES){ if(CARD_MINWORLD[u.id]!=null) u.minWorld = CARD_MINWORLD[u.id]; }
 // returns the next card "move" for an upgrade, or null if exhausted
@@ -1326,6 +1430,20 @@ function resetPlayer(){
     // World 5: CIRCO BRAINROTTO
     jackpot:0, bounce:0, pinball:false, showstopper:false,
     daredevil:0, knives:false, knifeCd:0, knifeCdBase:3.5, knifeN:0, knifeBig:false, knifeEvo:false,
+    // World 6: AUTUMN WOODS
+    leafDrift:0, harvestGain:0, harvestMax:0, harvestStacks:0,
+    emberTrail:0, emberR:0, emberLife:0, emberCd:0, emberAlways:false,
+    // World 7: SWAMP
+    bogAura:0, bogR:0, toxicHit:0, swampleech:0, swampStill:0.5, swampRegen:0, stillT:0,
+    // World 8: SKYLAND
+    thunder:false, thunderCd:0, thunderCdBase:5.5, thunderDmg:1.4, thunderChain:0, thunderEvo:false,
+    // World 9: CRYSTAL CAVES
+    prismCrit:0, crystalShatter:0, crystalShatterEvo:false,
+    fieldPulse:false, fieldPulseEvo:false, fpCd:0, fpCdBase:6, fpR:0, fpDps:0, fpCol:'#bfe6ff', fpSlow:false, fpLife:1.5,
+    // World 10: VOLCANO (lavaKill)
+    lavaKill:0,
+    // World 11: DIRT DEPTHS
+    quakeDash:0, buriedGold:0, earthward:0,
     // World 1 additions
     seeker:0, laststand:0,
     startDmg:10, turretCount:0, turretDmgBase:0, turretDmgMul:1, turretFireMul:1, turretRangeBase:330, turretRangeBonus:0, turretAdaptive:false,
@@ -2187,10 +2305,32 @@ function update(dt){
   if(ml>0.05){ P.face=Math.atan2(my,mx); P.walk+=dt*10; P.moving=true; P.walkAmt=Math.min(1,(P.walkAmt||0)+dt*8); }
   else { P.walk*=0.9; P.moving=false; P.walkAmt=Math.max(0,(P.walkAmt||0)-dt*6); }
 
+  // Swamp Leech: track standing still
+  if(P.swampleech>0 || P.swampRegen>0){
+    if(P.moving || P.dashT>0) P.stillT=0;
+    else P.stillT=(P.stillT||0)+dt;
+  }
+
+  // Ember Trail: burning leaves while moving (or always after evolve)
+  if(P.emberTrail>0 && (P.moving || P.emberAlways)){
+    P.emberCd=(P.emberCd||0)-dt;
+    if(P.emberCd<=0){
+      P.emberCd=Math.max(0.14,0.32-P.emberTrail*0.03);
+      const er=P.emberR||48, el=P.emberLife||1.1;
+      addZone(P.x,P.y,er,{tele:0.05,life:el,dps:6+P.emberTrail*3,col:'#ff8a3a',friendly:true});
+      if(Math.random()<0.35) spawnPart(P.x+rand(-10,10),P.y+rand(-10,10),0,-rand(20,50),0.35,0.35,'#ff6a20',rand(2,5));
+    }
+  }
+
   if(P.dashT>0){
     P.dashT-=dt;
     P.x += P.dvx*640*dt; P.y += P.dvy*640*dt;
     if(Math.random()<0.6) spawnPart(P.x,P.y,0,0,0.25,0.25,'#bfe3ff',6);
+    if(P.dashT<=0 && P.quakeDash>0){
+      const R=62+P.quakeDash*10, qd=P.dmg*(1.2+P.quakeDash*0.35)*(P.abyssalMul||1);
+      forEnemiesNear(P.x,P.y,R,(o)=>{ if(o.iv>0||o.under||o.lead) return; if(dist2(P.x,P.y,o.x,o.y)<R*R){ o.hp-=qd; o.hitT=Math.max(o.hitT,0.08); } });
+      spawnPart(P.x,P.y,0,0,0.3,0.3,'#8a5d2c',R,1,R*2.2); burst(P.x,P.y,'#caa15a',12,260); shake=Math.max(shake,5);
+    }
   } else {
     const spd = P.speed * (P.slowT>0 ? 0.5 : 1);   // chilled by cold zones
     P.x += mx*spd*dt; P.y += my*spd*dt;
@@ -2406,11 +2546,54 @@ function update(dt){
     }
   }
 
+  // --- Generic field pulse (Shard Field, Molten Bloom, W12+ themed cards) ---
+  if(P.fieldPulse){
+    P.fpCd -= dt;
+    if(P.fpCd<=0){
+      P.fpCd = P.fpCdBase;
+      const fl = P.fieldPulseEvo ? (P.fpLife||1.5)+0.8 : (P.fpLife||1.5);
+      addZone(P.x,P.y,P.fpR,{tele:0.08,life:fl,dps:P.fpDps,slow:!!P.fpSlow,col:P.fpCol||'#bfe6ff',friendly:true});
+      burst(P.x,P.y,P.fpCol||'#bfe6ff',P.fieldPulseEvo?20:12,280);
+      if(P.fpSlow) forEnemiesNear(P.x,P.y,P.fpR,(e)=>{ if(!e.isBoss&&!e.lead&&dist2(P.x,P.y,e.x,e.y)<P.fpR*P.fpR) e.chillT=Math.max(e.chillT||0,1.0); });
+    }
+  }
+
+  // --- Thunder Drop: periodic bolt on nearest foe ---
+  if(P.thunder){
+    P.thunderCd -= dt;
+    if(P.thunderCd<=0){
+      P.thunderCd = P.thunderCdBase;
+      let best=null, bd=Infinity;
+      forEnemiesNear(P.x,P.y,P.range,(e)=>{ if(e.iv>0||e.lead) return; const d=dist2(P.x,P.y,e.x,e.y); if(d<bd){bd=d;best=e;} });
+      if(best){
+        const td=P.dmg*(P.thunderDmg||1.4)*(P.abyssalMul||1);
+        damageEnemy(best,td,P.x,P.y,false);
+        burst(best.x,best.y,'#ffd24a',P.thunderEvo?18:10,320); sfx.boss();
+        if(P.thunderEvo){ for(let bi=ebullets.length-1;bi>=0;bi--){ if(dist2(best.x,best.y,ebullets[bi].x,ebullets[bi].y)<90*90) swapRemove(ebullets,bi); } }
+        const chains=P.thunderChain||0;
+        if(chains>0){
+          let second=null, sd=Infinity;
+          forEnemiesNear(best.x,best.y,160,(e)=>{ if(e===best||e.iv>0||e.lead) return; const d=dist2(best.x,best.y,e.x,e.y); if(d<sd){sd=d;second=e;} });
+          if(second){ damageEnemy(second,td*0.7,P.x,P.y,false); burst(second.x,second.y,'#fff6bf',8,220); }
+        }
+      }
+    }
+  }
+
   // --- Killing Frenzy stacks decay when you stop killing ---
   if(P.frenzy>0) P.frenzy = Math.max(0, P.frenzy - dt*2);
 
+  // --- Harvest Moon gold stacks decay when you stop killing ---
+  if(P.harvestStacks>0) P.harvestStacks = Math.max(0, P.harvestStacks - dt*1.5);
+
   // --- Regeneration ---
   if(P.regen>0 && P.hp<P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.regen*dt);
+
+  // --- Swamp Leech: heal while standing still ---
+  if((P.swampleech>0||P.swampRegen>0) && P.stillT>=(P.swampStill||0.5)){
+    const rate = (P.swampRegen||0) + P.swampleech*1.4;
+    if(rate>0 && P.hp<P.maxHp) P.hp = Math.min(P.maxHp, P.hp + rate*dt);
+  }
 
   // --- Aegis Bubble recharge ---
   if(P.shieldMax>0 && P.shield<P.shieldMax){
@@ -2424,12 +2607,21 @@ function update(dt){
     if(P.phoenixCd<=0){ P.phoenix++; P.phoenixCd=P.phoenixCdBase; floatText(P.x,P.y-P.r-10,'phoenix ready','#ff7a3a',12); }
   }
 
-  // --- Phoenix burn aura: enemies near you smoulder ---
+  // --- Phoenix burn aura / Scorch Aura: enemies near you smoulder ---
   if(P.burnAura>0){
     forEnemiesNear(P.x,P.y,80,(e)=>{
       if(e.iv>0 || e.lead) return;
       if(dist2(P.x,P.y,e.x,e.y) < 80*80){ e.hp -= P.burnAura*dt; e.hitT=Math.max(e.hitT,0.05);
         if(Math.random()<0.18) spawnPart(e.x+rand(-8,8),e.y+rand(-8,8),0,-rand(20,50),0.4,0.4,'#ff8a3a',rand(2,4)); }
+    });
+  }
+
+  // --- Bog Mire: mud aura slows nearby foes ---
+  if(P.bogAura>0){
+    const br=P.bogR||88;
+    forEnemiesNear(P.x,P.y,br,(e)=>{
+      if(e.iv>0 || e.lead || e.isBoss) return;
+      if(dist2(P.x,P.y,e.x,e.y) < br*br) e.chillT = Math.max(e.chillT||0, 0.25 + 0.12*P.bogAura);
     });
   }
 
@@ -2603,6 +2795,11 @@ function update(dt){
           hitSpark(b.x,b.y,isCrit?'#ffe14d':'#ff9f3a',isCrit);
           damageEnemy(e,dmg,b.x,b.y,isCrit);
           if(isCrit && P.critHeal>0) P.hp=Math.min(P.maxHp,P.hp+P.critHeal);   // Blood Crit
+          if(isCrit && P.prismCrit>0){   // Prism Edge: crits split shards
+            for(let s=0;s<2+P.prismCrit;s++){ const a=rand(0,TAU);
+              bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*380,vy:Math.sin(a)*380,r:5,pierce:1,hit:new Set([e]),dist:220,dmgMul:0.35*(b.dmgMul||1),col:'#c8e8ff'}); }
+            burst(e.x,e.y,'#c8e8ff',6,140);
+          }
           if(P.ricochet>0 && !b.ric){   // Ricochet: fling weaker bolts at nearby foes (don't ricochet a ricochet)
             const R=P.ricochetEvo?220:140, mul=P.ricochetEvo?0.7:0.5; let n=0;
             forEnemiesNear(b.x,b.y,R,(o)=>{ if(n>=P.ricochet||o===e||o.iv>0||o.under||o.lead||b.hit.has(o)) return;
@@ -2729,6 +2926,16 @@ function update(dt){
       }
       if(Math.random()<dt*10) spawnPart(e.x+rand(-e.r*.5,e.r*.5),e.y-e.r*.2,rand(-18,18),rand(-90,-35),.38,.38,Math.random()<.5?'#ff6a00':'#ffcc00',rand(2,5));
       if(e.fire.dur<=0){ e.fire=null; e.fireImmune=1; }
+    }
+    if(e.poison){
+      e.poison.dur-=dt; e.poison.tickCd-=dt;
+      if(e.poison.tickCd<=0){
+        e.poison.tickCd=0.5;
+        e.hp-=e.poison.dmg; e.hitT=Math.max(e.hitT,0.06);
+        floatText(e.x,e.y-e.r-4,Math.round(e.poison.dmg),'#5fe66a',11);
+      }
+      if(Math.random()<dt*8) spawnPart(e.x+rand(-e.r*.5,e.r*.5),e.y-e.r*.2,rand(-18,18),rand(-90,-35),.35,.35,'#40c820',rand(2,4));
+      if(e.poison.dur<=0) e.poison=null;
     }
 
     if(e.isBoss){
@@ -2860,6 +3067,11 @@ function update(dt){
       const hitLands = P.inv<=0 && P.dashT<=0 && P.shield<=0;   // the contact actually deals damage this frame
       hurtPlayer((e.isBoss?20:10)*(e.dmgBuff||1)*chalDmgMul(), e);
       if(P.thorns>0 && hitLands && !e.isBoss) damageEnemy(e, P.thorns, P.x, P.y, false);   // Spiky Peel
+      if(P.earthward>0 && hitLands && !e.isBoss){   // Earth Ward: quake when foes touch you
+        const R=48+P.earthward*8, qd=P.dmg*0.45*P.earthward*(P.abyssalMul||1);
+        forEnemiesNear(P.x,P.y,R,(o)=>{ if(o===e||o.iv>0||o.lead) return; if(dist2(P.x,P.y,o.x,o.y)<R*R){ o.hp-=qd; o.hitT=Math.max(o.hitT,0.08); } });
+        spawnPart(P.x,P.y,0,0,0.25,0.25,'#8a5d2c',R*0.6,1);
+      }
       if(e.kb && e.dst==='dash'){   // charging boulder bowls the player back
         const a=Math.atan2(P.y-e.y,P.x-e.x);
         P.x=clamp(P.x+Math.cos(a)*120, WALL+P.r, WORLD.w-WALL-P.r); P.y=clamp(P.y+Math.sin(a)*120, WALL+P.r, WORLD.h-WALL-P.r);
@@ -2897,6 +3109,27 @@ function update(dt){
       }
       if(P.vamp>0){ P.hp=Math.min(P.maxHp,P.hp+P.vamp); }
       if(P.frenzyGain>0) P.frenzy=Math.min(P.frenzyMax, P.frenzy+P.frenzyGain);
+      if(P.harvestGain>0) P.harvestStacks=Math.min(P.harvestMax||12, (P.harvestStacks||0)+1);
+      if(P.lavaKill>0){
+        const lr=52+P.lavaKill*8;
+        addZone(e.x,e.y,lr,{tele:0.08,life:1.1+P.lavaKill*0.12,dps:9+P.lavaKill*3,col:'#ff5020',friendly:true});
+        burst(e.x,e.y,'#ff6a20',8,200);
+      }
+      if(P.buriedGold>0){
+        const pull=180+P.buriedGold*45;
+        for(const g of gems){
+          const d=dist2(e.x,e.y,g.x,g.y);
+          if(d<pull*pull && d>1){ const dd=Math.sqrt(d); g.vx=(g.vx||0)+(P.x-g.x)/dd*220; g.vy=(g.vy||0)+(P.y-g.y)/dd*220; }
+        }
+      }
+      if(P.crystalShatter>0 && (e.chillT>0||e.frz>0)){
+        const R=68+P.crystalShatter*12, sd=P.dmg*(1.4+P.crystalShatter*0.45)*(P.abyssalMul||1);
+        forEnemiesNear(e.x,e.y,R,(o)=>{ if(o.iv>0||o.lead) return; if(dist2(e.x,e.y,o.x,o.y)<R*R){ o.hp-=sd; o.hitT=Math.max(o.hitT,0.1);
+          if(P.crystalShatterEvo && !o.isBoss) o.frz=Math.max(o.frz||0,0.6); } });
+        burst(e.x,e.y,'#c8e8ff',P.crystalShatterEvo?16:10,260);
+        if(P.crystalShatterEvo){ for(let s=0;s<4;s++){ const a=s*(TAU/4)+rand(0,0.5);
+          bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*360,vy:Math.sin(a)*360,r:5,pierce:1,hit:new Set(),dist:260,dmgMul:0.45,col:'#c8e8ff'}); } }
+      }
       if(P.frostfire && e.frz>0){          // Frostfire Core: frozen foes shatter into shards
         for(let s=0;s<4;s++){ const a=s*(TAU/4)+rand(0,0.6);
           bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*420,vy:Math.sin(a)*420,r:6,pierce:1,hit:new Set(),dist:300,dmgMul:0.5}); }
@@ -3050,7 +3283,7 @@ function update(dt){
     if(d < (P.r+12)*(P.r+12)){
       gems.splice(i,1);
       if(g.heart){ const h=g.heal||(g.big?50:25); P.hp=Math.min(P.maxHp,P.hp+h); floatText(P.x,P.y-24,'+'+h,'#e8556a',g.big?20:16); burst(P.x,P.y,'#ff97a6',g.big?14:8,140); sfx.coin(); }
-      else if(g.coin){ const v=Math.round(15*(P.goldMul||1)*coinMult()*worldCoinMul()*(gameMode==='challenger'?Math.min(3.5,1.3+worldIdx*0.3):1)); worldCoins+=v; if(gameMode!=='practice'){ gold+=v; saveGold(); if(window.markDirty) window.markDirty(); } setCoinHUD(); floatText(g.x,g.y,'+'+fmtNum(v),'#f5c542',13); sfx.coin(); }
+      else if(g.coin){ const harvestMul=P.harvestGain>0?(1+0.08*(P.harvestStacks||0)):1; const v=Math.round(15*(P.goldMul||1)*harvestMul*coinMult()*worldCoinMul()*(gameMode==='challenger'?Math.min(3.5,1.3+worldIdx*0.3):1)); worldCoins+=v; if(gameMode!=='practice'){ gold+=v; saveGold(); if(window.markDirty) window.markDirty(); } setCoinHUD(); floatText(g.x,g.y,'+'+fmtNum(v),'#f5c542',13); sfx.coin(); }
       else if(g.magnet){ for(const o of gems) o.vac=true; floatText(P.x,P.y-24,'MAGNET','#9fe0ff',16); burst(P.x,P.y,'#9fe0ff',12,160); sfx.level(); }   // pull in every pickup on the map
       else { gainXp(g.v); sfx.gem(2); }
     }
@@ -3149,6 +3382,8 @@ function damageEnemy(e,dmg,fx,fy,crit){
   if(P.stealthAggro && !e.isBoss) e.aggroT=Math.max(e.aggroT||0,3);   // getting shot wakes the enemy up
   if(P.freeze && !e.isBoss) e.frz=1.2;
   if(P.chillHit && !e.isBoss && e.frz<=0) e.chillT = Math.max(e.chillT||0, 0.8 + 0.25*P.chillHit);   // Permafrost: chill-on-hit
+  if(P.leafDrift && !e.isBoss && e.frz<=0) e.chillT = Math.max(e.chillT||0, 0.7 + 0.22*P.leafDrift);   // Falling Leaves
+  if(P.toxicHit && !e.isBoss && !e.poison) e.poison={dur:2.2+P.toxicHit*0.35,dmg:2+P.toxicHit*1.1,tickCd:0.5};   // Toxic Mire
   if(P.burnHit && !e.isBoss && !e.fire) e.fire={dur:2,dmg:3,tickCd:0.5};   // Ember Sage: burn-on-hit
   sfx.hit();
   const _dvx=(Math.random()-0.5)*120;
