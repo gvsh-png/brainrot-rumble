@@ -6,7 +6,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#8fd24f">
-<title>BRAINROT RUMBLE — Italian Invasion</title>
+<meta name="description" content="Brainrot bullet-hell survivor — dodge the swarm, dash to survive.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>BRAINROT RUMBLE</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -238,12 +242,12 @@
 <div id="login" class="overlay hidden">
   <div class="panel loginpanel">
     <div class="title logintitle">BRAINROT<br>RUMBLE</div>
-    <p class="loginsub">Sign in to save your progress to your Google account and play across devices.</p>
-    <button class="bigbtn" id="btn-google">
-      <span class="gicon">G</span> Sign in with Google
+    <p class="loginsub">Sign in with Google Play to save progress across Android devices.</p>
+    <button class="bigbtn" id="btn-play">
+      <span class="playicon" aria-hidden="true"></span> Sign in with Google Play
     </button>
     <button class="bigbtn green" id="btn-guest">Continue as Guest</button>
-    <div class="loginnote">Guest progress is saved on this device only and can't be moved to an account later.</div>
+    <div class="loginnote">Guest progress is saved on this device only and can't be moved to Play Games later.</div>
     <div id="loginmsg" class="hidden"></div>
   </div>
 </div>
@@ -316,10 +320,6 @@
   </div>
 </div>
 
-<!-- Supabase (UMD build exposes the global `supabase` with createClient) -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase-config.js"></script>
-
 <!-- Character/pet/recruit systems: load before core so their globals are available to game.js and shop.js -->
 <script src="js/changelog.js"></script>
 <script src="js/hooks.js"></script>
@@ -336,6 +336,8 @@
 <script src="js/input.js"></script>
 <script src="js/game.js"></script>
 <script src="js/shop.js"></script>
+<script src="js/play-bridge.js"></script>
+<script src="js/native.js"></script>
 <script src="js/auth.js"></script>
 </body>
 </html>

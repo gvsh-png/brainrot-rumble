@@ -1,46 +1,23 @@
 'use strict';
-// ============ ACCOUNTS: Google login (Supabase) + cloud save, or local guest ============
-// Progression (gold, world unlocks, gear owned/equipped/seen) saves to the signed-in Google
-// account via Supabase (Postgres + Row Level Security). "Continue as Guest" keeps everything in
-// localStorage only and is NEVER uploaded. Device-only settings (music/SFX mute) stay local.
+// ============ ACCOUNTS: Google Play Games cloud save (Android) or local guest ============
+// Progression saves to Google Play Games on the Android app. "Continue as Guest" keeps
+// everything in localStorage only. Device-only settings (music/SFX mute) stay local.
 //
-// SETUP (one-time):
-//   1. Create a project at https://supabase.com  → Project Settings → API:
-//        copy the "Project URL" and the "anon public" key into js/supabase-config.js
-//        (or inject them on Vercel via env vars + build.js — see README/build.js).
-//      NOTE: the anon key is PUBLIC and safe in the browser — your data is protected by the RLS
-//      policies below, not by hiding the key.
-//   2. SQL editor → run:
-//        create table if not exists public.saves (
-//          user_id uuid primary key references auth.users(id) on delete cascade,
-//          data jsonb not null default '{}',
-//          updated_at timestamptz not null default now()
-//        );
-//        alter table public.saves enable row level security;
-//        create policy "own_read"   on public.saves for select using (auth.uid() = user_id);
-//        create policy "own_insert" on public.saves for insert with check (auth.uid() = user_id);
-//        create policy "own_update" on public.saves for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
-//   3. Authentication → Providers → Google → enable; paste a Google OAuth Client ID + Secret
-//      (from Google Cloud console). In Google, add redirect URI: https://<project>.supabase.co/auth/v1/callback
-//   4. Authentication → URL Configuration → set Site URL to your Vercel URL and add it (and
-//      http://localhost:* for testing) under "Redirect URLs".
-// Until URL + anon key are set, Google login is disabled and the game runs in guest-only mode.
-
-const SUPA_URL  = (typeof window!=='undefined' && window.SUPA_URL)  || 'PASTE_SUPABASE_URL';
-const SUPA_ANON = (typeof window!=='undefined' && window.SUPA_ANON) || 'PASTE_SUPABASE_ANON_KEY';
+// ANDROID SETUP (one-time, see docs/ANDROID_PUBLISH.md):
+//   1. Create app in Google Play Console + enable Play Games Services
+//   2. Enable Saved Games (Snapshots) in Play Console
+//   3. Link OAuth client (package name + SHA-1) to Play Games
+//   4. Build signed APK/AAB: npm run android:release
 
 const EMPTY_PROFILE = () => ({ gold:0, unlocked:0, chalUnlocked:0, owned:[], equipped:{}, seen:[], gems:0, chars:[], pets:[], petPity:0, activeChar:'gianni', activePet:null });
 
-let sb = null;                // supabase client
-let authMode = null;          // 'guest' | 'account'
-let acctUser = null;          // signed-in supabase user (account mode)
-let loadedUid = null;
+let authMode = null;          // 'guest' | 'play'
+let playPlayer = null;        // Google Play Games player (account mode)
+let loadedPlayId = null;
 let saveTimer = null;
 
-function supaConfigured(){
-  return typeof supabase!=='undefined'
-      && typeof SUPA_URL==='string'  && SUPA_URL.indexOf('PASTE')<0  && SUPA_URL.indexOf('http')===0
-      && typeof SUPA_ANON==='string' && SUPA_ANON.indexOf('PASTE')<0 && SUPA_ANON.length>20;
+function playAvailable(){
+  return typeof PlayBridge !== 'undefined' && PlayBridge.isAvailable && PlayBridge.isAvailable();
 }
 
 // ---- profile <-> the live localStorage working keys ----
@@ -62,28 +39,21 @@ function currentBlob(){
 }
 function applyProfile(b){
   b = b || EMPTY_PROFILE();
-  // gold
   const restoredGold = Math.max(0, Math.floor(b.gold!=null? b.gold : 0));
   localStorage.setItem('br_gold', restoredGold);
   if(typeof _saveHash==='function') localStorage.setItem('br_gold_sig', _saveHash(restoredGold));
-  // world progress
   localStorage.setItem('br_unlocked',      b.unlocked!=null? b.unlocked : 0);
   localStorage.setItem('br_ch_unlocked',   b.chalUnlocked!=null? b.chalUnlocked : 0);
-  // gear
   localStorage.setItem('br_items_owned',   JSON.stringify(b.owned||[]));
   localStorage.setItem('br_gear_equipped', JSON.stringify(b.equipped||{}));
   localStorage.setItem('br_gear_seen',     JSON.stringify(b.seen||[]));
-  // gems
   const restoredGems = Math.max(0, Math.floor(b.gems!=null? b.gems : 0));
   localStorage.setItem('br_gems', restoredGems);
   if(typeof _gemHash==='function') localStorage.setItem('br_gems_sig', _gemHash(restoredGems));
   if(typeof gemBalance!=='undefined') gemBalance = restoredGems;
-  // characters
   localStorage.setItem('br_owned_chars', JSON.stringify(b.chars||[]));
-  // pets
   localStorage.setItem('br_owned_pets', JSON.stringify(b.pets||[]));
   localStorage.setItem('br_pet_pity', b.petPity!=null? b.petPity : 0);
-  // active selections
   const ac = b.activeChar||'gianni';
   localStorage.setItem('br_active_char', ac);
   if(typeof activeCharId!=='undefined') activeCharId = ac;
@@ -91,7 +61,6 @@ function applyProfile(b){
   else { localStorage.removeItem('br_active_pet'); if(typeof activePetId!=='undefined') activePetId=null; }
   rehydrate();
 }
-// push the freshly-written working keys into the live game globals + refresh the menu UI
 function rehydrate(){
   try{
     gold = +(localStorage.getItem('br_gold')||0);
@@ -144,75 +113,81 @@ function rehydrate(){
   const gt=$('goldtxt'); if(gt) gt.textContent = (typeof gold!=='undefined'?gold:0);
 }
 
-// ---- saving (debounced; gentle on quota) ----
-// Debounced; the actual stringify+write runs in idle time so it never lands inside a render frame.
 const _ric = window.requestIdleCallback ? (fn)=>window.requestIdleCallback(fn,{timeout:2000}) : (fn)=>setTimeout(fn,0);
 function markDirty(){ if(saveTimer) return; saveTimer=setTimeout(()=>{ saveTimer=null; _ric(saveProfile); }, 1500); }
 window.markDirty = markDirty;
 function flushSave(){ if(saveTimer){ clearTimeout(saveTimer); saveTimer=null; saveProfile(); } }
 window.addEventListener('beforeunload', flushSave);
 window.addEventListener('pagehide', flushSave);
+
+function playCacheKey(id){ return 'br_save_play_'+id; }
+
 function saveProfile(){
   const blob = currentBlob();
   if(authMode==='guest'){ localStorage.setItem('br_save_guest', JSON.stringify(blob)); return; }
-  if(authMode==='account' && acctUser && sb){
-    localStorage.setItem('br_save_acct_'+acctUser.id, JSON.stringify(blob));        // offline cache
-    sb.from('saves').upsert({ user_id:acctUser.id, data:blob, updated_at:new Date().toISOString() })
-      .then(({error})=>{ if(error) console.warn('cloud save failed', error.message); });
+  if(authMode==='play' && playPlayer && PlayBridge){
+    const cacheKey = playCacheKey(playPlayer.playerId || 'default');
+    localStorage.setItem(cacheKey, JSON.stringify(blob));
+    PlayBridge.saveCloud(blob);
   }
 }
 
-// ---- guest mode (local only; never uploaded) ----
 function enterGuest(){
-  authMode='guest'; acctUser=null; loadedUid=null;
+  authMode='guest'; playPlayer=null; loadedPlayId=null;
   let blob=null;
   try{ const g=localStorage.getItem('br_save_guest'); if(g) blob=JSON.parse(g); }catch(e){}
-  if(!blob) blob=currentBlob();   // first run: the existing localStorage IS the guest save (nothing wiped)
+  if(!blob) blob=currentBlob();
   applyProfile(blob);
   localStorage.setItem('br_save_guest', JSON.stringify(currentBlob()));
   hideLogin(); updateAcctUI();
 }
 
-// ---- account mode (Google + Supabase) ----
-async function enterAccount(user){
-  if(authMode==='account' && loadedUid===user.id){ hideLogin(); updateAcctUI(); return; }
-  authMode='account'; acctUser=user; loadedUid=user.id;
+async function enterPlayAccount(player){
+  const pid = player && (player.playerId || player.displayName || 'play');
+  if(authMode==='play' && loadedPlayId===pid){ hideLogin(); updateAcctUI(); return; }
+  authMode='play'; playPlayer=player; loadedPlayId=pid;
   let blob=null;
   try{
-    const { data, error } = await sb.from('saves').select('data').eq('user_id', user.id).maybeSingle();
-    if(!error && data && data.data) blob = data.data;
-  }catch(e){
-    const c=localStorage.getItem('br_save_acct_'+user.id);     // offline → last cached cloud save
+    blob = await PlayBridge.loadCloud();
+  }catch(e){}
+  if(!blob){
+    const c=localStorage.getItem(playCacheKey(pid));
     if(c){ try{ blob=JSON.parse(c); }catch(_){} }
   }
-  if(!blob) blob = EMPTY_PROFILE();   // brand-new account = fresh start; guest progress is NOT imported
+  if(!blob) blob = EMPTY_PROFILE();
   applyProfile(blob);
-  saveProfile();                      // ensure the row exists
+  saveProfile();
   hideLogin(); updateAcctUI();
 }
 
-function doGoogleLogin(){
-  if(!supaConfigured()){ loginMsg("Google login isn't set up yet — add your Supabase URL + anon key (js/supabase-config.js). You can play as guest for now."); return; }
-  authMode=null;   // explicit sign-in overrides a prior guest choice
-  const redirectTo = location.href.split('#')[0].split('?')[0];
-  sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo } })
-    .then(({error})=>{ if(error) loginMsg('Login failed: '+error.message); });
+async function doPlayLogin(){
+  if(!playAvailable()){ loginMsg("Google Play sign-in is only available in the Android app."); return; }
+  authMode=null;
+  loginMsg('Signing in…');
+  const btn=$('btn-play'); if(btn) btn.disabled=true;
+  try{
+    const auth = await PlayBridge.signIn();
+    if(!auth || !auth.isAuthenticated){ loginMsg('Sign-in cancelled or failed. Try again or play as guest.'); return; }
+    const player = await PlayBridge.getPlayer();
+    if(!player){ loginMsg('Signed in but could not load player profile.'); return; }
+    await enterPlayAccount(player);
+  } finally {
+    if(btn) btn.disabled=false;
+  }
 }
+
 function doSignOut(){
-  if(sb) sb.auth.signOut().catch(()=>{});
-  acctUser=null; authMode=null; loadedUid=null;
+  authMode=null; playPlayer=null; loadedPlayId=null;
   showLogin(); updateAcctUI();
 }
 
-// ---- UI ----
 function showLogin(){ const o=$('login'); if(o) o.classList.remove('hidden'); }
 function hideLogin(){ const o=$('login'); if(o) o.classList.add('hidden'); }
 function loginMsg(t){ const m=$('loginmsg'); if(m){ m.textContent=t; m.classList.remove('hidden'); } }
 function updateAcctUI(){
   const un=$('sdrop-username'), si=$('sdrop-acct'); if(!un) return;
-  if(authMode==='account' && acctUser){
-    const md = acctUser.user_metadata||{};
-    const nm = md.full_name || md.name || acctUser.email || 'Account';
+  if(authMode==='play' && playPlayer){
+    const nm = playPlayer.displayName || 'Play Games';
     un.textContent = String(nm).split(' ')[0];
     if(si){ si.textContent='Sign Out'; si.dataset.action='signout'; si.style.background='#d9694a'; si.style.boxShadow='0 4px 0 #a0412c'; }
   } else {
@@ -221,35 +196,54 @@ function updateAcctUI(){
   }
 }
 
-// ---- boot ----
+function configureLoginUI(){
+  const playBtn = $('btn-play');
+  const sub = document.querySelector('.loginsub');
+  const note = document.querySelector('.loginnote');
+  if(playAvailable()){
+    if(sub) sub.textContent = 'Sign in with Google Play to save progress across Android devices.';
+    if(note) note.textContent = 'Guest progress stays on this device only and cannot be moved to Play Games later.';
+    if(playBtn) playBtn.classList.remove('hidden');
+  } else {
+    if(sub) sub.textContent = 'Play in your browser — progress is saved on this device.';
+    if(note) note.textContent = 'Install the Android app from Google Play for cloud saves with Google Play Games.';
+    if(playBtn) playBtn.classList.add('hidden');
+  }
+}
+
+async function tryAutoPlaySignIn(){
+  if(!playAvailable()) return false;
+  try{
+    const auth = await PlayBridge.isAuthenticated();
+    if(!auth || !auth.isAuthenticated) return false;
+    const player = await PlayBridge.getPlayer();
+    if(!player) return false;
+    await enterPlayAccount(player);
+    return true;
+  }catch(e){ return false; }
+}
+
 (function initAuth(){
-  // Non-destructively snapshot any existing progress as the guest save, so current players keep
-  // everything when they choose "Continue as Guest". The original keys are never removed.
   if(localStorage.getItem('br_save_guest')==null){
     try{ localStorage.setItem('br_save_guest', JSON.stringify(currentBlob())); }catch(e){}
   }
 
-  const g=$('btn-google'); if(g) g.addEventListener('click', doGoogleLogin);
+  configureLoginUI();
+
+  const playBtn=$('btn-play'); if(playBtn) playBtn.addEventListener('click', doPlayLogin);
   const gu=$('btn-guest'); if(gu) gu.addEventListener('click', enterGuest);
   const si=$('sdrop-acct'); if(si) si.addEventListener('click', ()=>{
     $('settingsdrop').classList.add('hidden');
-    if(si.dataset.action==='signout'){ if(confirm('Sign out of your Google account?')) doSignOut(); }
+    if(si.dataset.action==='signout'){ if(confirm('Sign out of Google Play Games?')) doSignOut(); }
     else { showLogin(); }
   });
 
-  if(supaConfigured()){
-    try{
-      sb = supabase.createClient(SUPA_URL, SUPA_ANON);
-      // fires INITIAL_SESSION on load (and after the Google redirect detects the session in the URL)
-      sb.auth.onAuthStateChange((event, session)=>{
-        if(session && session.user && authMode!=='guest'){ enterAccount(session.user); }
-        else if(event==='SIGNED_OUT'){ acctUser=null; loadedUid=null; if(authMode==='account'){ authMode=null; showLogin(); } }
-      });
-    }catch(e){ console.warn('Supabase init failed',e); }
-  } else {
-    const gb=$('btn-google'); if(gb) gb.classList.add('disabled');
-    loginMsg('Add your Supabase URL + anon key to enable Google login. Guest play works now.');
-  }
-
-  showLogin(); updateAcctUI();
+  (async ()=>{
+    const signedIn = await tryAutoPlaySignIn();
+    if(!signedIn){
+      showLogin();
+      if(!playAvailable()) enterGuest();
+    }
+    updateAcctUI();
+  })();
 })();
