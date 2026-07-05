@@ -88,14 +88,14 @@ const EXT_SHOOT_VARIANTS = [
   { type: 'ring', n: 7, cd: 3.2, spd: 115 },
 ];
 
-const EXT_GRUNT_NAMES = [
-  ['Bruiser', 'Spitter', 'Dasher', 'Swarmling'],
-  ['Crusher', 'Blaster', 'Striker', 'Hatchling'],
-  ['Tank', 'Sniper', 'Rusher', 'Brood'],
-  ['Mauler', 'Volley', 'Pouncer', 'Spawn'],
-  ['Breaker', 'Barrage', 'Skimmer', 'Larva'],
-  ['Wrecker', 'Sprayer', 'Bolt', 'Minion'],
-  ['Rammer', 'Caster', 'Flash', 'Grub'],
+const EXT_BRAINROT_NAMES = [
+  ['CAPPUCCINO ASSASSINO', 'TRULIMERO SELVATICO', 'BOBRITTO FURTIVO', 'BARABOOM'],
+  ['GLORBO FRUTTODRILLO', 'BURBALONI LULILOLI', 'FRULA FRUTTINA', 'ESPRESSO SIGILLATO'],
+  ['ZIBRA ZUBRA', 'GOLUBIRO SPIA', 'TRALALERITO PICCOLO', 'AMBALABU RANA'],
+  ['DIN DIN DIN', 'BANANINI SCIMPANZINI', 'POLPO FRUTTOSO', 'MEDUSA VOLANTE'],
+  ['PAPERO BOMBA', 'LIRILI LARILA', 'VESPA DELLO SWARM', 'PIPIKIWI FRUTTOSO'],
+  ['COCOFANTO MINI', 'PATAPIM SPEZZATO', 'ANANASINI SELVATICO', 'TATASAHUR JR'],
+  ['ORCALERO PICCOLO', 'GORILLO MELONE', 'HOTSPOT MINI', 'SATURNITA LUNA'],
 ];
 
 function extTheme(i, band) {
@@ -129,7 +129,7 @@ function buildFoes(wi, band, worldName) {
   const prefix = worldName.split(' ')[0] || 'SWARM';
   const spr = id => 'ext_e' + wi + '_' + id;
   const tint = (EXT_WORLD_THEMES[wi - 11] || EXT_WORLD_THEMES[0]).tint;
-  const nameSet = EXT_GRUNT_NAMES[wi % EXT_GRUNT_NAMES.length];
+  const names = EXT_BRAINROT_NAMES[wi % EXT_BRAINROT_NAMES.length];
   const shootVar = EXT_SHOOT_VARIANTS[wi % EXT_SHOOT_VARIANTS.length];
   const shootVar2 = EXT_SHOOT_VARIANTS[(wi + 3) % EXT_SHOOT_VARIANTS.length];
   const mk = (def) => {
@@ -141,11 +141,11 @@ function buildFoes(wi, band, worldName) {
   };
   const shootOf = (v) => Object.assign({}, v, { col: tint });
   const templates = [
-    mk({ spr: spr('b0'), name: prefix + ' ' + nameSet[0], hp: 10, sp: 68, r: 17, xp: 2, score: 18 }),
-    mk({ spr: spr('b1'), name: prefix + ' ' + nameSet[1], hp: 7, sp: 76, r: 15, xp: 1, score: 14,
+    mk({ spr: spr('b0'), name: names[0] + ' ' + prefix, hp: 10, sp: 68, r: 17, xp: 2, score: 18 }),
+    mk({ spr: spr('b1'), name: names[1] + ' ' + prefix, hp: 7, sp: 76, r: 15, xp: 1, score: 14,
       range: 280 + (wi % 5) * 20, shoot: shootOf(shootVar) }),
-    mk({ spr: spr('s0'), name: prefix + ' ' + nameSet[2], hp: 5, sp: 102, r: 13, xp: 1, score: 11, dash: true }),
-    mk({ spr: spr('s1'), name: prefix + ' ' + nameSet[3], hp: 6, sp: 94, r: 14, xp: 1, score: 13,
+    mk({ spr: spr('s0'), name: names[2] + ' ' + prefix, hp: 5, sp: 102, r: 13, xp: 1, score: 11, dash: true }),
+    mk({ spr: spr('s1'), name: names[3] + ' ' + prefix, hp: 6, sp: 94, r: 14, xp: 1, score: 13,
       death: { type: (wi % 3 === 0) ? 'split' : 'ring', n: 3 + (wi % 3) } }),
   ];
   if (wi % 5 === 2) {

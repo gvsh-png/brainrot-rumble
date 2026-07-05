@@ -139,6 +139,10 @@
     return null;
   }
 
+  function isCircleFree(x, y, r, obs) {
+    return !circleHitsObs(x, y, r, obs);
+  }
+
   function pushOutCircle(x, y, r, o) {
     const nx = Math.max(o.x, Math.min(x, o.x + o.w));
     const ny = Math.max(o.y, Math.min(y, o.y + o.h));
@@ -181,5 +185,5 @@
     }
   }
 
-  window.WorldMapLayout = { getObstacles, resolveCircle, drawObstacles, pickLayout, pickExtendedLayout };
+  window.WorldMapLayout = { getObstacles, resolveCircle, drawObstacles, pickLayout, pickExtendedLayout, isCircleFree, circleHitsObs };
 })();
