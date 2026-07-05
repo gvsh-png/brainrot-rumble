@@ -65,6 +65,7 @@ function loadShop(seed = {}) {
     document,
     location: { hash: '' },
     window: {},
+    WORLDS: { length: 50 },
     SP: new Proxy({}, { get: () => ({ toDataURL() { return 'data:'; }, width: 8, height: 8 }) }),
     SPW: {},
     sfx: { coin() {}, pick() {}, evolve() {} },
@@ -94,7 +95,7 @@ function loadShop(seed = {}) {
 
 test('instance helpers exist and legacy owned ids migrate to instance records', () => {
   const { sandbox, localStorage } = loadShop({
-    br_gear_reset_v2: '1',
+    br_gear_reset_v4: '1',
     br_items_owned: JSON.stringify(['dmg_common_0', 'hp_rare_2']),
     br_gear_equipped: JSON.stringify({ helmet: 'dmg_common_0' }),
     br_gear_seen: JSON.stringify(['dmg_common_0']),
@@ -115,7 +116,7 @@ test('instance helpers exist and legacy owned ids migrate to instance records', 
 
 test('a cloud restore with higher uids does not collide with newly minted uids', () => {
   const { sandbox } = loadShop({
-    br_gear_reset_v2: '1',
+    br_gear_reset_v4: '1',
     br_gear_uid_seq: '1',
     br_items_owned: JSON.stringify([{ uid: 'g9', itemId: 'dmg_common_0' }]),
   });
@@ -128,14 +129,51 @@ test('a cloud restore with higher uids does not collide with newly minted uids',
 });
 
 test('selling one duplicate removes only one copy and pays 40 percent refund', () => {
-  const { sandbox } = loadShop({ br_gear_reset_v2: '1' });
+  const { sandbox } = loadShop({ br_gear_reset_v4: '1' });
   sandbox.gold = 0;
   const a = sandbox.addGearInstance('dmg_common_0');
   sandbox.addGearInstance('dmg_common_0');
   sandbox.sellGearInstance(a.uid);
 
-  assert.equal(sandbox.gold, 12);
+  assert.equal(sandbox.gold, 8);
   const owned = sandbox.ownedGearList();
   assert.equal(owned.length, 1);
   assert.equal(owned[0].itemId, 'dmg_common_0');
+});
+
+test('daily shop stock scales across all 50 worlds', () => {
+  const { sandbox } = loadShop({ br_gear_reset_v4: '1' });
+  assert.equal(sandbox.primaryShopRarity(0), 'common');
+  assert.equal(sandbox.primaryShopRarity(49), 'omniscient');
+
+  const w3 = sandbox.dailyShop(null, 3);
+  assert.ok(w3.length >= 6);
+  for (const id of w3) {
+    const rar = id.split('_')[1];
+    assert.ok(['cplus', 'cpp', 'uncommon'].includes(rar), 'world 4 shop should be cpp tier ±1');
+  }
+
+  const late = sandbox.dailyShop(null, 48);
+  for (const id of late) {
+    const rar = id.split('_')[1];
+    assert.ok(['eternal', 'eternplus', 'omniscient'].includes(rar), 'world 49 shop should be endgame tier ±1');
+  }
+});
+
+test('six crate tiers including premium platinum diamond vault', () => {
+  const { sandbox } = loadShop({ br_gear_reset_v4: '1' });
+  assert.equal(typeof sandbox.cratePrice, 'function');
+  assert.ok(sandbox.cratePrice('platinum') > sandbox.cratePrice('gold'));
+  assert.ok(sandbox.cratePrice('vault') > sandbox.cratePrice('diamond'));
+  assert.equal(sandbox.cratePrice('vault'), 95000);
+});
+
+test('catalog includes new stat types and eight gear slots', () => {
+  const { sandbox } = loadShop({ br_gear_reset_v4: '1' });
+  const a = sandbox.addGearInstance('rate_epic_0');
+  const b = sandbox.addGearInstance('vamp_omniscient_3');
+  assert.equal(a.itemId, 'rate_epic_0');
+  assert.equal(b.itemId, 'vamp_omniscient_3');
+  assert.equal(sandbox.itemCat('dmg_common_0'), 'cape');
+  assert.equal(sandbox.itemStat('magnet_void_1'), 'magnet');
 });

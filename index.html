@@ -5,12 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#8fd24f">
+<meta name="theme-color" content="#3d6e48">
 <meta name="description" content="Brainrot bullet-hell survivor — dodge the swarm, dash to survive.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>BRAINROT SWARM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -208,8 +211,8 @@
 </div>
 
 <div id="gameover" class="overlay hidden">
-  <div class="panel">
-    <div class="title" style="color:#4aa3df">GAME<br>OVER</div>
+  <div class="panel go-panel">
+    <div class="title go-title">GAME<br>OVER</div>
     <div class="stats">
       reached <b id="fwave">wave 1</b><br>
       coins collected <b id="fcoins">0</b><br>
@@ -219,15 +222,15 @@
   </div>
 </div>
 
-<div id="world-cleared" class="overlay hidden" style="z-index:20;background:rgba(24,14,6,0.88)">
-  <div class="panel" style="display:flex;flex-direction:column;align-items:center;gap:clamp(12px,2.4vmin,22px)">
-    <div class="title" style="color:#ffd24a" id="wc-title">WORLD 1 CLEARED!</div>
-    <div id="wc-stats" style="font-size:clamp(16px,3.2vmin,26px);font-weight:800;color:#3a2d22;line-height:2">
-      <span><img id="wc-coinico" draggable="false" alt="" style="width:1.1em;height:1.1em;vertical-align:-0.15em"> <b id="wc-coins">0</b> coins</span><br>
+<div id="world-cleared" class="overlay hidden" style="z-index:20">
+  <div class="panel wc-panel">
+    <div class="title wc-title" id="wc-title">WORLD 1 CLEARED!</div>
+    <div id="wc-stats" class="wc-stats">
+      <span><img id="wc-coinico" draggable="false" alt="" class="wc-ico"> <b id="wc-coins">0</b> coins</span><br>
       <span id="wc-gem-row"><span class="gemico-el">◆</span> <b id="wc-gems">+5</b> gems</span>
     </div>
-    <div id="wc-unlock" class="hidden" style="font-size:clamp(13px,2.6vmin,20px);font-weight:800;color:#7030a0;background:#f3eaff;border:3px solid #7030a0;border-radius:12px;padding:8px 18px">
-      <img id="wc-starico" draggable="false" alt="" style="width:1em;height:1em;vertical-align:-0.1em"> New character unlocked: <b id="wc-char-name"></b>
+    <div id="wc-unlock" class="wc-unlock hidden">
+      <img id="wc-starico" draggable="false" alt="" class="wc-ico"> New character unlocked: <b id="wc-char-name"></b>
     </div>
     <button class="bigbtn green" id="wc-continue">CONTINUE</button>
   </div>
@@ -340,6 +343,7 @@
 <script src="js/world-map-layout.js"></script>
 <script src="js/world-skills.js"></script>
 <script src="js/characters-ext.js"></script>
+<script src="js/characters-shop-ext.js"></script>
 <script src="js/pets-ext.js"></script>
 <script src="js/core.js"></script>
 <script src="js/audio.js"></script>

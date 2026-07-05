@@ -2,8 +2,8 @@
 // Cutscenes before/after every world + challenger — driven by campaign storyline.
 
 const WorldCine = (function () {
-  const DUR = { introFull: 14, outroFull: 11, introQuick: 9.5, outroQuick: 8.5, chalIn: 9, chalOut: 8.5 };
-  let t = 0, done = null, kind = null, wi = 0, isChal = false;
+  const DUR = { act1In: 15, act1Out: 12.5, introFull: 14, outroFull: 11, introQuick: 9.5, outroQuick: 8.5, chalIn: 9, chalOut: 8.5 };
+  let t = 0, done = null, kind = null, wi = 0, isChal = false, cheerPlayed = false;
 
   function seenKey(k) { return 'br_cine_' + k; }
   function markSeen(k) { try { localStorage.setItem(seenKey(k), '1'); } catch (e) {} }
@@ -64,32 +64,317 @@ const WorldCine = (function () {
     cx.translate(-W / 2, -H / 2);
   }
 
-  function drawLetterbox() {
-    const bar = Math.round(H * 0.06);
-    cx.fillStyle = '#000';
-    cx.fillRect(0, 0, W, bar);
-    cx.fillRect(0, H - bar, W, bar);
+  function isArcCine() {
+    if (isChal) return false;
+    if (typeof isArcWorld === 'function') return isArcWorld(wi);
+    return wi >= 0 && wi < 50;
+  }
+
+  function scenePhase() {
+    if (!isArcCine()) return 'default';
+    const outro = kind === 'outro';
+    if (outro) {
+      if (t < 3.2) return 'victory';
+      if (t < 7) return 'celebrate';
+      if (t < 10.5) return 'tease';
+      return 'fade';
+    }
+    if (t < 3.5) return 'peace';
+    if (t < 8) return 'invasion';
+    if (t < 11.5) return 'chaos';
+    return 'hero';
+  }
+
+  function sceneEase(maxT) {
+    const e = typeof easeOut === 'function' ? easeOut : function (x) { return 1 - (1 - x) * (1 - x); };
+    return e(Math.min(1, t / maxT));
+  }
+
+  function applySceneShake() {
+    const ph = scenePhase();
+    if (ph !== 'chaos' || !isArcCine()) return;
+    const ramp = Math.min(1, Math.max(0, (t - 7) / 2.5));
+    const amt = ramp * 9;
+    if (amt > 0 && typeof rand === 'function') {
+      cx.translate(rand(-amt, amt), rand(-amt, amt));
+    }
+  }
+
+  const PEACE_NPCS = [
+    { x: 0.22, y: 0.68, p: 0 }, { x: 0.38, y: 0.74, p: 1.2 }, { x: 0.55, y: 0.66, p: 2.1 },
+    { x: 0.68, y: 0.72, p: 0.6 }, { x: 0.44, y: 0.58, p: 3.0 },
+  ];
+
+  function drawPeacefulNPCs(flee) {
+    const fleeT = flee ? Math.max(0, t - 7) : 0;
+    for (const h of PEACE_NPCS) {
+      const wob = Math.sin((t + h.p) * 1.5) * 8;
+      const fx = fleeT > 0 ? -fleeT * fleeT * 220 : 0;
+      const hx = h.x * W + wob + fx;
+      const hy = h.y * H;
+      cx.fillStyle = '#e0c39a';
+      cx.beginPath(); cx.arc(hx, hy, 7, 0, TAU); cx.fill();
+      cx.fillStyle = '#3a2d22';
+      cx.beginPath(); cx.arc(hx, hy - 9, 5, 0, TAU); cx.fill();
+    }
+  }
+
+  function drawZoneDecor(w) {
+    const id = w && w.id ? w.id : 'grass';
+    const th = w && w.theme ? w.theme : {};
+    cx.save();
+    if (id === 'citrus') {
+      cx.fillStyle = th.accent || '#fff0a0';
+      for (let i = 0; i < 5; i++) {
+        const tx = W * (0.12 + i * 0.18);
+        cx.beginPath(); cx.arc(tx, H * 0.42, 22, 0, TAU); cx.fill();
+        cx.fillStyle = '#5a9a30';
+        cx.fillRect(tx - 4, H * 0.42, 8, H * 0.22);
+        cx.fillStyle = th.accent || '#fff0a0';
+      }
+    } else if (id === 'forest') {
+      cx.fillStyle = '#3d6a28';
+      for (let i = 0; i < 6; i++) {
+        const tx = W * (0.08 + i * 0.16);
+        cx.beginPath();
+        cx.moveTo(tx, H * 0.38); cx.lineTo(tx - 28, H * 0.68); cx.lineTo(tx + 28, H * 0.68);
+        cx.closePath(); cx.fill();
+      }
+    } else if (id === 'glacier') {
+      cx.fillStyle = 'rgba(200,235,255,0.55)';
+      for (let i = 0; i < 4; i++) {
+        const bx = W * (0.15 + i * 0.22);
+        cx.beginPath();
+        cx.moveTo(bx, H * 0.55); cx.lineTo(bx - 50, H * 0.72); cx.lineTo(bx + 50, H * 0.72);
+        cx.closePath(); cx.fill();
+      }
+    } else if (id === 'circo') {
+      cx.fillStyle = '#e8463c';
+      cx.fillRect(W * 0.2, H * 0.28, W * 0.6, 14);
+      cx.fillStyle = '#ffd838';
+      for (let i = 0; i < 8; i++) cx.fillRect(W * 0.2 + i * (W * 0.075), H * 0.28 + (i % 2) * 14, W * 0.037, 14);
+      cx.strokeStyle = '#fff'; cx.lineWidth = 3;
+      cx.beginPath(); cx.moveTo(W * 0.5, H * 0.28); cx.lineTo(W * 0.5, H * 0.62); cx.stroke();
+    } else if (id === 'autumn') {
+      cx.fillStyle = '#c87828';
+      for (let i = 0; i < 7; i++) {
+        const tx = W * (0.1 + i * 0.13);
+        cx.beginPath(); cx.arc(tx, H * 0.4, 16, 0, TAU); cx.fill();
+        cx.fillStyle = i % 2 ? '#e89030' : '#a05818';
+        cx.fillRect(tx - 3, H * 0.4, 6, H * 0.2);
+        cx.fillStyle = '#c87828';
+      }
+    } else if (id === 'swamp') {
+      cx.fillStyle = 'rgba(60,120,40,0.45)';
+      for (let i = 0; i < 5; i++) {
+        cx.beginPath(); cx.ellipse(W * (0.15 + i * 0.17), H * 0.62, 55, 18, 0, 0, TAU); cx.fill();
+      }
+    } else if (id === 'sky') {
+      cx.fillStyle = 'rgba(255,255,255,0.35)';
+      for (let i = 0; i < 4; i++) {
+        const cxp = W * (0.2 + i * 0.2);
+        const cyp = H * (0.35 + (i % 2) * 0.12);
+        cx.beginPath(); cx.ellipse(cxp, cyp, 48, 22, 0, 0, TAU); cx.fill();
+      }
+    } else if (id === 'crystal') {
+      cx.fillStyle = 'rgba(180,120,255,0.5)';
+      for (let i = 0; i < 6; i++) {
+        const bx = W * (0.12 + i * 0.15);
+        cx.beginPath();
+        cx.moveTo(bx, H * 0.32); cx.lineTo(bx - 14, H * 0.62); cx.lineTo(bx + 14, H * 0.62);
+        cx.closePath(); cx.fill();
+      }
+    } else if (id === 'volcano') {
+      cx.fillStyle = '#e85030';
+      cx.beginPath();
+      cx.moveTo(W * 0.5, H * 0.3); cx.lineTo(W * 0.32, H * 0.68); cx.lineTo(W * 0.68, H * 0.68);
+      cx.closePath(); cx.fill();
+      cx.fillStyle = 'rgba(255,180,60,0.35)';
+      cx.beginPath(); cx.ellipse(W * 0.5, H * 0.58, 40, 14, 0, 0, TAU); cx.fill();
+    } else if (id === 'dirt') {
+      cx.fillStyle = 'rgba(100,70,30,0.45)';
+      for (let i = 0; i < 4; i++) {
+        cx.fillRect(W * (0.15 + i * 0.2), H * 0.35, 28, H * 0.35);
+        cx.beginPath(); cx.arc(W * (0.15 + i * 0.2) + 14, H * 0.35, 18, Math.PI, 0); cx.fill();
+      }
+    } else if (wi >= 11) {
+      cx.fillStyle = th.accent || th.tint || '#b06ff0';
+      for (let i = 0; i < 7; i++) {
+        const tx = W * (0.08 + i * 0.13);
+        const hgt = 50 + (i % 4) * 22;
+        cx.fillRect(tx, H * 0.68 - hgt, 16, hgt);
+        cx.beginPath(); cx.moveTo(tx - 8, H * 0.68 - hgt); cx.lineTo(tx + 8, H * 0.68 - hgt - 20); cx.lineTo(tx + 24, H * 0.68 - hgt); cx.fill();
+      }
+    } else {
+      cx.fillStyle = 'rgba(90,150,50,0.35)';
+      for (let i = 0; i < 8; i++) {
+        cx.beginPath(); cx.arc(W * (0.1 + i * 0.11), H * 0.48, 10 + (i % 3) * 4, 0, TAU); cx.fill();
+      }
+    }
+    cx.restore();
+  }
+
+  function drawInvasionMarch(w) {
+    if (typeof SP === 'undefined') return;
+    const foes = w && w.foes && w.foes.length ? w.foes : [];
+    const sprs = foes.length ? foes.map(f => f.spr) : ['swarmmite', 'swarmwasp', 'swarmbeetle'];
+    const e = sceneEase(2.8);
+    const boss = w && w.bosses && w.bosses.length ? w.bosses[w.bosses.length - 1] : null;
+    const bossX = W * 1.12 - e * (W * 0.58);
+    const bossY = H * 0.54;
+    for (let i = 0; i < 8; i++) {
+      const lag = 0.4 + i * 0.16;
+      const eFn = typeof easeOut === 'function' ? easeOut : function (x) { return 1 - (1 - x) * (1 - x); };
+      const e2 = eFn(Math.min(1, Math.max(0, (t - lag) / 2.5)));
+      const ax = W * 1.2 - e2 * (W * 0.55) + Math.sin(i * 1.5) * 24;
+      const ay = bossY + 60 + (i % 3) * 22 - 22;
+      const s = sprs[i % sprs.length];
+      if (SP[s]) drawSprite(s, ax, ay, 44, Math.sin(t * 3 + i) * 0.1, 0, 0, i % 2 === 0, w ? w.enemyTint : null);
+    }
+    if (boss && SP[boss.spr]) {
+      drawSprite(boss.spr, bossX, bossY, 105 + Math.sin(t * 2) * 6, Math.sin(t * 2.5) * 0.04, 0, 0, false, null);
+    }
+  }
+
+  function drawChaosFlash() {
+    if (t < 7 || t > 11.5) return;
+    const ramp = Math.min(1, Math.max(0, (t - 7) / 1.5));
+    cx.globalAlpha = (0.12 + 0.08 * Math.sin(t * 14)) * ramp;
+    cx.fillStyle = wi === 4 ? '#ff6040' : '#ff2828';
+    cx.fillRect(0, 0, W, H);
+    cx.globalAlpha = 1;
+  }
+
+  function drawSwarmRetreat(w) {
+    if (typeof SP === 'undefined') return;
+    const foes = w && w.foes && w.foes.length ? w.foes : [];
+    const sprs = foes.length ? foes.map(f => f.spr) : ['swarmmite', 'swarmwasp'];
+    const e = sceneEase(2.2);
+    const slide = e * W * 0.65;
+    for (let i = 0; i < 8; i++) {
+      const s = sprs[i % sprs.length];
+      if (!SP[s]) continue;
+      const ex = W * (0.35 + (i / 7) * 0.4) + slide;
+      const ey = H * 0.7 + (i % 3) * 14;
+      drawSprite(s, ex, ey, 40, Math.PI, 0, 0, true, w ? w.enemyTint : null);
+    }
+  }
+
+  function renderAct1Intro(w, st) {
+    const ph = scenePhase();
+    backdrop(w);
+    camDrift();
+    drawZoneDecor(w);
+
+    if (ph === 'peace') {
+      drawPeacefulNPCs(false);
+      drawVisEffect(st.vis);
+    } else if (ph === 'invasion') {
+      drawPeacefulNPCs(true);
+      drawBrainrotOverlay(w);
+      drawInvasionMarch(w);
+      drawVisEffect(st.vis);
+      drawHero(Math.sin(t * 2) * 2, 0.18);
+    } else if (ph === 'chaos') {
+      applySceneShake();
+      drawBrainrotOverlay(w);
+      drawChaosFlash();
+      drawSwarmArmy(w);
+      drawBossSilhouette(w, 12);
+      drawVisEffect('brainrot');
+    } else {
+      const heroBob = Math.sin(t * 2.5) * 4;
+      const heroRise = sceneEase(1.2);
+      drawSwarmArmy(w);
+      drawBossSilhouette(w, 10);
+      drawHero(heroBob, 0.22 + (1 - heroRise) * -0.08);
+      if (st.allyChar) drawAlly(st, Math.sin(t * 2.8) * 3);
+      if (wi === 0 && t > 11.2) {
+        cx.globalAlpha = 0.45 * heroRise * (0.6 + 0.4 * Math.sin(t * 5));
+        cx.strokeStyle = '#9fe0ff'; cx.lineWidth = 4;
+        cx.beginPath(); cx.arc(W * 0.22, H * 0.62 + heroBob, 56, 0, TAU); cx.stroke();
+        cx.globalAlpha = 1;
+      }
+    }
+    renderBeats(st.introBeats);
+  }
+
+  function renderAct1Outro(w, st) {
+    const ph = scenePhase();
+    backdrop(w);
+    camDrift();
+
+    if (ph === 'victory') {
+      drawBossSilhouette(w, 4);
+      const fall = Math.min(1, t / 2.5);
+      cx.globalAlpha = 0.5 * fall;
+      cx.fillStyle = w.enemyTint || '#ff5a70';
+      cx.beginPath(); cx.ellipse(W * 0.5, H * 0.68, 80, 24, 0, 0, TAU); cx.fill();
+      cx.globalAlpha = 1;
+      drawHero(Math.sin(t * 2) * 2, 0.24);
+    } else if (ph === 'celebrate') {
+      drawHero(Math.sin(t * 2) * 3, 0.24);
+      if (st.allyChar) drawAlly(st, Math.sin(t * 2.5) * 2);
+      drawVisEffect(st.vis);
+      drawVisEffect('applause');
+      drawVisEffect('confetti');
+    } else if (ph === 'tease') {
+      drawSwarmRetreat(w);
+      drawHero(Math.sin(t * 1.8) * 2, 0.26);
+      drawVisEffect('applause');
+    } else {
+      drawHero(Math.sin(t * 1.5) * 2, 0.28);
+    }
+    renderBeats(st.outroBeats);
+  }
+
+  function drawEdgeVignette(w) {
+    const th = w && w.theme ? w.theme : { void: '#1a2838' };
+    const c = th.void || th.bg || '#1a2838';
+    const g = cx.createLinearGradient(0, 0, 0, H * 0.14);
+    g.addColorStop(0, c + '55');
+    g.addColorStop(1, c + '00');
+    cx.fillStyle = g;
+    cx.fillRect(0, 0, W, H * 0.14);
+    const g2 = cx.createLinearGradient(0, H, 0, H * 0.86);
+    g2.addColorStop(0, c + '55');
+    g2.addColorStop(1, c + '00');
+    cx.fillStyle = g2;
+    cx.fillRect(0, H * 0.86, W, H * 0.14);
   }
 
   function backdrop(w) {
     const th = w && w.theme ? w.theme : { bg: '#4a6e32', tile1: '#7ec850', tile2: '#6ab840', void: '#3d5c28' };
+    const pat = th.groundPattern || 'checker';
+    const phase = (wi * 17 + 31) | 0;
     cx.fillStyle = th.void || th.bg;
     cx.fillRect(0, 0, W, H);
-    cx.fillStyle = th.tile1;
     const ts = 64;
     for (let gy = 0; gy < H; gy += ts) {
       for (let gx = 0; gx < W; gx += ts) {
-        if (((gx / ts + gy / ts) & 1)) cx.fillRect(gx, gy, ts, ts);
+        const tx = (gx / ts) | 0, ty = (gy / ts) | 0;
+        let alt = false;
+        if (pat === 'stripe') alt = ((tx + phase) % 3) !== 1;
+        else if (pat === 'diamond') alt = ((tx + ty) % 3 + (tx * ty) % 2) % 2 === 0;
+        else if (pat === 'dots') alt = ((tx * 7 + ty * 13 + phase) % 5) < 2;
+        else if (pat === 'wave') alt = Math.sin(tx * 0.45 + ty * 0.3 + phase * 0.1) > 0;
+        else alt = ((tx + ty) & 1) === 0;
+        cx.fillStyle = alt ? th.tile1 : th.tile2;
+        cx.fillRect(gx, gy, ts, ts);
       }
     }
-    cx.fillStyle = th.tile2;
-    for (let gy = 0; gy < H; gy += ts * 2) {
-      for (let gx = 0; gx < W; gx += ts * 2) {
-        if (!(((gx / ts + gy / ts) & 1))) cx.fillRect(gx + ts * 0.25, gy + ts * 0.25, ts * 0.5, ts * 0.5);
+    if (th.accent) {
+      cx.globalAlpha = 0.2;
+      cx.fillStyle = th.accent;
+      for (let i = 0; i < 24; i++) {
+        const ax = (i * 173 + phase * 11) % W;
+        const ay = (i * 97 + phase * 7) % H;
+        cx.beginPath(); cx.arc(ax, ay, 8 + (i % 4), 0, TAU); cx.fill();
       }
+      cx.globalAlpha = 1;
     }
     if (w && w.enemyTint) {
-      cx.globalAlpha = 0.12;
+      cx.globalAlpha = kind === 'intro' || kind === 'chal_in' ? 0.18 : 0.08;
       cx.fillStyle = w.enemyTint;
       cx.fillRect(0, 0, W, H);
       cx.globalAlpha = 1;
@@ -101,13 +386,80 @@ const WorldCine = (function () {
     cx.fillRect(0, 0, W, H);
   }
 
+  function drawBrainrotOverlay(w) {
+    if (kind !== 'intro' && kind !== 'chal_in') return;
+    const tint = w && w.enemyTint ? w.enemyTint : '#e04090';
+    cx.globalAlpha = 0.12 + 0.06 * Math.sin(t * 3.5);
+    cx.fillStyle = tint;
+    cx.fillRect(0, 0, W, H);
+    cx.globalAlpha = 1;
+    for (let i = 0; i < 14; i++) {
+      const bx = (i * 137 + t * 60) % W;
+      const by = H * 0.15 + ((i * 83 + t * 35) % (H * 0.55));
+      cx.globalAlpha = 0.25 + 0.15 * Math.sin(t * 4 + i);
+      cx.fillStyle = tint;
+      cx.beginPath();
+      cx.ellipse(bx, by, 28 + (i % 5) * 8, 18 + (i % 3) * 6, t * 0.3 + i, 0, TAU);
+      cx.fill();
+      cx.globalAlpha = 1;
+    }
+  }
+
+  function drawApplauseCrowd() {
+    if (kind !== 'outro' && kind !== 'chal_out') return;
+    const e = Math.min(1, Math.max(0, (t - 2.4) / 1.2));
+    if (e <= 0) return;
+    const baseY = H * 0.86;
+    for (let i = 0; i < 14; i++) {
+      const px = W * (0.06 + (i / 13) * 0.88);
+      const wave = Math.sin(t * 6 + i * 0.8) * 6 * e;
+      const bodyH = 34 + (i % 3) * 6;
+      cx.globalAlpha = 0.55 + 0.35 * e;
+      cx.fillStyle = i % 2 ? '#f0d890' : '#e8c0a0';
+      cx.fillRect(px - 10, baseY - bodyH + wave, 20, bodyH);
+      cx.fillStyle = '#f5e0c8';
+      cx.beginPath(); cx.arc(px, baseY - bodyH - 10 + wave, 11, 0, TAU); cx.fill();
+      cx.strokeStyle = '#3a2d22'; cx.lineWidth = 2;
+      const armY = baseY - bodyH + 8 + wave;
+      for (const sx of [-1, 1]) {
+        cx.beginPath();
+        cx.moveTo(px + sx * 8, armY);
+        cx.lineTo(px + sx * 18, armY - 16 - Math.abs(Math.sin(t * 8 + i)) * 10);
+        cx.stroke();
+      }
+      cx.globalAlpha = 1;
+    }
+    cx.globalAlpha = 0.35 * e;
+    cx.font = '900 ' + Math.round(H * 0.04) + 'px sans-serif';
+    cx.fillStyle = '#ffe878';
+    cx.textAlign = 'center';
+    for (let i = 0; i < 8; i++) {
+      const cxp = W * (0.1 + i * 0.11);
+      const cyp = H * 0.12 + Math.sin(t * 5 + i) * 12;
+      cx.fillText(i % 2 ? '★' : '♥', cxp, cyp);
+    }
+    cx.globalAlpha = 1;
+  }
+
   function drawVisEffect(effect) {
-    const n = 36;
+    if (effect === 'applause') { drawApplauseCrowd(); return; }
+    const n = effect === 'brainrot' || effect === 'confetti' ? 48 : 36;
     for (let i = 0; i < n; i++) {
       const px = (i / n) * W + Math.sin(t * 2 + i) * 30;
       const py = (i * 47 + t * 40) % H;
       cx.globalAlpha = 0.15 + 0.1 * Math.sin(t * 3 + i);
-      if (effect === 'embers' || effect === 'sparks') {
+      if (effect === 'confetti') {
+        const cols = ['#ff4080', '#ffe040', '#40c8ff', '#80ff60', '#ff8040'];
+        cx.fillStyle = cols[i % cols.length];
+        cx.save(); cx.translate(px, py); cx.rotate(t * 2 + i);
+        cx.fillRect(-4, -2, 8, 4); cx.restore();
+      } else if (effect === 'brainrot') {
+        cx.fillStyle = i % 2 ? '#e040a0' : '#80ff40';
+        cx.beginPath(); cx.arc(px, py, 3 + (i % 4), 0, TAU); cx.fill();
+        cx.globalAlpha = 0.2;
+        cx.strokeStyle = '#ff60c0'; cx.lineWidth = 1.5;
+        cx.beginPath(); cx.moveTo(px, py); cx.lineTo(px + Math.sin(t * 5 + i) * 20, py + 14); cx.stroke();
+      } else if (effect === 'embers' || effect === 'sparks') {
         cx.fillStyle = effect === 'embers' ? '#ff7a3a' : '#ffe08a';
         cx.beginPath(); cx.arc(px, py, 2 + (i % 3), 0, TAU); cx.fill();
       } else if (effect === 'rain' || effect === 'toxic') {
@@ -120,6 +472,9 @@ const WorldCine = (function () {
       } else if (effect === 'void') {
         cx.fillStyle = '#b06ff0';
         cx.beginPath(); cx.arc(px, py, 3, 0, TAU); cx.fill();
+      } else if (effect === 'static') {
+        cx.fillStyle = i % 2 ? '#e8f0ff' : '#a8c0ff';
+        cx.fillRect(px, py, 2 + (i % 3), 2);
       } else {
         cx.fillStyle = '#c8f0a0';
         cx.beginPath(); cx.arc(px, py, 2.5, 0, TAU); cx.fill();
@@ -149,9 +504,10 @@ const WorldCine = (function () {
     }
   }
 
-  function drawHero(bob) {
+  function drawHero(bob, xNorm) {
     const e = entranceEase(1.4);
-    const hx = W * (0.22 + (1 - e) * -0.18);
+    const baseX = xNorm != null ? xNorm : 0.22;
+    const hx = W * (baseX + (1 - e) * -0.18);
     const hy = H * 0.62 + bob;
     if (typeof drawCharacter === 'function') {
       drawCharacter(typeof activeCharId !== 'undefined' ? activeCharId : 'gianni', hx, hy, 95, Math.sin(t * 2) * 0.04, false);
@@ -170,7 +526,7 @@ const WorldCine = (function () {
       ? foes.map(f => f.spr)
       : ['swarmmite', 'swarmwasp', 'swarmbeetle', 'swarmmoth'];
     const march = entranceEase(2.2);
-    const slide = kind === 'outro' || kind === 'chal_out' ? Math.min(1, t / 2.5) * W * 0.4 : 0;
+    const slide = kind === 'outro' || kind === 'chal_out' ? Math.min(1, t / 2.5) * W * 0.55 : 0;
     for (let i = 0; i < 10; i++) {
       const s = sprs[i % sprs.length];
       if (!SP[s]) continue;
@@ -205,7 +561,7 @@ const WorldCine = (function () {
   }
 
   function start(kindIn, worldIndex, onDone, challenger) {
-    kind = kindIn; wi = worldIndex; done = onDone; t = 0; isChal = !!challenger;
+    kind = kindIn; wi = worldIndex; done = onDone; t = 0; isChal = !!challenger; cheerPlayed = false;
     state = kindIn === 'outro' || kindIn === 'chal_out' ? ST.OUTRO : ST.INTRO;
     $('menu') && $('menu').classList.add('hidden');
     $('introskip') && $('introskip').classList.remove('hidden');
@@ -234,6 +590,10 @@ const WorldCine = (function () {
   }
 
   function durFor(k) {
+    if (isArcCine()) {
+      if (k === 'intro') return DUR.act1In;
+      if (k === 'outro') return DUR.act1Out;
+    }
     if (k === 'intro') return isMilestoneWorld() ? DUR.introFull : DUR.introQuick;
     if (k === 'outro') return isMilestoneWorld() ? DUR.outroFull : DUR.outroQuick;
     if (k === 'chal_in') return DUR.chalIn;
@@ -242,6 +602,10 @@ const WorldCine = (function () {
 
   function update(dt) {
     t += dt;
+    if ((kind === 'outro' || kind === 'chal_out') && t > 3.0 && !cheerPlayed) {
+      cheerPlayed = true;
+      if (typeof sfx !== 'undefined' && sfx.cheer) sfx.cheer();
+    }
     if (t >= durFor(kind)) finish();
   }
 
@@ -256,30 +620,40 @@ const WorldCine = (function () {
     const w = worldData(wi);
     const st = storyFor(w);
     cx.save();
-    backdrop(w);
-    camDrift();
-    drawVisEffect(st.vis);
 
-    if (kind === 'intro' || kind === 'chal_in') {
-      drawSwarmArmy(w);
-      drawBossSilhouette(w, 10);
-      drawHero(Math.sin(t * 2.5) * 4);
-      if (st.allyChar) drawAlly(st, Math.sin(t * 2.8) * 3);
-      if (st.heroLine && t > 0.8 && t < 4.5) caption(st.heroLine, 0.8, 4.2, H * 0.9, { dim: true });
-      renderBeats(isChal ? st.chalIntroBeats : st.introBeats);
+    if (isArcCine() && kind === 'intro') {
+      renderAct1Intro(w, st);
+    } else if (isArcCine() && kind === 'outro') {
+      renderAct1Outro(w, st);
     } else {
-      drawBossSilhouette(w, 6);
-      drawSwarmArmy(w);
-      drawHero(Math.sin(t * 2) * 3);
-      if (st.allyChar) drawAlly(st, Math.sin(t * 2) * 2);
-      renderBeats(isChal ? st.chalOutroBeats : st.outroBeats);
+      backdrop(w);
+      camDrift();
+      if (kind === 'intro' || kind === 'chal_in') drawBrainrotOverlay(w);
+      drawVisEffect(st.vis);
+      if (kind === 'outro' || kind === 'chal_out') drawVisEffect('applause');
+
+      if (kind === 'intro' || kind === 'chal_in') {
+        drawSwarmArmy(w);
+        drawBossSilhouette(w, 10);
+        drawHero(Math.sin(t * 2.5) * 4);
+        if (st.allyChar) drawAlly(st, Math.sin(t * 2.8) * 3);
+        if (st.heroLine && t > 0.8 && t < 4.5) caption(st.heroLine, 0.8, 4.2, H * 0.9, { dim: true });
+        renderBeats(isChal ? st.chalIntroBeats : st.introBeats);
+      } else {
+        drawBossSilhouette(w, 6);
+        drawSwarmArmy(w);
+        drawHero(Math.sin(t * 2) * 3);
+        if (st.allyChar) drawAlly(st, Math.sin(t * 2) * 2);
+        renderBeats(isChal ? st.chalOutroBeats : st.outroBeats);
+      }
     }
 
-    drawLetterbox();
+    drawEdgeVignette(w);
 
     if (t > maxFadeStart()) {
+      const th = w && w.theme ? w.theme : { void: '#1a2838' };
       cx.globalAlpha = Math.min(1, (t - maxFadeStart()) / 1.1);
-      cx.fillStyle = '#000';
+      cx.fillStyle = th.void || th.bg || '#1a2838';
       cx.fillRect(0, 0, W, H);
     }
     cx.restore();
