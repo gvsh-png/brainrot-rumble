@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.69';
+const CURRENT_VERSION = '1.70';
 const CHANGELOG = [
+  { v: '1.70', notes: 'Haptic feedback on dash, hits, level-up, evolve, jackpot, boss kills, and more — toggle in Settings → Gameplay. Quit to menu or background the app mid-run and your progress is saved: Battle tab shows Continue or Start New.' },
   { v: '1.69', notes: 'Full UI polish: menus, shop, characters, equipment, pets, settings, and popups now use the same dark survivor card theme as in-round skill picks. Unified design tokens, Baloo 2 font, richer menu gradient, slate topbar, and improved tablet/desktop layouts (wider grids, larger modals).' },
   { v: '1.68', notes: 'Grounded world cards for W6–W50: Autumn, Swamp, Skyland, Crystal, Volcano, and Dirt Depths each get 3 themed abilities (Falling Leaves, Toxic Mire, Thunder Drop, Prism Edge, Lava Pool, Quake Dash, etc.) with real combat wiring. Replaced generic "Swarm Fury W12" procedural cards with 39 unique biome-themed skills for extended worlds (Neon Drift, Rust Thorns, Swarm Crown EVOLVE, and more).' },
   { v: '1.67', notes: 'Boss fights always get a clear arena: picks the best open spot on the map, strips obstacles inside the ring, moves you to center, and uses a larger 50% arena. Citrus Coast map no longer uses corridor lanes. Music overhaul: warmer low-pass tones, chord pads, structured melodies, softer drums.' },

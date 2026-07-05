@@ -39,6 +39,9 @@
   if(App && App.addListener){
     App.addListener('appStateChange', ({ isActive }) => {
       if(isActive) setupImmersive();
+      else if(typeof saveSuspendedRun === 'function' && typeof canSuspendRun === 'function' && canSuspendRun()){
+        saveSuspendedRun();
+      }
     });
 
     App.addListener('backButton', ({ canGoBack })=>{

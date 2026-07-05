@@ -113,6 +113,7 @@
         <div class="sdrop-head">Gameplay</div>
         <div class="sdrop-row">
           <button id="sdrop-deathshake" class="sdrop-toggle" type="button">Death Shake: On</button>
+          <button id="sdrop-haptic" class="sdrop-toggle" type="button">Haptic Feedback: On</button>
         </div>
       </div>
       <div class="sdrop-sep"></div>
@@ -151,6 +152,14 @@
       </div>
       <div id="menubot">
         <button class="gamemodebtn" id="gamemodebtn" type="button"><span class="gmlbl">GAMEMODE</span></button>
+        <div id="run-resume" class="run-resume hidden">
+          <div class="run-resume-box">
+            <div class="run-resume-title">RUN IN PROGRESS</div>
+            <div class="run-resume-meta" id="run-resume-meta">World 1 · Wave 3</div>
+            <button class="bigbtn green" id="run-continue-btn" type="button">CONTINUE</button>
+            <button class="bigbtn quit" id="run-abandon-btn" type="button">START NEW</button>
+          </div>
+        </div>
         <button class="startbtn" id="startbtn"><span class="startlbl">START</span></button>
         <div class="hint">drag to move • auto-fire • survive the waves</div>
       </div>
@@ -347,12 +356,14 @@
 <script src="js/pets-ext.js"></script>
 <script src="js/core.js"></script>
 <script src="js/audio.js"></script>
+<script src="js/haptics.js"></script>
 <script src="js/sprites.js"></script>
 <script src="js/sprites-ext.js"></script>
 <script src="js/sprites-world-gen.js"></script>
 <script src="js/minimap.js"></script>
 <script src="js/input.js"></script>
 <script src="js/game.js"></script>
+<script src="js/run-save.js"></script>
 <script src="js/boss-ext.js"></script>
 <script src="js/storyline.js"></script>
 <script src="js/cutscenes-ext.js"></script>

@@ -686,6 +686,7 @@ function loadWorld(idx){
 let cut = null;   // cutscene state
 let _clearData = null;
 function worldCleared(boss){
+  if(typeof clearSuspendedRun === 'function') clearSuspendedRun();
   const isPractice = gameMode==='practice';
   let gemsEarned=0, newChars=[];
   if(!isPractice){   // practice grants no persistent progress at all
@@ -716,6 +717,7 @@ function worldCleared(boss){
   ebullets=[]; bullets=[]; petBullets=[]; zones=[]; skibidiBullets.length=0; skibidiTimers.length=0;
   hitstop=0.25; shake=Math.max(shake,16);
   stopMusic(); sfx.win();
+  if(typeof haptic === 'function') haptic('win');
   bigText(isPractice ? 'TRAINING COMPLETE' : 'WORLD CLEARED', '#ffd24a');
 }
 function cutsceneUpdate(dt){
@@ -1482,6 +1484,7 @@ function startGame(idx){
   } else { _doStartGame(wi); }
 }
 function _doStartGame(wi){
+  if(typeof clearSuspendedRun === 'function') clearSuspendedRun();
   loadWorld(wi);
   if(infiniteMapMode()){ WORLD.w=999999; WORLD.h=999999; }   // effectively infinite; ground drawn per-frame
   initAudio();
@@ -1559,6 +1562,7 @@ function startChallengerSpawn(){
 }
 
 function chalWorldCleared(e){
+  if(typeof clearSuspendedRun === 'function') clearSuspendedRun();
   const prevChalUnlocked=chalUnlocked;
   chalUnlocked=Math.min(WORLDS.length-1, Math.max(chalUnlocked, worldIdx+1));
   localStorage.setItem('br_ch_unlocked', chalUnlocked); if(window.markDirty) window.markDirty();
@@ -2046,6 +2050,7 @@ function gainXp(n){
 function openLevelUp(){
   state = ST.LEVELUP;
   sfx.level();
+  if(typeof haptic === 'function') haptic('level');
   // candidates = every card with a remaining move whose synergy gate (req) is satisfied
   const cands = [];
   for(const u of UPGRADES){
@@ -2103,6 +2108,7 @@ function openLevelUp(){
                   `<div class="cstars">${stars}</div>`;
     d.onclick = ()=>{
       m.evolve ? sfx.evolve() : sfx.pick();
+      if(typeof haptic === 'function') haptic(m.evolve ? 'evolve' : 'pick');
       m.apply(); P.up[u.id]=(P.up[u.id]||0)+1;
       const allCards = [...$('cards').querySelectorAll('.card')];
       allCards.forEach(c => { c.style.pointerEvents='none'; });
@@ -2132,10 +2138,12 @@ function openLevelUp(){
 
 // ============ DEATH ============
 function gameOver(){
+  if(typeof clearSuspendedRun === 'function') clearSuspendedRun();
   state = ST.OVER;
   arena=null; bossPending=0;
   stopMusic();
   sfx.die();
+  if(typeof haptic === 'function') haptic('heavy');
   shake = 22; hitstop = 0.12;
   $('fwave').textContent = timerMode() ? 'time '+fmtTime(chalElapsed) : 'wave '+wave;
   $('fcoins').textContent = worldCoins;
@@ -2155,7 +2163,7 @@ function tryDash(){
     placedTurrets.push({x:P.x,y:P.y,hp:25,maxHp:25,cd:0,face:0,inv:0});
     P.dashCd=P.dashMax;
     sfx.dash();
-    if(navigator.vibrate) navigator.vibrate(20);
+    if(typeof haptic === 'function') haptic('dash');
     return;
   }
   if(typeof fireHook==='function') fireHook('onDash');
@@ -2169,7 +2177,7 @@ function tryDash(){
   else { mx/=ml; my/=ml; }
   P.dvx=mx; P.dvy=my; P.dashT=0.18; P.dashCd=P.dashMax; P.inv=Math.max(P.inv,0.25);
   sfx.dash();
-  if(navigator.vibrate) navigator.vibrate(20);
+  if(typeof haptic === 'function') haptic('dash');
 }
 
 // O(1) removal for arrays where order doesn't matter (bullets/projectiles): overwrite slot i with
@@ -3097,6 +3105,7 @@ function update(dt){
       if(typeof fireHook==='function') fireHook('onKill', e);
       sfx.hit();
       if(deathShakeOn) shake=Math.max(shake,e.isBoss?16:8);
+      if(e.isBoss && typeof haptic === 'function') haptic('boss');
       // Hit-stop only on boss kills. Normal kills are constant in a survivor game, so freezing the
       // sim 50ms each one stacked into near-continuous choppiness — feedback comes from burst+sfx instead.
       hitstop=Math.max(hitstop,e.isBoss?0.06:0);
@@ -3372,6 +3381,7 @@ function damageEnemy(e,dmg,fx,fy,crit){
     dmg *= 2;
     if(P.showstopper && !crit){ dmg *= P.critMul; crit=true; }                // Showstopper: jackpots also crit
     floatText(e.x,e.y-e.r-20,'JACKPOT!','#ffd24a',16);
+    if(typeof haptic === 'function') haptic('jackpot');
   }
   e.hp -= dmg; e.hitT=0.12; e.sq=1;
   if(!e.isBoss && !e.under && fx!=null && fy!=null && !(fx===e.x && fy===e.y)){   // small knockback away from the hit source
@@ -4651,7 +4661,7 @@ function hurtPlayer(dmg, src){
   P.hp -= dmg*(P.shieldDR||1)*(P.armor||1)*worldDmgMul(); P.inv = 0.8; P.hitT = 0.25;
   shake = Math.max(shake,10); hitFlash = 1; hitstop=Math.max(hitstop,0.04);
   sfx.hurt(); burst(P.x,P.y,'#e54d4d',12,200);
-  if(navigator.vibrate) navigator.vibrate(60);
+  if(typeof haptic === 'function') haptic('hurt');
   if(P.hp<=0){
     if(typeof fireHook==='function') fireHook('onHpZero');
     if(P.phoenix>0){   // Phoenix: rise from the ashes instead of dying
@@ -5706,34 +5716,58 @@ wireGfxUI();
 const _dm=$('sdrop-music'); if(_dm) _dm.addEventListener('click',()=>setMusicMuted(!muted));
 const _ds=$('sdrop-sfx'); if(_ds) _ds.addEventListener('click',()=>setSfxMuted(!sfxMuted));
 const _dds=$('sdrop-deathshake'); if(_dds) _dds.addEventListener('click',()=>setDeathShake(!deathShakeOn));
+const _dh=$('sdrop-haptic'); if(_dh) _dh.addEventListener('click',()=>setHapticOn(!hapticOn));
 $('pausemute').addEventListener('click', ()=>setMusicMuted(!muted));
 $('pausesfx').addEventListener('click', ()=>setSfxMuted(!sfxMuted));
 refreshMute();
 setDeathShake(deathShakeOn);
+if(typeof setHapticOn === 'function') setHapticOn(hapticOn);
 
 // ---- pause / resume / quit ----
-function pauseGame(){ if(state!==ST.PLAY) return; state=ST.PAUSE; $('pause').classList.remove('hidden'); }
+function refreshRunResumeUI(){
+  const panel=$('run-resume'), start=$('startbtn'), meta=$('run-resume-meta');
+  const has = typeof hasSuspendedRun === 'function' && hasSuspendedRun();
+  if(panel) panel.classList.toggle('hidden', !has);
+  if(start) start.classList.toggle('hidden', has);
+  if(has && meta && typeof getSuspendedRunMeta === 'function'){
+    const m=getSuspendedRunMeta();
+    if(m) meta.textContent = m.mode+' · '+m.world+' · '+m.progress+' · Lv '+m.lv+' · '+m.kills+' kills';
+  }
+}
+function pauseGame(){
+  if(state!==ST.PLAY) return;
+  state=ST.PAUSE;
+  $('pause').classList.remove('hidden');
+  if(typeof saveSuspendedRun === 'function') saveSuspendedRun();
+}
 function resumeGame(){ if(state!==ST.PAUSE) return; state=ST.PLAY; $('pause').classList.add('hidden'); }
 function togglePause(){ if(state===ST.PLAY) pauseGame(); else if(state===ST.PAUSE) resumeGame(); }
+function suspendToMenu(){
+  if(typeof saveSuspendedRun === 'function' && canSuspendRun && canSuspendRun()) saveSuspendedRun();
+  quitToMenu();
+}
 function quitToMenu(){
   state=ST.MENU; arena=null; bossPending=0; boss=null;
   bullets=[]; ebullets=[]; petBullets=[]; enemies=[]; gems=[]; texts=[]; zones=[]; holes=[]; luckies=[]; clearParts();
   resetPlayer(); computeCamera();
   $('pause').classList.add('hidden');
+  $('levelup').classList.add('hidden');
   $('hud').classList.add('hidden');
   $('dashbtn').classList.add('hidden');
   $('zoomctl').classList.add('hidden');
   $('bossbar').classList.add('hidden');
   $('menu').classList.remove('hidden');
   refreshTopbar();
+  refreshRunResumeUI();
   playMusic(muted ? null : 'menu');
 }
 $('pausebtn').addEventListener('click', pauseGame);
 $('resumebtn').addEventListener('click', resumeGame);
-$('quitbtn').addEventListener('click', quitToMenu);
+$('quitbtn').addEventListener('click', suspendToMenu);
 // when the page is tabbed away / minimized: stop music + pause; resume on return
 document.addEventListener('visibilitychange', ()=>{
   if(document.hidden){
+    if(typeof saveSuspendedRun === 'function' && canSuspendRun && canSuspendRun()) saveSuspendedRun();
     stopMusic(); if(AC){ try{ AC.suspend(); }catch(e){} }
     if(state===ST.PLAY) pauseGame();
   } else {
@@ -5772,6 +5806,21 @@ $('startbtn').addEventListener('click', ()=>{
       startGame(wi);
     }
   }, 190);
+});
+const _runCont=$('run-continue-btn');
+if(_runCont) _runCont.addEventListener('click', ()=>{
+  sfx.pick();
+  const m=$('menu'); m.classList.add('leaving');
+  setTimeout(()=>{
+    m.classList.remove('leaving');
+    if(typeof continueSuspendedRun === 'function' && continueSuspendedRun()) return;
+    refreshRunResumeUI();
+  }, 190);
+});
+const _runAbandon=$('run-abandon-btn');
+if(_runAbandon) _runAbandon.addEventListener('click', ()=>{
+  sfx.pick();
+  if(typeof clearSuspendedRun === 'function') clearSuspendedRun();
 });
 $('introskip').addEventListener('click', ()=>{
   if(typeof WorldCine!=='undefined' && WorldCine.isActive()) WorldCine.skip();
@@ -5947,6 +5996,7 @@ $('wnext').addEventListener('click', ()=>{
   if(selWorld<maxW){ selWorld++; refreshWorldSel(); sfx.pick(); }
 });
 refreshWorldSel();
+refreshRunResumeUI();
 $('retrybtn').addEventListener('click', startGame);
 $('wc-continue').addEventListener('click', ()=>{
   $('world-cleared').classList.add('hidden');
