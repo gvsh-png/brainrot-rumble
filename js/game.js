@@ -5212,7 +5212,7 @@ wireGfxUI();
 (function(){
   const btn=$('settingsbtn'), drop=$('settingsdrop'), closeBtn=$('sdrop-close');
   if(!btn||!drop) return;
-  const open=()=>drop.classList.remove('hidden');
+  const open=()=>{ if(typeof initDebugTools==='function') initDebugTools(); drop.classList.remove('hidden'); };
   const close=()=>drop.classList.add('hidden');
   btn.addEventListener('click', open);
   if(closeBtn) closeBtn.addEventListener('click', close);

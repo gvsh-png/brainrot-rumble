@@ -6,7 +6,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const OUT = path.join(ROOT, 'www');
 
-const COPY_FILES = ['index.html', 'styles.css', 'manifest.webmanifest'];
+const COPY_FILES = ['index.html', 'styles.css', 'manifest.webmanifest', 'br-debug.js'];
 const COPY_DIRS = ['js', 'icons'];
 
 function rmrf(dir) {

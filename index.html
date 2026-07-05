@@ -113,6 +113,11 @@
         </div>
       </div>
       <div class="sdrop-sep"></div>
+      <div class="sdrop-section hidden" id="debug-tools-section">
+        <div class="sdrop-head">Debug (APK only)</div>
+        <button id="sdrop-debug-unlock" class="sdrop-btn" type="button">Unlock All Worlds</button>
+      </div>
+      <div class="sdrop-sep hidden" id="debug-tools-sep"></div>
       <div class="sdrop-section">
         <button id="sdrop-changelog" class="sdrop-btn" type="button">Update Log</button>
       </div>
@@ -320,6 +325,8 @@
   </div>
 </div>
 
+<!-- Debug flag: false on web/release; debug APK overrides via android/app/src/debug/assets/public/br-debug.js -->
+<script src="br-debug.js"></script>
 <!-- Character/pet/recruit systems: load before core so their globals are available to game.js and shop.js -->
 <script src="js/changelog.js"></script>
 <script src="js/hooks.js"></script>
@@ -344,6 +351,7 @@
 <script src="js/boss-ext.js"></script>
 <script src="js/cutscenes-ext.js"></script>
 <script src="js/world-ext.js"></script>
+<script src="js/debug-tools.js"></script>
 <script src="js/shop.js"></script>
 <script src="js/play-bridge.js"></script>
 <script src="js/native.js"></script>

@@ -93,4 +93,5 @@
 
   if (typeof refreshTopbar === 'function') refreshTopbar();
   if (typeof refreshWorldSel === 'function') refreshWorldSel();
+  if (typeof initDebugTools === 'function') initDebugTools();
 })();

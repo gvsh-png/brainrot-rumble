@@ -67,8 +67,9 @@ function rehydrate(){
     unlockedMax = +(localStorage.getItem('br_unlocked')||0);
     if(typeof selWorld!=='undefined' && selWorld>unlockedMax) selWorld=unlockedMax;
     if(typeof chalUnlocked!=='undefined'){
+      const maxChal = typeof WORLDS!=='undefined' ? WORLDS.length - 1 : 49;
       chalUnlocked = unlockedMax >= 3
-        ? Math.max(0, Math.min(10, +(localStorage.getItem('br_ch_unlocked')||0)))
+        ? Math.max(0, Math.min(maxChal, +(localStorage.getItem('br_ch_unlocked')||0)))
         : -1;
     }
     const ownedRaw = JSON.parse(localStorage.getItem('br_items_owned')||'[]');
