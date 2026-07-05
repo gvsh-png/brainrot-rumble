@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.61';
+const CURRENT_VERSION = '1.62';
 const CHANGELOG = [
+  { v: '1.62', notes: 'Fixed infinite loading screen — duplicate GROUND_PATTERNS declaration crashed game.js on startup. Loading now dismisses immediately with a safety timeout fallback.' },
   { v: '1.61', notes: 'Map overhaul: spawn safety so you never start boxed in, safer obstacle layouts (no center blocks), and 5 ground patterns per world (checker/stripe/diamond/dots/wave) instead of plain checkers everywhere. Cutscenes now show brainrot invasion on intro, crowds applauding on victory, and unique visual effects per zone.' },
   { v: '1.60', notes: '12 new characters: 7 gem-shop heroes with unique abilities (Voltex, Mimic, Gambler, Bruiser, Artillery, Leech Lord, Eclipse) and 5 challenger unlocks (Tactician W5, Berserker W12, Paladin W20, Ironclad W28, Duelist W38). Daily character shop now shows 5 picks. Three premium crates added — Platinum, Diamond, and Vault — with endgame-tier loot and steep prices.' },
   { v: '1.59', notes: 'Shop card UI cleanup: aligned tags, bonus, and buy button on every card. Restored original high-tier gear prices (shown as 139k / 178k). Much more gold from kills, coin gems, and world scaling so late-game gear is affordable.' },

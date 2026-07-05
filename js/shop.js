@@ -1005,13 +1005,28 @@ const _initTab = (location.hash||'').slice(1);
 showTab(['battle','shop','inventory','character','pets'].indexOf(_initTab)>=0 ? _initTab : 'battle');
 
 // ---- asset prewarm + loading screen ----
+function dismissLoading(){
+  const L=$('loading');
+  if(L && !L.classList.contains('hidden')){
+    L.classList.add('fade');
+    setTimeout(()=>L.classList.add('hidden'), 420);
+  }
+}
+window.dismissLoading = dismissLoading;
+
 // All sprites are procedural canvases built at script-load. Warm the GPU upload of every sprite
 // and pre-generate each gear tint so nothing is built mid-game, then fade out the loading overlay.
 (function prewarmAssets(){
-  const scr=document.createElement('canvas'); scr.width=scr.height=8; const sg=scr.getContext('2d');
-  for(const k in SP){  try{ sg.drawImage(SP[k],0,0,8,8);  }catch(e){} }
-  for(const k in SPW){ try{ sg.drawImage(SPW[k],0,0,8,8); }catch(e){} }
-  if(typeof tintedSprite==='function'){ for(const cat of GEAR_CATS) for(const r of RAR_ORDER){ try{ tintedSprite('gear_'+cat, RAR[r].color); }catch(e){} } }
-  const L=$('loading');
-  if(L) requestAnimationFrame(()=>{ L.classList.add('fade'); setTimeout(()=>L.classList.add('hidden'), 420); });
+  dismissLoading();   // hide immediately — prewarm continues in background
+  const run = ()=>{
+    const scr=document.createElement('canvas'); scr.width=scr.height=8; const sg=scr.getContext('2d');
+    for(const k in SP){  try{ sg.drawImage(SP[k],0,0,8,8);  }catch(e){} }
+    for(const k in SPW){ try{ sg.drawImage(SPW[k],0,0,8,8); }catch(e){} }
+    if(typeof tintedSprite==='function'){
+      for(const cat of GEAR_CATS) for(const r of RAR_ORDER){ try{ tintedSprite('gear_'+cat, RAR[r].color); }catch(e){} }
+    }
+  };
+  if(typeof requestIdleCallback==='function') requestIdleCallback(run, { timeout: 3000 });
+  else setTimeout(run, 50);
 })();
+setTimeout(dismissLoading, 8000);   // safety net — never stuck on loading forever

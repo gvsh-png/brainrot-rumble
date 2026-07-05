@@ -4416,9 +4416,11 @@ function hurtPlayer(dmg, src){
 
 // ============ RENDER ============
 const TILE = 80;
-const GROUND_PATTERNS = ['checker', 'stripe', 'diamond', 'dots', 'wave'];
 function groundPatternForTheme(th, wi) {
-  return th && th.groundPattern ? th.groundPattern : GROUND_PATTERNS[(wi || 0) % GROUND_PATTERNS.length];
+  const patterns = typeof GROUND_PATTERNS !== 'undefined'
+    ? GROUND_PATTERNS
+    : ['checker', 'stripe', 'diamond', 'dots', 'wave'];
+  return th && th.groundPattern ? th.groundPattern : patterns[(wi || 0) % patterns.length];
 }
 function groundPatternSeed(wi) { return ((wi || 0) * 17 + 31) | 0; }
 function fillGroundCell(g, gx, gy, tile, th, wi) {
