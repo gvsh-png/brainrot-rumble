@@ -1,8 +1,11 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.48';
+const CURRENT_VERSION = '1.51';
 const CHANGELOG = [
+  { v: '1.51', notes: 'Longer immersive cutscenes (~9–14 sec): zone atmosphere lines, cinematic letterbox, hero/swarm entrance animations, victory reactions, and milestone twists still only every ~5 worlds.' },
+  { v: '1.50', notes: 'Story tuned for ages ~10: quick ~4 sec cutscenes on most worlds, bigger story moments only every ~5 worlds, simple fun dialogue, and new allies pop up on screen when they join.' },
+  { v: '1.49', notes: 'Campaign storyline cutscenes (multi-beat acts I–IV per world), brighter extended-world floors, and contrast rings so player/enemies stand out from the background.' },
   { v: '1.48', notes: 'Debug APK only: Settings → Debug → Unlock All Worlds for testing every story/challenger world. Not included in release builds or web play.' },
   { v: '1.47', notes: 'Extended worlds W12–W50 now have 4 unique grunts each (2 base + 2 swarm), a unique phased wave-5 boss, and a unique 3-phase final boss with signature attacks and gimmicks per world.' },
   { v: '1.46', notes: 'Massive content expansion: 50 worlds total (W12–W50 procedural sectors), intro/outro cutscenes for every world, special Challenger cutscenes, 4 new swarm enemy sprites, one world-exclusive skill per world from W8 onward, 12 milestone characters and 12 milestone pets, and HP/damage scaling that continues past World 10.' },
