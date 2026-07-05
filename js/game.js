@@ -3317,6 +3317,7 @@ function bossMoves(e){
       if(e.vph>=2) return ['FOREST_FLOOD','TETHER','GEYSER_SWEEP','BURROW_DOUBLE','RING_VOLLEY'];
       return ['FOREST_FLOOD','BURROW_SLAM','GEYSER_SWEEP','ring16'];
   }
+  if(typeof extBossMoves==='function'){ const ext=extBossMoves(e); if(ext) return ext; }
   return ['ring16'];
 }
 const MOVE_COL = { dash:'#e54d4d', spiral:'#e54d4d', aimed3:'#e23b3b', aimed5:'#e23b3b',
@@ -3361,7 +3362,11 @@ const MOVE_COL = { dash:'#e54d4d', spiral:'#e54d4d', aimed3:'#e23b3b', aimed5:'#
   SUMMON_ACT:'#ff5ea8', BALLOON_RING:'#ff5ea8', BLINK:'#ff5ea8', CONFETTI_SPIRAL:'#ffd24a',
   MEGA_STORM:'#ff5acd', CROSS_STORM:'#ff9be0', SPIRAL_LITE:'#ffd24a',
   BLADE_FAN:'#e0e0e0', COCONUT_STORM:'#8d6e63', QUAKE_RING:'#8d6e63',
-  CONFETTI_TOSS:'#ff5ea8', CALLIOPE_RING:'#ffd24a', EMBER_JUGGLE:'#ff7a2a' };
+  CONFETTI_TOSS:'#ff5ea8', CALLIOPE_RING:'#ffd24a', EMBER_JUGGLE:'#ff7a2a',
+  EXT_LANCE:'#b06ff0', EXT_SPORE_FAN:'#7ab955', EXT_ORBIT_BURST:'#9fd0ff', EXT_BEAM_SWEEP:'#e0503f',
+  EXT_PHASE_SLAM:'#a9763e', EXT_VORTEX_PULL:'#d2a0ff', EXT_COLLAPSE:'#c77dff', EXT_HIVE_SPAWN:'#6a4a9a',
+  EXT_SWARM_BURST:'#9a7ad8', EXT_FROST_FAN:'#9fd0ff', EXT_VOID_RAIN:'#6c5ce7', EXT_SHOCK_GRID:'#ff7675',
+  EXT_FINAL_CATACLYSM:'#ff5acd' };
 function pickMove(e){
   let pool=bossMoves(e);
   // bullet-hell injection: a LOT more for final-boss phase 3, a moderate bit for mid-bosses past phase 1
@@ -3371,6 +3376,7 @@ function pickMove(e){
 }
 // run one move; returns how long the boss stays in the "fire" state before recovering
 function execMove(e){
+  if(typeof extExecMove==='function'){ const extR=extExecMove(e); if(extR!=null) return extR; }
   switch(e.mv){
     case 'dash': e.dst='wind'; e.dwin=e.enraged?0.25:0.4; e.da=Math.atan2(P.y-e.y,P.x-e.x); return 0.9;
     case 'spiral': e.spin=0.7; e.spinCol='#e54d4d'; return 0.75;
@@ -3636,6 +3642,7 @@ const GIMMICK = {
 // runs every frame alongside the move cycle; escalates with e.vph. kept forgiving (slow, wide gaps).
 function updateGimmick(e,dt){
   if(!e.gimmick || e.scriptPause) return;
+  if(e.gimmick.startsWith('ext_') && typeof extGimmickUpdate==='function'){ extGimmickUpdate(e,dt); return; }
   const ph=e.vph||1;
   const gm = (e.finalPhase||e.partner) ? 1 : 1.4;   // non-final bosses fire their signature gimmick a bit less often (but often enough to feel unique)
   switch(e.gimmick){
