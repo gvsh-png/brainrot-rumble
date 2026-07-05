@@ -17,7 +17,7 @@
   }
 
   function mkObs(x, y, w, h, col) {
-    return { x, y, w, h, col: col || '#5a4a38' };
+    return { x, y, w, h, col: col || '#c8a868' };
   }
 
   function buildLayout(kind, W, H) {
@@ -28,42 +28,42 @@
 
     if (kind === 'pillars') {
       const pw = Math.max(90, W * 0.07), ph = Math.max(140, H * 0.22);
-      obs.push(mkObs(W * 0.22 - pw / 2, cy - ph / 2, pw, ph, '#6a7a8a'));
-      obs.push(mkObs(W * 0.78 - pw / 2, cy - ph / 2, pw, ph, '#6a7a8a'));
-      if (W > H * 1.2) obs.push(mkObs(cx - pw / 2, H * 0.18, pw, ph * 0.85, '#5a6a7a'));
+      obs.push(mkObs(W * 0.22 - pw / 2, cy - ph / 2, pw, ph, '#a8c8e8'));
+      obs.push(mkObs(W * 0.78 - pw / 2, cy - ph / 2, pw, ph, '#a8c8e8'));
+      if (W > H * 1.2) obs.push(mkObs(cx - pw / 2, H * 0.18, pw, ph * 0.85, '#98b8d8'));
     } else if (kind === 'corridor') {
       const thick = Math.max(80, Math.min(W, H) * 0.08);
-      obs.push(mkObs(pad, pad, thick, H - pad * 2, '#4a3868'));
-      obs.push(mkObs(W - pad - thick, pad, thick, H - pad * 2, '#4a3868'));
+      obs.push(mkObs(pad, pad, thick, H - pad * 2, '#c8a0f0'));
+      obs.push(mkObs(W - pad - thick, pad, thick, H - pad * 2, '#c8a0f0'));
     } else if (kind === 'islands') {
       const s = Math.max(120, Math.min(W, H) * 0.14);
-      obs.push(mkObs(pad, pad, s, s, '#6a5038'));
-      obs.push(mkObs(W - pad - s, pad, s, s, '#6a5038'));
-      obs.push(mkObs(pad, H - pad - s, s, s, '#6a5038'));
-      obs.push(mkObs(W - pad - s, H - pad - s, s, s, '#6a5038'));
+      obs.push(mkObs(pad, pad, s, s, '#e8c878'));
+      obs.push(mkObs(W - pad - s, pad, s, s, '#e8c878'));
+      obs.push(mkObs(pad, H - pad - s, s, s, '#e8c878'));
+      obs.push(mkObs(W - pad - s, H - pad - s, s, s, '#e8c878'));
     } else if (kind === 'cross') {
       const tw = Math.max(100, W * 0.12), th = Math.max(100, H * 0.12);
-      obs.push(mkObs(cx - tw / 2, pad, tw, cy - pad - th * 0.5, '#5a2818'));
-      obs.push(mkObs(cx - tw / 2, cy + th * 0.5, tw, H - pad - cy - th * 0.5, '#5a2818'));
-      obs.push(mkObs(pad, cy - th / 2, cx - pad - tw * 0.5, th, '#5a2818'));
-      obs.push(mkObs(cx + tw * 0.5, cy - th / 2, W - pad - cx - tw * 0.5, th, '#5a2818'));
+      obs.push(mkObs(cx - tw / 2, pad, tw, cy - pad - th * 0.5, '#ff9878'));
+      obs.push(mkObs(cx - tw / 2, cy + th * 0.5, tw, H - pad - cy - th * 0.5, '#ff9878'));
+      obs.push(mkObs(pad, cy - th / 2, cx - pad - tw * 0.5, th, '#ff9878'));
+      obs.push(mkObs(cx + tw * 0.5, cy - th / 2, W - pad - cx - tw * 0.5, th, '#ff9878'));
     } else if (kind === 'ring') {
       const bw = Math.max(70, W * 0.09), bh = Math.max(70, H * 0.09);
       const spots = [
         [0.5, 0.22], [0.78, 0.38], [0.72, 0.72], [0.28, 0.72], [0.22, 0.38],
       ];
       for (const [fx, fy] of spots) {
-        obs.push(mkObs(W * fx - bw / 2, H * fy - bh / 2, bw, bh, '#7a5a28'));
+        obs.push(mkObs(W * fx - bw / 2, H * fy - bh / 2, bw, bh, '#f0d060'));
       }
     } else if (kind === 'lanes') {
       const bh = Math.max(70, H * 0.1);
-      obs.push(mkObs(pad, H * 0.32 - bh / 2, W - pad * 2, bh, '#4a6a30'));
-      obs.push(mkObs(pad, H * 0.68 - bh / 2, W - pad * 2, bh, '#4a6a30'));
+      obs.push(mkObs(pad, H * 0.32 - bh / 2, W - pad * 2, bh, '#98d868'));
+      obs.push(mkObs(pad, H * 0.68 - bh / 2, W - pad * 2, bh, '#98d868'));
     } else if (kind === 'clusters') {
       const r = Math.max(55, Math.min(W, H) * 0.06);
       const pts = [[0.3, 0.35], [0.65, 0.28], [0.55, 0.62], [0.25, 0.7], [0.75, 0.55]];
       for (const [fx, fy] of pts) {
-        obs.push(mkObs(W * fx - r, H * fy - r, r * 2, r * 2, '#4a5a28'));
+        obs.push(mkObs(W * fx - r, H * fy - r, r * 2, r * 2, '#a8d848'));
       }
     }
     return obs;

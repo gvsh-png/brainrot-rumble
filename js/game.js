@@ -585,9 +585,9 @@ const WORLDS = [
     foes:FOES_W2, bosses:BOSSES_W2 },
   { id:'forest', name:'FORESTA FRUTOSA', band:1, waveTarget:20, endless:false,
     map:{w:2000,h:3800}, enemyTint:null,
-    theme:{ void:'#226018', tile1:'#5ec43e', tile2:'#50b034',
-            tuft:'rgba(20,90,10,0.44)', wall:'#5c3a1e', post:'#7a4e28',
-            bg:'#46a028', tint:null, music:'world_forest' },
+    theme:{ void:'#5ec43e', tile1:'#8ef85a', tile2:'#72e848',
+            tuft:'rgba(30,110,20,0.30)', wall:'#8a5a32', post:'#a86e40',
+            bg:'#6edc40', tint:null, music:'world_forest' },
     foes:FOES_W3, bosses:BOSSES_W3 },
   { id:'glacier', name:'GELATO GLACIER', band:2, waveTarget:20, endless:false, map:{w:3800,h:3800}, enemyTint:null,
     theme:{ void:'#6abcb4', tile1:'#e8faf4', tile2:'#d2f0ea', tuft:'rgba(100,190,180,0.32)',
@@ -601,28 +601,28 @@ const WORLDS = [
     theme:{ void:'#9a4818', tile1:'#ec9438', tile2:'#e08430', tuft:'rgba(140,60,14,0.36)',
             wall:null, post:null, bg:'#dc8828', tint:'#f07820', music:'world_autumn' },
     foes:FOES_W6, bosses:BOSSES_W6 },
-  { id:'swamp', name:'SWAMP', band:5, waveTarget:20, endless:false, map:{w:4800,h:1200}, enemyTint:null,
-    theme:{ void:'#2c5e1c', tile1:'#6ab83e', tile2:'#5ea834', tuft:'rgba(20,80,10,0.42)',
-            wall:'#2a5418', post:'#58882c', postDark:'#1c3e10', bg:'#5cb030', tint:'#74c838', music:'world_swamp',
-            debris:0.7 },
+  { id:'swamp', name:'SWAMP', band:5, waveTarget:20, endless:false, map:{w:4800,h:1200}, enemyTint:'#90e850',
+    theme:{ void:'#6ac848', tile1:'#8ed85a', tile2:'#7ed050', tuft:'rgba(30,100,20,0.28)',
+            wall:'#4a8828', post:'#68a838', postDark:'#3a6818', bg:'#70c840', tint:'#80e040', music:'world_swamp',
+            debris:0.55 },
     foes:FOES_SWAMP, bosses:BOSSES_DIRT },
   { id:'sky', name:'SKYLAND', band:6, waveTarget:20, endless:false, map:{w:3000,h:3000}, enemyTint:'#a8d8ff',
     theme:{ void:'#78b8e0', tile1:'#c8eeff', tile2:'#b4e4ff', tuft:'rgba(120,190,230,0.32)',
             wall:null, post:null, bg:'#b8e8ff', tint:'#a8d8ff', music:'world_sky' },
     foes:FOES_W8, bosses:BOSSES_SKY },
-  { id:'crystal', name:'CRYSTAL CAVES', band:7, waveTarget:20, endless:false, map:{w:1100,h:4400}, enemyTint:'#c898f0',
-    theme:{ void:'#3c1e60', tile1:'#7a4eaa', tile2:'#6c3e98', tuft:'rgba(160,120,220,0.34)',
-            wall:'#301848', post:'#624090', postDark:'#1e1038', bg:'#623890', tint:'#c898f0', music:'world_crystal' },
+  { id:'crystal', name:'CRYSTAL CAVES', band:7, waveTarget:20, endless:false, map:{w:1100,h:4400}, enemyTint:'#d070ff',
+    theme:{ void:'#d8c0ff', tile1:'#f0e8ff', tile2:'#e0d0ff', tuft:'rgba(180,140,240,0.28)',
+            wall:'#c8a0f0', post:'#e8d8ff', postDark:'#b090e8', bg:'#e8d8ff', tint:'#c060f0', music:'world_crystal' },
     foes:FOES_W9, bosses:BOSSES_W9 },
-  { id:'volcano', name:'VOLCANO', band:8, waveTarget:20, endless:false, map:{w:3400,h:3400}, enemyTint:'#f04820',
-    theme:{ void:'#421208', tile1:'#943828', tile2:'#84301e', tuft:'rgba(80,20,8,0.40)',
-            wall:'#300a04', post:'#803028', postDark:'#200800', bg:'#7c2818', tint:'#f04820', music:'world_volcano',
-            debris:0.8 },
+  { id:'volcano', name:'VOLCANO', band:8, waveTarget:20, endless:false, map:{w:3400,h:3400}, enemyTint:'#ff6030',
+    theme:{ void:'#f0a070', tile1:'#ffb090', tile2:'#ff9878', tuft:'rgba(180,80,40,0.28)',
+            wall:'#e87850', post:'#ffa878', postDark:'#d86840', bg:'#ff9878', tint:'#ff5020', music:'world_volcano',
+            debris:0.65 },
     foes:FOES_W10, bosses:BOSSES_W10 },
-  { id:'dirt', name:'DIRT DEPTHS', band:9, waveTarget:20, endless:false, map:{w:1000,h:5000}, enemyTint:null,
-    theme:{ void:'#6a3c1e', tile1:'#8c5a2e', tile2:'#7e5028', tuft:'rgba(50,28,10,0.38)',
-            wall:'#543018', post:'#8a5e30', postDark:'#402410', bg:'#7a4e28', tint:'#9a6028', music:'world_dirt',
-            debris:0.8, edgeDark:0.15 },
+  { id:'dirt', name:'DIRT DEPTHS', band:9, waveTarget:20, endless:false, map:{w:1000,h:5000}, enemyTint:'#e8a050',
+    theme:{ void:'#d8a868', tile1:'#f0c880', tile2:'#e8b868', tuft:'rgba(120,80,30,0.28)',
+            wall:'#c89850', post:'#e0b060', postDark:'#b08040', bg:'#e8b868', tint:'#f0a838', music:'world_dirt',
+            debris:0.55, edgeDark:0 },
     foes:FOES_W11, bosses:BOSSES_W11 },
 ];
 let worldIdx = 0;
@@ -4486,6 +4486,22 @@ function drawTurretUnit(tu, ts, bodyCol, visorCol, hpFrac){
   }
 }
 
+function drawReadabilityRim(x, y, r) {
+  if (typeof state === 'undefined' || state === ST.MENU) return;
+  cx.save();
+  cx.strokeStyle = '#ffffff';
+  cx.lineWidth = Math.max(2, r * 0.11);
+  cx.globalAlpha = 0.9;
+  cx.beginPath();
+  cx.ellipse(x, y, r * 0.95, r * 1.02, 0, 0, TAU);
+  cx.stroke();
+  cx.strokeStyle = '#2a1c10';
+  cx.lineWidth = Math.max(1.2, r * 0.065);
+  cx.globalAlpha = 0.4;
+  cx.stroke();
+  cx.restore();
+}
+
 function render(){
   cx.save();
   let sx=0, sy=0;
@@ -4655,10 +4671,6 @@ function render(){
     const wob = skipWob ? 0 : (e.isBoss ? Math.sin(e.t*2)*0.06 : Math.sin(e.t*6)*0.12*(e.walkAmt||0));   // walk-cycle wobble eases in/out with movement instead of snapping
     const pulse=0;
     if(e.cut && cut){ cx.globalAlpha = cut.alpha; }
-    if(!e.under){
-      cx.fillStyle='rgba(0,0,0,0.28)';
-      cx.beginPath(); cx.ellipse(e.x, e.y+e.r*0.85, e.r*0.85, e.r*0.32, 0, 0, TAU); cx.fill();
-    }
     if(RIG[e.spr]){
       // part-based rig draw — pose driven by movement/hit/knockback state
       let ePose='idle', ePhase=0;
@@ -4683,6 +4695,20 @@ function render(){
       cx.fillStyle='#fff';
       cx.strokeStyle=OUT; cx.lineWidth=3; cx.strokeText(e.name, e.x, e.y-e.r-22); cx.fillText(e.name, e.x, e.y-e.r-22);
     }
+  }
+
+  if (state !== ST.MENU && _vis.length) {
+    cx.strokeStyle = '#ffffff';
+    cx.lineWidth = 2.4;
+    cx.globalAlpha = 0.78;
+    cx.beginPath();
+    for (const e of _vis) {
+      if (e.under) continue;
+      cx.moveTo(e.x + e.r * 1.02, e.y);
+      cx.ellipse(e.x, e.y, e.r * 1.02, e.r * 1.06, 0, 0, TAU);
+    }
+    cx.stroke();
+    cx.globalAlpha = 1;
   }
 
   // batched status overlays: one state-set per effect type instead of per enemy
@@ -4807,6 +4833,7 @@ function render(){
         const _lean = (_a.faceX||0)*0.16*(_a.walkAmt||0);
         drawPlayerGear(P.x, P.y, P.r*2.6, bob+(flip?-_lean:_lean), flip);
       }
+      drawReadabilityRim(P.x, P.y, P.r * 1.02);
     }
     // Phoenix burn aura
     if(P.burnAura>0){

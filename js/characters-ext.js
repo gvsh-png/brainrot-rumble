@@ -1,15 +1,15 @@
 'use strict';
-// Milestone characters — humanoid art + one clear roguelike gimmick each (Rotato-style).
+// Milestone characters — vivid color palettes (no muddy dark tones) + roguelike gimmicks.
 
 (function () {
-  function themedChar(skin, body, legs, accent, extra) {
+  function themedChar(skin, body, legs, arms, extra) {
     return function (ctx, size, t, anim) {
       t = t || 0;
       anim = anim || {};
       const by = _charBodyY(anim, size);
       ctx.save();
       ctx.translate(0, by);
-      _humanBase(ctx, size, legs, body, skin, skin, anim);
+      _humanBase(ctx, size, legs, body, arms || skin, skin, anim);
       _eyes(ctx, size);
       if (extra) extra(ctx, size, t, anim);
       ctx.restore();
@@ -35,7 +35,7 @@
           }
         });
       },
-      draw: themedChar('#e8c39a', '#5a8ab0', '#3a5a78', '#7ec8e3', (ctx, size) => {
+      draw: themedChar('#f0c9a0', '#58b4ff', '#2a78d8', '#f0c9a0', (ctx, size) => {
         _fillR(ctx, size, '#7ec8e3', -size * 0.2, -size * 0.34, size * 0.4, size * 0.08, size * 0.02);
       }),
     },
@@ -54,12 +54,12 @@
           if (stillT >= 1 && cd <= 0 && (P.shield || 0) < 1) {
             P.shield = 1;
             cd = 25;
-            if (typeof floatText === 'function') floatText(P.x, P.y - 42, 'GUARD', '#c9a227', 14);
+            if (typeof floatText === 'function') floatText(P.x, P.y - 42, 'GUARD', '#ffd24a', 14);
           }
         });
       },
-      draw: themedChar('#d4b080', '#c9a227', '#6a5520', '#ffe878', (ctx, size) => {
-        _fillR(ctx, size, '#8a7028', -size * 0.22, -size * 0.06, size * 0.44, size * 0.22, size * 0.06);
+      draw: themedChar('#f0c090', '#ffd24a', '#e8a020', '#f0c090', (ctx, size) => {
+        _fillR(ctx, size, '#ffe878', -size * 0.22, -size * 0.06, size * 0.44, size * 0.22, size * 0.06);
       }),
     },
     {
@@ -77,8 +77,8 @@
           }
         });
       },
-      draw: themedChar('#c8a0d8', '#7a4a9a', '#4a2868', '#9b59b6', (ctx, size, t) => {
-        ctx.strokeStyle = '#9b59b6';
+      draw: themedChar('#f0c0d8', '#e056fd', '#9b30ff', '#f0b0e8', (ctx, size, t) => {
+        ctx.strokeStyle = '#ff80ff';
         ctx.lineWidth = Math.max(1.5, size * 0.025);
         for (let i = 0; i < 3; i++) {
           const a = t * 2 + i * 2.1;
@@ -95,20 +95,23 @@
       rarity: 'world', worldUnlock: 14,
       baseStats: { maxHp: 100, dmg: 10.5, speed: 288 },
       register() {
-        onHook('onDash', () => { if (typeof P !== 'undefined') P.stealthAggro = true; P._voidSlip = 0.5; });
+        onHook('onDash', () => { if (typeof P !== 'undefined') { P.stealthAggro = true; P._voidSlip = 0.5; } });
         onHook('petTick', (dt) => {
           if (!P._voidSlip) return;
           P._voidSlip -= dt;
           if (P._voidSlip <= 0) { P._voidSlip = 0; P.stealthAggro = false; }
         });
       },
-      draw: themedChar('#b0a0e0', '#4a3a7a', '#2a1a5a', '#6c5ce7', (ctx, size, t) => {
-        ctx.globalAlpha = 0.35 + Math.sin(t * 4) * 0.1;
-        ctx.fillStyle = '#6c5ce7';
-        ctx.beginPath();
-        ctx.ellipse(0, size * 0.08, size * 0.24, size * 0.34, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
+      draw: themedChar('#f0d8ff', '#00e5ff', '#00b8d4', '#80f0ff', (ctx, size, t) => {
+        ctx.strokeStyle = '#00e5ff';
+        ctx.lineWidth = Math.max(2, size * 0.028);
+        for (let i = 0; i < 3; i++) {
+          const a = t * 4 + i * 2;
+          ctx.beginPath();
+          ctx.moveTo(-size * 0.2, size * 0.05);
+          ctx.lineTo(-size * 0.32 - Math.cos(a) * size * 0.04, size * 0.05 + Math.sin(a) * size * 0.03);
+          ctx.stroke();
+        }
       }),
     },
     {
@@ -123,13 +126,13 @@
           k++;
           if (k % 8 === 0 && typeof P !== 'undefined') {
             P.hp = Math.min(P.maxHp, P.hp + 2);
-            if (typeof floatText === 'function') floatText(P.x, P.y - 38, '+2', '#00cec9', 13);
+            if (typeof floatText === 'function') floatText(P.x, P.y - 38, '+2', '#00e676', 13);
           }
         });
       },
-      draw: themedChar('#e0c0a0', '#00b894', '#007a68', '#55efc4', (ctx, size) => {
-        _fillE(ctx, size, '#55efc4', size * 0.18, size * 0.02, size * 0.08, size * 0.14);
-        _fillE(ctx, size, '#55efc4', -size * 0.18, size * 0.02, size * 0.08, size * 0.14);
+      draw: themedChar('#f0c0a0', '#00e676', '#00c853', '#f0c0a0', (ctx, size) => {
+        _fillE(ctx, size, '#69f0ae', size * 0.18, size * 0.02, size * 0.08, size * 0.14);
+        _fillE(ctx, size, '#69f0ae', -size * 0.18, size * 0.02, size * 0.08, size * 0.14);
       }),
     },
     {
@@ -148,13 +151,13 @@
             if ((o.x - P.x) ** 2 + (o.y - P.y) ** 2 > 280 * 280) continue;
             o.hp -= P.dmg * 0.55;
             o.hitT = Math.max(o.hitT || 0, 0.12);
-            if (typeof burst === 'function') burst(o.x, o.y, '#74b9ff', 6, 120);
+            if (typeof burst === 'function') burst(o.x, o.y, '#448aff', 6, 120);
             if (++hits >= 2) break;
           }
         });
       },
-      draw: themedChar('#e8d8a0', '#4a8ac8', '#2a5a88', '#74b9ff', (ctx, size, t) => {
-        ctx.fillStyle = '#ffe878';
+      draw: themedChar('#f0e8a0', '#448aff', '#2962ff', '#f0e8a0', (ctx, size) => {
+        ctx.fillStyle = '#ffea00';
         ctx.beginPath();
         ctx.moveTo(size * 0.12, -size * 0.28);
         ctx.lineTo(size * 0.18, -size * 0.12);
@@ -174,10 +177,14 @@
       register() {
         if (typeof P !== 'undefined') P.burnHit = true;
       },
-      draw: themedChar('#f0c090', '#c85030', '#6a2818', '#e17055', (ctx, size, t) => {
-        ctx.fillStyle = 'rgba(255,120,40,' + (0.35 + Math.sin(t * 5) * 0.15) + ')';
+      draw: themedChar('#f0c090', '#ff6e40', '#ff3d00', '#ffc080', (ctx, size, t) => {
+        ctx.fillStyle = '#ffab40';
         ctx.beginPath();
-        ctx.arc(0, -size * 0.32, size * 0.08, 0, Math.PI * 2);
+        ctx.arc(0, -size * 0.32, size * 0.09, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ff6d00';
+        ctx.beginPath();
+        ctx.arc(0, -size * 0.34, size * 0.05, 0, Math.PI * 2);
         ctx.fill();
       }),
     },
@@ -189,11 +196,11 @@
       register() {
         if (typeof P !== 'undefined') P.chillHit = (P.chillHit || 0) + 1;
       },
-      draw: themedChar('#d8e8f8', '#6a8ab8', '#3a5a78', '#a29bfe', (ctx, size) => {
-        _fillE(ctx, size, '#cfeaff', 0, -size * 0.34, size * 0.2, size * 0.06);
-        ctx.fillStyle = '#a29bfe';
+      draw: themedChar('#e8f8ff', '#40c4ff', '#00b0ff', '#e8f8ff', (ctx, size) => {
+        _fillE(ctx, size, '#b3e5fc', 0, -size * 0.34, size * 0.22, size * 0.07);
+        ctx.fillStyle = '#00e5ff';
         ctx.beginPath();
-        ctx.arc(0, -size * 0.36, size * 0.04, 0, Math.PI * 2);
+        ctx.arc(0, -size * 0.36, size * 0.05, 0, Math.PI * 2);
         ctx.fill();
       }),
     },
@@ -217,13 +224,13 @@
             P.dashCd = 0;
             boost = 3;
             P.speed *= 1.15;
-            if (typeof floatText === 'function') floatText(P.x, P.y - 44, 'SKIP!', '#fdcb6e', 15);
+            if (typeof floatText === 'function') floatText(P.x, P.y - 44, 'SKIP!', '#ffca28', 15);
           }
         });
       },
-      draw: themedChar('#f0d890', '#c8a040', '#8a6820', '#fdcb6e', (ctx, size, t) => {
-        ctx.strokeStyle = '#fdcb6e';
-        ctx.lineWidth = Math.max(1.5, size * 0.028);
+      draw: themedChar('#fff0b0', '#ffca28', '#ff8f00', '#fff0b0', (ctx, size) => {
+        ctx.strokeStyle = '#ff6f00';
+        ctx.lineWidth = Math.max(2, size * 0.03);
         ctx.beginPath();
         ctx.arc(0, -size * 0.3, size * 0.1, 0, Math.PI * 2);
         ctx.stroke();
@@ -243,10 +250,11 @@
           bullets.push({ x: P.x, y: P.y, vx: Math.cos(a) * 380, vy: Math.sin(a) * 380, r: 5, pierce: 0, hit: new Set(), dist: (P.range || 330) * 0.75, dmgMul: 0.3, homing: 3 });
         });
       },
-      draw: themedChar('#f0c0a0', '#c84848', '#6a2020', '#ff7675', (ctx, size) => {
-        _fillR(ctx, size, '#4a4a58', -size * 0.1, -size * 0.38, size * 0.2, size * 0.06, size * 0.02);
-        ctx.fillStyle = '#74b9ff';
-        ctx.fillRect(size * 0.06, -size * 0.36, size * 0.05, size * 0.03);
+      draw: themedChar('#f0c0a0', '#ff5252', '#d32f2f', '#f0c0a0', (ctx, size) => {
+        _fillR(ctx, size, '#ffffff', -size * 0.14, -size * 0.38, size * 0.28, size * 0.08, size * 0.02);
+        ctx.fillStyle = '#448aff';
+        ctx.fillRect(-size * 0.06, -size * 0.36, size * 0.05, size * 0.04);
+        ctx.fillRect(size * 0.02, -size * 0.36, size * 0.05, size * 0.04);
       }),
     },
     {
@@ -268,17 +276,17 @@
         onHook('onKill', (e) => {
           if (e && e.isBoss && typeof P !== 'undefined') {
             P.dmg += 1;
-            if (typeof floatText === 'function') floatText(P.x, P.y - 50, '+1 DMG', '#dfe6e9', 14);
+            if (typeof floatText === 'function') floatText(P.x, P.y - 50, '+1 DMG', '#ea80fc', 14);
           }
         });
       },
-      draw: themedChar('#e8e8f0', '#6a7a88', '#3a4a58', '#dfe6e9', (ctx, size) => {
-        ctx.fillStyle = '#fdcb6e';
+      draw: themedChar('#f0e0c0', '#ab47bc', '#8e24aa', '#f0e0c0', (ctx, size) => {
+        ctx.fillStyle = '#ffea00';
         for (let i = -2; i <= 2; i++) {
           ctx.beginPath();
           ctx.moveTo(i * size * 0.06, -size * 0.34);
-          ctx.lineTo(i * size * 0.06 + size * 0.03, -size * 0.42);
-          ctx.lineTo(i * size * 0.06 - size * 0.03, -size * 0.42);
+          ctx.lineTo(i * size * 0.06 + size * 0.03, -size * 0.44);
+          ctx.lineTo(i * size * 0.06 - size * 0.03, -size * 0.44);
           ctx.fill();
         }
       }),
@@ -297,7 +305,7 @@
             active = true;
             P.dmg *= 1.18;
             P.speed *= 1.12;
-            if (typeof floatText === 'function') floatText(P.x, P.y - 48, 'LAST STAND', '#fff', 16);
+            if (typeof floatText === 'function') floatText(P.x, P.y - 48, 'LAST STAND', '#ff4081', 16);
           } else if (!low && active) {
             active = false;
             P.dmg /= 1.18;
@@ -305,14 +313,15 @@
           }
         });
       },
-      draw: themedChar('#f0e8d8', '#4a5a68', '#2a3a48', '#fff', (ctx, size, t) => {
-        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+      draw: themedChar('#ffe0c0', '#ffffff', '#ff4081', '#ffe0c0', (ctx, size) => {
+        _fillR(ctx, size, '#ff4081', -size * 0.18, -size * 0.04, size * 0.36, size * 0.24, size * 0.06);
+        ctx.strokeStyle = '#ff4081';
         ctx.lineWidth = Math.max(2, size * 0.03);
         ctx.beginPath();
-        ctx.moveTo(-size * 0.14, -size * 0.08);
-        ctx.lineTo(size * 0.14, size * 0.12);
-        ctx.moveTo(size * 0.14, -size * 0.08);
-        ctx.lineTo(-size * 0.14, size * 0.12);
+        ctx.moveTo(-size * 0.1, -size * 0.06);
+        ctx.lineTo(size * 0.1, size * 0.1);
+        ctx.moveTo(size * 0.1, -size * 0.06);
+        ctx.lineTo(-size * 0.1, size * 0.1);
         ctx.stroke();
       }),
     },
