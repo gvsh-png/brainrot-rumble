@@ -21,6 +21,21 @@ npm run android:release  # assemble release AAB (needs signing config)
 npm test
 ```
 
+## Install on your phone without a PC
+
+A GitHub Action builds a **debug APK** on every push to `main` / `cursor/*` (or run it manually).
+
+1. On your phone, open GitHub in the browser and sign in
+2. Go to **Actions** → **Android Debug APK** → latest green run
+3. Scroll to **Artifacts** → download **brainrot-rumble-debug-apk**
+4. Open the downloaded `app-debug.apk`
+5. If prompted, allow **Install unknown apps** for your browser or Files app
+6. Install and launch **Brainrot Rumble**
+
+> **Note:** Google Play Games sign-in still needs Play Console setup (App ID + debug SHA-1). Guest mode works without that.
+
+To trigger a build manually: **Actions** → **Android Debug APK** → **Run workflow**.
+
 ## 1. Create the Play Console app
 
 1. Play Console → **Create app**
