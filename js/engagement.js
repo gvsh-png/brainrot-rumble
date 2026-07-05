@@ -297,9 +297,9 @@ function refreshDailyBountiesUI(){
     const rew = def.reward.gems ? ('+' + def.reward.gems + ' ◆') : ('+' + def.reward.gold + ' gold');
     if(!done && prog >= def.target) claimable++;
     return '<div class="db-row' + (done ? ' done' : '') + '">' +
-      '<div class="db-label">' + def.label + '</div>' +
+      '<div class="db-label">' + def.label + ' <span class="db-prog">' + Math.min(prog, def.target) + '/' + def.target + '</span></div>' +
       '<div class="db-bar"><div class="db-fill" style="width:' + pct + '%"></div></div>' +
-      '<div class="db-meta"><span>' + Math.min(prog, def.target) + '/' + def.target + '</span><span class="db-reward">' + rew + '</span></div>' +
+      '<div class="db-reward">' + rew + '</div>' +
       '</div>';
   }).join('');
   const badge = $('bountybadge');

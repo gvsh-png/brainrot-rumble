@@ -146,10 +146,6 @@
   <div id="tabview">
     <!-- BATTLE -->
     <div id="tab-battle" class="tabpanel">
-      <div id="daily-bounties" class="daily-bounties">
-        <div class="db-title">DAILY BOUNTIES <span class="db-sub">resets midnight UTC</span></div>
-        <div id="daily-bounty-list"></div>
-      </div>
       <div id="worldsel">
         <button id="wprev" type="button" aria-label="Previous world">◀</button>
         <span id="wname">WORLD 1 · GRASSLANDS</span>
@@ -160,14 +156,22 @@
         <div id="charplat"></div>
         <img id="charimg" draggable="false" alt="">
       </div>
+      <div id="daily-bounties" class="daily-bounties">
+        <div class="db-title">DAILY BOUNTIES <span class="db-sub">UTC midnight</span></div>
+        <div id="daily-bounty-list"></div>
+      </div>
       <div id="menubot">
         <button class="gamemodebtn" id="gamemodebtn" type="button"><span class="gmlbl">GAMEMODE</span></button>
         <div id="run-resume" class="run-resume hidden">
           <div class="run-resume-box">
-            <div class="run-resume-title">RUN IN PROGRESS</div>
-            <div class="run-resume-meta" id="run-resume-meta">World 1 · Wave 3</div>
-            <button class="bigbtn green" id="run-continue-btn" type="button">CONTINUE</button>
-            <button class="bigbtn quit" id="run-abandon-btn" type="button">START NEW</button>
+            <div class="run-resume-head">
+              <div class="run-resume-title">RUN IN PROGRESS</div>
+              <div class="run-resume-meta" id="run-resume-meta">World 1 · Wave 3</div>
+            </div>
+            <div class="run-resume-actions">
+              <button class="bigbtn green" id="run-continue-btn" type="button">CONTINUE</button>
+              <button class="bigbtn quit" id="run-abandon-btn" type="button">NEW RUN</button>
+            </div>
           </div>
         </div>
         <button class="startbtn" id="startbtn"><span class="startlbl">START</span></button>
