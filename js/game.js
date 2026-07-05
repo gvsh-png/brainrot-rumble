@@ -5745,7 +5745,7 @@ function refreshRunResumeUI(){
   if(start) start.classList.toggle('hidden', has);
   if(has && meta && typeof getSuspendedRunMeta === 'function'){
     const m=getSuspendedRunMeta();
-    if(m) meta.textContent = m.mode+' · '+m.world+' · '+m.progress+' · Lv '+m.lv+' · '+m.kills+' kills';
+    if(m) meta.textContent = m.world+' · '+m.progress+' · Lv '+m.lv;
   }
 }
 function pauseGame(){
