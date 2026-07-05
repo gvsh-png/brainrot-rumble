@@ -1,8 +1,10 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.53';
+const CURRENT_VERSION = '1.55';
 const CHANGELOG = [
+  { v: '1.55', notes: 'Extended enemies are now proper brainrot hybrids (Cappuccino, Trulimero, Bobritto, Sahur-style titans, etc.) drawn with the same sh/dot/eyes vector style as W1–W11. Enemies path around map obstacles. Final boss attacks wired up. 13 unique final boss designs.' },
+  { v: '1.54', notes: 'W8+ visual overhaul: removed all white gameplay circles around player/enemies, no more black void floors, 39 unique bright world palettes, 20 distinct enemy archetypes per extended world, unique map sizes/layouts, and world-select icons now show grunt + boss sprites.' },
   { v: '1.53', notes: 'Bright vivid worlds & characters — no muddy dark floors or gray/black heroes. Extended chars use bold distinct colors (cyan, gold, magenta, coral, etc.). W7–W11 and W12–50 floors brightened; light readability rims on player/enemies.' },
   { v: '1.52', notes: 'Content polish: unique W8–W11 enemy rosters, per-world map obstacles/layouts, removed gameplay circles, milestone pets/chars with gimmicks.' },
   { v: '1.51', notes: 'Longer immersive cutscenes (~9–14 sec): zone atmosphere lines, cinematic letterbox, hero/swarm entrance animations, victory reactions, and milestone twists still only every ~5 worlds.' },

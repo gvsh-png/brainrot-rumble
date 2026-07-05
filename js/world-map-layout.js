@@ -2,7 +2,23 @@
 // Per-world map obstacles (rocks/pillars) — layout variation beyond floor palette.
 
 (function () {
-  const LAYOUT_CYCLE = ['open', 'pillars', 'corridor', 'islands', 'cross', 'ring', 'lanes', 'clusters'];
+  const LAYOUT_CYCLE = [
+    'open', 'pillars', 'corridor', 'islands', 'cross', 'ring', 'lanes', 'clusters',
+    'zigzag', 'center', 'corners', 'split', 'maze', 'diagonal', 'arc', 'spine',
+  ];
+
+  // One unique layout per extended world index (11–49).
+  const EXT_LAYOUTS = [
+    'pillars', 'lanes', 'corridor', 'islands', 'cross', 'ring', 'clusters', 'zigzag',
+    'center', 'corners', 'split', 'maze', 'diagonal', 'arc', 'spine', 'pillars',
+    'lanes', 'islands', 'cross', 'ring', 'clusters', 'zigzag', 'center', 'corners',
+    'split', 'maze', 'diagonal', 'arc', 'spine', 'pillars', 'lanes', 'corridor',
+    'islands', 'cross', 'ring', 'clusters', 'zigzag', 'center', 'corners',
+  ];
+
+  function pickExtendedLayout(wi) {
+    return EXT_LAYOUTS[wi - 11] || LAYOUT_CYCLE[(wi * 5 + 3) % LAYOUT_CYCLE.length];
+  }
 
   function pickLayout(world, wi) {
     if (world && world.mapLayout) return world.mapLayout;
@@ -65,6 +81,46 @@
       for (const [fx, fy] of pts) {
         obs.push(mkObs(W * fx - r, H * fy - r, r * 2, r * 2, '#a8d848'));
       }
+    } else if (kind === 'zigzag') {
+      const bw = Math.max(80, W * 0.08), bh = Math.max(80, H * 0.08);
+      obs.push(mkObs(W * 0.2 - bw / 2, H * 0.25, bw, bh, '#f0a878'));
+      obs.push(mkObs(W * 0.5 - bw / 2, H * 0.45, bw, bh, '#f0a878'));
+      obs.push(mkObs(W * 0.8 - bw / 2, H * 0.65, bw, bh, '#f0a878'));
+    } else if (kind === 'center') {
+      const s = Math.max(140, Math.min(W, H) * 0.16);
+      obs.push(mkObs(cx - s / 2, cy - s / 2, s, s, '#c8a0f0'));
+      obs.push(mkObs(cx - s * 0.3, cy - s * 0.8, s * 0.6, s * 0.5, '#d8b0ff'));
+    } else if (kind === 'corners') {
+      const s = Math.max(100, Math.min(W, H) * 0.12);
+      obs.push(mkObs(pad, pad, s, s * 1.4, '#98d868'));
+      obs.push(mkObs(W - pad - s, pad, s, s * 1.4, '#98d868'));
+      obs.push(mkObs(pad, H - pad - s * 1.4, s, s * 1.4, '#98d868'));
+      obs.push(mkObs(W - pad - s, H - pad - s * 1.4, s, s * 1.4, '#98d868'));
+    } else if (kind === 'split') {
+      const tw = Math.max(90, W * 0.1);
+      obs.push(mkObs(cx - tw / 2, pad, tw, H * 0.38 - pad, '#ff9878'));
+      obs.push(mkObs(cx - tw / 2, H * 0.62, tw, H - pad - H * 0.62, '#ff9878'));
+    } else if (kind === 'maze') {
+      const bw = Math.max(70, W * 0.07), bh = Math.max(70, H * 0.07);
+      obs.push(mkObs(W * 0.35, pad, bw, H - pad * 2, '#a8c8e8'));
+      obs.push(mkObs(W * 0.65, H * 0.3, bw, H * 0.7 - pad, '#a8c8e8'));
+      obs.push(mkObs(pad, H * 0.45, W * 0.35 - pad, bh, '#a8c8e8'));
+    } else if (kind === 'diagonal') {
+      const bw = Math.max(80, W * 0.09), bh = Math.max(120, H * 0.18);
+      obs.push(mkObs(W * 0.15, H * 0.2, bw, bh, '#e8c878'));
+      obs.push(mkObs(W * 0.45, H * 0.42, bw, bh, '#e8c878'));
+      obs.push(mkObs(W * 0.75, H * 0.64, bw, bh, '#e8c878'));
+    } else if (kind === 'arc') {
+      const bw = Math.max(70, W * 0.08), bh = Math.max(70, H * 0.08);
+      const spots = [[0.35, 0.3], [0.5, 0.2], [0.65, 0.3], [0.72, 0.5], [0.65, 0.7], [0.5, 0.78], [0.35, 0.7], [0.28, 0.5]];
+      for (const [fx, fy] of spots) {
+        obs.push(mkObs(W * fx - bw / 2, H * fy - bh / 2, bw, bh, '#f0d060'));
+      }
+    } else if (kind === 'spine') {
+      const tw = Math.max(100, W * 0.12);
+      obs.push(mkObs(cx - tw / 2, H * 0.2, tw, H * 0.12, '#98d868'));
+      obs.push(mkObs(cx - tw / 2, H * 0.44, tw, H * 0.12, '#98d868'));
+      obs.push(mkObs(cx - tw / 2, H * 0.68, tw, H * 0.12, '#98d868'));
     }
     return obs;
   }
@@ -81,6 +137,10 @@
       if (dx * dx + dy * dy < r * r) return o;
     }
     return null;
+  }
+
+  function isCircleFree(x, y, r, obs) {
+    return !circleHitsObs(x, y, r, obs);
   }
 
   function pushOutCircle(x, y, r, o) {
@@ -125,5 +185,5 @@
     }
   }
 
-  window.WorldMapLayout = { getObstacles, resolveCircle, drawObstacles, pickLayout };
+  window.WorldMapLayout = { getObstacles, resolveCircle, drawObstacles, pickLayout, pickExtendedLayout, isCircleFree, circleHitsObs };
 })();
