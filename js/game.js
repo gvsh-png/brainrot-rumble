@@ -269,10 +269,15 @@ function chalDmgMul(){ return gameMode==='challenger' ? 1.3 + worldBand()*0.08 :
 function worldHpBand(){ return typeof extBandMul==='function' ? extBandMul(0.42, 9) : 1 + worldBand()*0.42; }
 function worldCoinMul(){
   const b = worldBand();
-  let mul = typeof extBandMul==='function' ? extBandMul(0.32, 9) : 1 + b * 0.32;
+  let mul = typeof extBandMul==='function' ? extBandMul(0.48, 9) : 1 + b * 0.48;
   const wi = typeof worldIdx === 'number' ? worldIdx : 0;
-  if(wi > 10) mul *= 1 + (wi - 10) * 0.055;
+  if(wi > 10) mul *= 1 + (wi - 10) * 0.14;
   return mul;
+}
+function killGoldDrop(e){
+  if(gameMode==='practice' || e.isBoss) return 0;
+  const base = Math.max(4, Math.round((e.score || 10) * 0.22));
+  return Math.round(base * worldCoinMul() * (P.goldMul || 1));
 }
 // coins are scarce early; from wave 20 on they pay out a little more (capped at 3x)
 function coinMult(){ return Math.min(3, wave < 20 ? 1 : 1 + (wave-19)*0.1); }
@@ -2912,7 +2917,12 @@ function update(dt){
         if(e.death && e.death.type==='ring'){ const n=e.death.n||4; for(let k=0;k<n;k++) fireEB(e.x,e.y,k*TAU/n,150,'#e58a3a'); }
         if(e.death && e.death.type==='split') spawnSplit(e);
         dropOrb(e.x, e.y, orbTier(e.xp));
-        if(Math.random()<0.03){ const a=rand(0,TAU), s=rand(90,210); gems.push({x:e.x,y:e.y,coin:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s}); }
+        const coinChance = Math.min(0.22, 0.04 + worldIdx * 0.0035);
+        if(Math.random()<coinChance){ const a=rand(0,TAU), s=rand(90,210); gems.push({x:e.x,y:e.y,coin:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s}); }
+        if(gameMode!=='practice'){
+          const kg = killGoldDrop(e);
+          if(kg>0){ gold+=kg; saveGold(); if(window.markDirty) window.markDirty(); floatText(e.x,e.y-18,'+'+fmtNum(kg),'#f5c542',11); }
+        }
         if(Math.random()<0.025){ const a=rand(0,TAU), s=rand(90,210); gems.push({x:e.x,y:e.y,heart:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s}); }
       }
     }
@@ -3003,7 +3013,7 @@ function update(dt){
     if(d < (P.r+12)*(P.r+12)){
       gems.splice(i,1);
       if(g.heart){ const h=g.heal||(g.big?50:25); P.hp=Math.min(P.maxHp,P.hp+h); floatText(P.x,P.y-24,'+'+h,'#e8556a',g.big?20:16); burst(P.x,P.y,'#ff97a6',g.big?14:8,140); sfx.coin(); }
-      else if(g.coin){ const v=Math.round(8*(P.goldMul||1)*coinMult()*worldCoinMul()*(gameMode==='challenger'?Math.min(3.5,1.3+worldIdx*0.3):1)); worldCoins+=v; if(gameMode!=='practice'){ gold+=v; saveGold(); if(window.markDirty) window.markDirty(); } setCoinHUD(); floatText(g.x,g.y,'+'+fmtNum(v),'#f5c542',13); sfx.coin(); }
+      else if(g.coin){ const v=Math.round(15*(P.goldMul||1)*coinMult()*worldCoinMul()*(gameMode==='challenger'?Math.min(3.5,1.3+worldIdx*0.3):1)); worldCoins+=v; if(gameMode!=='practice'){ gold+=v; saveGold(); if(window.markDirty) window.markDirty(); } setCoinHUD(); floatText(g.x,g.y,'+'+fmtNum(v),'#f5c542',13); sfx.coin(); }
       else if(g.magnet){ for(const o of gems) o.vac=true; floatText(P.x,P.y-24,'MAGNET','#9fe0ff',16); burst(P.x,P.y,'#9fe0ff',12,160); sfx.level(); }   // pull in every pickup on the map
       else { gainXp(g.v); sfx.gem(2); }
     }

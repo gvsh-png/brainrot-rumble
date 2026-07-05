@@ -36,7 +36,7 @@ const RAR = {}, RAR_ORDER = [];
 for(let i=0;i<RAR_LADDER.length;i++){
   const [id,name]=RAR_LADDER[i];
   RAR_ORDER.push(id);
-  RAR[id] = { name, color:tierColor(i,RAR_LADDER.length), price:Math.round(10*Math.pow(1.145,i)) };
+  RAR[id] = { name, color:tierColor(i,RAR_LADDER.length), price:Math.round(20*Math.pow(1.28,i)) };
 }
 
 function buildTierVals(start, epicVal, maxVal, opts={}){
@@ -113,9 +113,9 @@ function gaussOdds(center, spread){
   return odds;
 }
 const CRATES = {
-  wood:   { name:'Wooden Crate', price:25,   glow:'#9aa3af', odds:gaussOdds(4, 4.5) },
-  silver: { name:'Silver Crate', price:140,  glow:'#bcd0e0', odds:gaussOdds(16, 6) },
-  gold:   { name:'Gold Crate',   price:650,  glow:'#e0a92e', odds:gaussOdds(30, 7) },
+  wood:   { name:'Wooden Crate', price:35,   glow:'#9aa3af', odds:gaussOdds(4, 4.5) },
+  silver: { name:'Silver Crate', price:220,  glow:'#bcd0e0', odds:gaussOdds(16, 6) },
+  gold:   { name:'Gold Crate',   price:1100, glow:'#e0a92e', odds:gaussOdds(30, 7) },
 };
 const CRATE_ORDER = ['wood','silver','gold'];
 const GEAR_UID_KEY = 'br_gear_uid_seq';
@@ -401,8 +401,11 @@ function shopCardHTML(id, price){
   return '<div class="scard r-'+rar+(owned?' owned':'')+'"'+rarBorderStyle(rar)+'>'+ribbon+
     '<div class="sname">'+itemName(id)+'</div>'+
     '<div class="sicon"><img src="'+gearIconURL(id)+'" alt=""></div>'+
-    '<div class="stagrow">'+rtagHTML(rar)+statTag(itemStat(id))+'<span class="sbonus">'+itemBonusShort(id)+'</span></div>'+
-    action+'</div>';
+    '<div class="smeta">'+
+      '<div class="stagline">'+rtagHTML(rar)+statTag(itemStat(id))+'</div>'+
+      '<div class="sbonus">'+itemBonusShort(id)+'</div>'+
+    '</div>'+
+    '<div class="sfoot">'+action+'</div></div>';
 }
 
 function renderShop(){
