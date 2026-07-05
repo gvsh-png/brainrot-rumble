@@ -2,7 +2,7 @@
 // Cutscenes before/after every world + challenger — driven by campaign storyline.
 
 const WorldCine = (function () {
-  const DUR = { intro: 14, outro: 12, chalIn: 9, chalOut: 9 };
+  const DUR = { introFull: 7, outroFull: 6, introQuick: 4.2, outroQuick: 3.8, chalIn: 5.5, chalOut: 5.5 };
   let t = 0, done = null, kind = null, wi = 0, isChal = false;
 
   function seenKey(k) { return 'br_cine_' + k; }
@@ -19,7 +19,7 @@ const WorldCine = (function () {
   }
 
   function caption(str, t0, t1, y, opts) {
-    const a = t < t0 || t > t1 ? 0 : Math.min(1, (t - t0) / 0.45, (t1 - t) / 0.45);
+    const a = t < t0 || t > t1 ? 0 : Math.min(1, (t - t0) / 0.28, (t1 - t) / 0.28);
     if (a <= 0) return;
     const big = opts && opts.big;
     const dim = opts && opts.dim;
@@ -99,6 +99,22 @@ const WorldCine = (function () {
     }
   }
 
+  function drawAlly(st, bob) {
+    if (!st.allyChar || typeof drawCharacter !== 'function') return;
+    const ax = W * 0.74;
+    const ay = H * 0.6 + bob;
+    cx.strokeStyle = 'rgba(255,220,80,0.7)';
+    cx.lineWidth = 3;
+    cx.beginPath(); cx.arc(ax, ay, 48, 0, TAU); cx.stroke();
+    drawCharacter(st.allyChar.id, ax, ay, 86, Math.sin(t * 2.2) * 0.04, true);
+    for (const b of st.introBeats || []) {
+      if (b.ally && t >= b.t0 && t <= b.t1) {
+        caption(b.text, b.t0, b.t1, H * 0.9, { big: true });
+        break;
+      }
+    }
+  }
+
   function drawHero(bob) {
     if (typeof drawCharacter === 'function') {
       drawCharacter(typeof activeCharId !== 'undefined' ? activeCharId : 'gianni', W * 0.28, H * 0.62 + bob, 95, Math.sin(t * 2) * 0.04, false);
@@ -143,8 +159,9 @@ const WorldCine = (function () {
     cx.lineWidth = 4;
     cx.beginPath(); cx.arc(bx, by, 58 * pulse, 0, TAU); cx.stroke();
     drawSprite(b.spr, bx, by, 115 * pulse, 0, 0, 0, false, null);
-    if (t > 1.2 && t < 8) {
-      caption(b.name, 1.2, 7.5, H * 0.34, { dim: true });
+    const bossCapEnd = durFor(kind) - 0.3;
+    if (t > 1.0 && t < bossCapEnd) {
+      caption(b.name, 1.0, bossCapEnd, H * 0.34, { dim: true });
     }
   }
 
@@ -172,14 +189,28 @@ const WorldCine = (function () {
     if (cb) cb();
   }
 
+  function isMilestoneWorld() {
+    const st = storyFor(worldData(wi));
+    return !!(st && st.milestone);
+  }
+
+  function durFor(k) {
+    if (k === 'intro') return isMilestoneWorld() ? DUR.introFull : DUR.introQuick;
+    if (k === 'outro') return isMilestoneWorld() ? DUR.outroFull : DUR.outroQuick;
+    if (k === 'chal_in') return DUR.chalIn;
+    return DUR.chalOut;
+  }
+
   function update(dt) {
     t += dt;
-    const max = kind === 'intro' ? DUR.intro : kind === 'outro' ? DUR.outro : kind === 'chal_in' ? DUR.chalIn : DUR.chalOut;
-    if (t >= max) finish();
+    if (t >= durFor(kind)) finish();
   }
 
   function renderBeats(beats) {
-    for (const b of beats) captionBeat(b);
+    for (const b of beats) {
+      if (b.ally) continue;
+      captionBeat(b);
+    }
   }
 
   function render() {
@@ -193,12 +224,14 @@ const WorldCine = (function () {
       drawSwarmArmy(w);
       drawBossSilhouette(w, 10);
       drawHero(Math.sin(t * 2.5) * 4);
-      if (st.heroLine && t > 1 && t < 5) caption(st.heroLine, 1, 4.8, H * 0.9, { dim: true });
+      if (st.allyChar) drawAlly(st, Math.sin(t * 2.8) * 3);
+      if (st.heroLine && t > 0.6 && t < 3.5) caption(st.heroLine, 0.6, 3.2, H * 0.9, { dim: true });
       renderBeats(isChal ? st.chalIntroBeats : st.introBeats);
     } else {
       drawBossSilhouette(w, 6);
       drawSwarmArmy(w);
       drawHero(Math.sin(t * 2) * 3);
+      if (st.allyChar && st.milestone) drawAlly(st, Math.sin(t * 2) * 2);
       renderBeats(isChal ? st.chalOutroBeats : st.outroBeats);
     }
 
@@ -211,10 +244,8 @@ const WorldCine = (function () {
   }
 
   function maxFadeStart() {
-    if (kind === 'intro') return 12.5;
-    if (kind === 'outro') return 10.5;
-    if (kind === 'chal_in') return 7.8;
-    return 8.2;
+    const d = durFor(kind);
+    return Math.max(2.8, d - 1.2);
   }
 
   function beforeStart(worldIndex, mode, onReady) {
