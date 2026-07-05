@@ -4542,8 +4542,8 @@ function render(){
   // rotation does); skip it once there are enough visible enemies that the blit cost actually matters
   const skipWob = _vis.length > 40;
   // batch all enemy shadows in one fill call (moveTo before each ellipse to avoid connecting subpaths)
-  cx.fillStyle='rgba(40,60,25,0.28)'; cx.beginPath();
-  for(const e of _vis){ if(!e.under){ const sy=e.y+e.r*0.85; cx.moveTo(e.x+e.r*0.8,sy); cx.ellipse(e.x,sy,e.r*0.8,e.r*0.32,0,0,TAU); } }
+  cx.fillStyle='rgba(0,0,0,0.42)'; cx.beginPath();
+  for(const e of _vis){ if(!e.under){ const sy=e.y+e.r*0.85; cx.moveTo(e.x+e.r*0.8,sy); cx.ellipse(e.x,sy,e.r*0.85,e.r*0.34,0,0,TAU); } }
   cx.fill();
   for(const e of _vis){
     if(e.under){   // burrowed: just a heaving dirt mound that tracks the player
@@ -4576,6 +4576,14 @@ function render(){
     const wob = skipWob ? 0 : (e.isBoss ? Math.sin(e.t*2)*0.06 : Math.sin(e.t*6)*0.12*(e.walkAmt||0));   // walk-cycle wobble eases in/out with movement instead of snapping
     const pulse=0;
     if(e.cut && cut){ cx.globalAlpha = cut.alpha; }
+    if(!e.under){
+      cx.strokeStyle='rgba(0,0,0,0.62)'; cx.lineWidth=Math.max(2.2, e.r*0.2);
+      cx.beginPath(); cx.arc(e.x,e.y,e.r*1.14,0,TAU); cx.stroke();
+      if(!e.isBoss){
+        cx.strokeStyle='rgba(255,255,255,0.22)'; cx.lineWidth=1.6;
+        cx.beginPath(); cx.arc(e.x,e.y,e.r*1.04,0,TAU); cx.stroke();
+      }
+    }
     if(RIG[e.spr]){
       // part-based rig draw — pose driven by movement/hit/knockback state
       let ePose='idle', ePhase=0;
@@ -4710,11 +4718,15 @@ function render(){
         cx.fillStyle='rgba(180,255,200,0.9)'; cx.beginPath(); cx.arc(ox,oy,3.2,0,TAU); cx.fill(); }
       cx.restore();
     }
-    cx.fillStyle='rgba(40,60,25,0.3)';
-    cx.beginPath(); cx.ellipse(P.x, P.y+P.r*0.9, P.r*0.85, P.r*0.34, 0,0,TAU); cx.fill();
+    cx.fillStyle='rgba(0,0,0,0.45)';
+    cx.beginPath(); cx.ellipse(P.x, P.y+P.r*0.9, P.r*0.9, P.r*0.36, 0,0,TAU); cx.fill();
     {
       const bob=Math.sin(P.walk)*0.06;
       const flip = Math.cos(P.face)<0;
+      cx.strokeStyle='rgba(0,0,0,0.72)'; cx.lineWidth=3.2;
+      cx.beginPath(); cx.arc(P.x,P.y,P.r*1.12,0,TAU); cx.stroke();
+      cx.strokeStyle='rgba(255,255,255,0.38)'; cx.lineWidth=2;
+      cx.beginPath(); cx.arc(P.x,P.y,P.r*1.02,0,TAU); cx.stroke();
       if(typeof drawCharacter==='function') drawCharacter(P.charId||'gianni', P.x, P.y, P.r*2.6, bob, flip);
       else drawSprite('player', P.x, P.y, P.r*2.6, bob, 0, 0, flip);
       cx.globalAlpha=1;

@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.48';
+const CURRENT_VERSION = '1.49';
 const CHANGELOG = [
+  { v: '1.49', notes: 'Campaign storyline cutscenes (multi-beat acts I–IV per world), brighter extended-world floors, and contrast rings so player/enemies stand out from the background.' },
   { v: '1.48', notes: 'Debug APK only: Settings → Debug → Unlock All Worlds for testing every story/challenger world. Not included in release builds or web play.' },
   { v: '1.47', notes: 'Extended worlds W12–W50 now have 4 unique grunts each (2 base + 2 swarm), a unique phased wave-5 boss, and a unique 3-phase final boss with signature attacks and gimmicks per world.' },
   { v: '1.46', notes: 'Massive content expansion: 50 worlds total (W12–W50 procedural sectors), intro/outro cutscenes for every world, special Challenger cutscenes, 4 new swarm enemy sprites, one world-exclusive skill per world from W8 onward, 12 milestone characters and 12 milestone pets, and HP/damage scaling that continues past World 10.' },

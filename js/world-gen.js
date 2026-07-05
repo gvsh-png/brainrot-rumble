@@ -38,15 +38,15 @@ function extHex(h, s, l) {
 
 function extTheme(i, band) {
   const h = extHue(i);
-  const voidC = extHex(h, 55, 22);
-  const tile1 = extHex(h, 60, 52);
-  const tile2 = extHex(h, 58, 46);
-  const bg = extHex(h, 50, 44);
-  const tint = extHex((h + 40) % 360, 70, 58);
+  const voidC = extHex(h, 42, 36);
+  const tile1 = extHex(h, 52, 64);
+  const tile2 = extHex(h, 50, 50);
+  const bg = extHex(h, 48, 52);
+  const tint = extHex((h + 165) % 360, 78, 58);
   const music = band < 15 ? 'world_ext_low' : band < 25 ? 'world_ext_mid' : band < 35 ? 'world_ext_high' : 'world_ext_final';
   return {
-    void: voidC, tile1, tile2, tuft: 'rgba(0,0,0,0.28)', wall: voidC, post: tile1, postDark: voidC,
-    bg, tint, music, debris: band > 20 ? 0.75 : 0.5,
+    void: voidC, tile1, tile2, tuft: 'rgba(20,30,10,0.32)', wall: extHex(h, 45, 42), post: tile1, postDark: extHex(h, 45, 32),
+    bg, tint, music, debris: band > 20 ? 0.8 : 0.55, edgeDark: 0.06,
   };
 }
 

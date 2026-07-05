@@ -143,7 +143,7 @@ function tintedSprite(name, tint){
   const c=document.createElement('canvas'); c.width=src.width; c.height=src.height;
   c._nom=src._nom;              // propagate nominal size so drawSprite can compensate
   const g=c.getContext('2d'); g.drawImage(src,0,0);
-  g.globalCompositeOperation='source-atop'; g.globalAlpha=0.42; g.fillStyle=tint;
+  g.globalCompositeOperation='source-atop'; g.globalAlpha=0.52; g.fillStyle=tint;
   g.fillRect(0,0,c.width,c.height);
   TINTED[key]=c; return c;
 }
