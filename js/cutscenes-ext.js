@@ -96,7 +96,7 @@ const WorldCine = (function () {
     }
     const g = cx.createRadialGradient(W / 2, H * 0.55, W * 0.1, W / 2, H * 0.55, W * 0.7);
     g.addColorStop(0, 'rgba(0,0,0,0)');
-    g.addColorStop(1, 'rgba(0,0,0,0.45)');
+    g.addColorStop(1, 'rgba(0,0,0,0.18)');
     cx.fillStyle = g;
     cx.fillRect(0, 0, W, H);
   }

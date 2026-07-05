@@ -38,15 +38,15 @@ function extHex(h, s, l) {
 
 function extTheme(i, band) {
   const h = extHue(i);
-  const voidC = extHex(h, 42, 36);
-  const tile1 = extHex(h, 52, 64);
-  const tile2 = extHex(h, 50, 50);
-  const bg = extHex(h, 48, 52);
-  const tint = extHex((h + 165) % 360, 78, 58);
+  const voidC = extHex(h, 38, 62);
+  const tile1 = extHex(h, 58, 76);
+  const tile2 = extHex(h, 52, 66);
+  const bg = extHex(h, 50, 72);
+  const tint = extHex((h + 150) % 360, 82, 50);
   const music = band < 15 ? 'world_ext_low' : band < 25 ? 'world_ext_mid' : band < 35 ? 'world_ext_high' : 'world_ext_final';
   return {
-    void: voidC, tile1, tile2, tuft: 'rgba(20,30,10,0.32)', wall: extHex(h, 45, 42), post: tile1, postDark: extHex(h, 45, 32),
-    bg, tint, music, debris: band > 20 ? 0.8 : 0.55, edgeDark: 0.06,
+    void: voidC, tile1, tile2, tuft: 'rgba(50,90,50,0.22)', wall: extHex(h, 42, 58), post: tile1, postDark: extHex(h, 42, 50),
+    bg, tint, music, debris: band > 20 ? 0.65 : 0.45, edgeDark: 0,
   };
 }
 
@@ -142,6 +142,7 @@ function buildExtendedWorlds(startIdx, endIdx) {
     const name = EXT_WORLD_NAMES[wi - startIdx] || ('SWARM SECTOR ' + (wi + 1));
     const map = EXT_MAP_SHAPES[wi % EXT_MAP_SHAPES.length];
     const theme = extTheme(wi, band);
+    const mapLayout = typeof WorldMapLayout !== 'undefined' ? WorldMapLayout.pickLayout({ id: 'ext_' + wi }, wi) : null;
     const foes = buildFoes(wi, band, name);
     const bosses = buildBosses(wi, band, name);
     const hpMul = 1 + Math.max(0, band - 9) * 0.12;
@@ -153,6 +154,7 @@ function buildExtendedWorlds(startIdx, endIdx) {
       waveTarget: 20,
       endless: false,
       map: Object.assign({}, map),
+      mapLayout,
       enemyTint: theme.tint,
       hpMul,
       dmgMul,
