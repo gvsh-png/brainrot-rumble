@@ -22,11 +22,13 @@ function saveGfx(){ try{ localStorage.setItem('br_gfx', JSON.stringify(GFX)); }c
 (function loadGfx(){
   const raw = (()=>{ try{ return localStorage.getItem('br_gfx'); }catch(e){ return null; } })();
   if(raw===null){
-    // First boot: pick safe defaults for the device so weak hardware starts smooth (lower
-    // resolution + fewer particles), but keep vsync pacing — never the juddery frame-skip cap.
     const cores = navigator.hardwareConcurrency || 4;
     const coarse = !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches);
-    if(cores <= 4 || coarse){ GFX.dpr = 0.85; GFX.particles = 0.5; }
+    const nativeAndroid = typeof document !== 'undefined' && document.documentElement
+      && (document.documentElement.classList.contains('is-native-android')
+        || (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform()==='android'));
+    if(nativeAndroid){ GFX.dpr = 0.85; GFX.particles = 0.5; GFX.frameMin = 0; }
+    else if(cores <= 4 || coarse){ GFX.dpr = 0.85; GFX.particles = 0.5; }
     saveGfx();
     return;
   }

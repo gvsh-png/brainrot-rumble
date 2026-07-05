@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Brainrot Rumble</string>
+    <string name="title_activity_main">Brainrot Rumble</string>
+    <string name="package_name">gg.brainrot.rumble</string>
+    <string name="custom_url_scheme">gg.brainrot.rumble</string>
+    <!-- TODO: Play Console → Play Games Services → Configuration → Application ID (numeric) -->
+    <string name="game_services_project_id" translatable="false">0</string>
+</resources>

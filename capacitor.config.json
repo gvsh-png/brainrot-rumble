@@ -1,0 +1,30 @@
+{
+  "appId": "gg.brainrot.rumble",
+  "appName": "Brainrot Rumble",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2500,
+      "launchAutoHide": true,
+      "backgroundColor": "#8fd24f",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#6ba83a"
+    },
+    "Keyboard": {
+      "resize": "none"
+    }
+  }
+}

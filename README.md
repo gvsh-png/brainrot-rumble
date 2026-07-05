@@ -1,11 +1,18 @@
 # BRAINROT SURVIVORS — Italian Brainrot Bullet Hell
 
-A mobile-first web game. One HTML file, zero dependencies, zero build step.
+A mobile-first web game. Vanilla JS + Canvas 2D. Ships as a **web game** and a **Google Play Android app** (Capacitor).
 
 ## Play
 
-Open `index.html` in any browser, or host it anywhere static (GitHub Pages, Vercel, etc.).
-Built for phones — add it to your home screen for fullscreen.
+- **Web:** open `index.html` or host statically (Vercel, GitHub Pages, etc.). Progress is saved on-device (guest).
+- **Android:** see [docs/ANDROID_PUBLISH.md](docs/ANDROID_PUBLISH.md) for building and publishing to Google Play with **Google Play Games** cloud saves.
+
+```bash
+npm install
+npm test
+npm run cap:sync      # after web changes
+npm run android:open  # Android Studio
+```
 
 ## How it works
 
@@ -39,12 +46,18 @@ satisfying game feel.
 Vanilla JS + Canvas 2D. All characters and pickups are **code-drawn vector sprites**
 pre-rendered to offscreen canvases (no emoji, no external image files). Web Audio synth
 sound effects (no audio assets). Clean flat cel-shaded daylight art — no glow/bloom.
-`localStorage` high score, haptic feedback on hit where supported.
+`localStorage` progression; **Google Play Games Saved Games** on Android. Haptic feedback on hit where supported.
+
+## Android / Google Play
+
+- **Capacitor 5** wraps the web game as a native Android app (`android/`)
+- **Google Play Games** sign-in + cloud saves (replaces Supabase)
+- Portrait-locked, immersive status bar, hardware back button handling
+- Publishing guide: [docs/ANDROID_PUBLISH.md](docs/ANDROID_PUBLISH.md)
 
 ## Project structure
 
-No build step — open `index.html` directly or host it statically. The code is split
-into plain (non-module) files so they still run from `file://`:
+Web assets live at the repo root; `npm run prepare:www` copies them into `www/` for Capacitor.
 
 ```
 index.html      markup + script/style links

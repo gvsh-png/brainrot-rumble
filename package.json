@@ -1,0 +1,36 @@
+{
+  "name": "brainrot-rumble",
+  "version": "1.43.0",
+  "description": "Brainrot Rumble — mobile bullet-hell survivor (web + Android)",
+  "private": true,
+  "scripts": {
+    "test": "node --test shop.test.js perf.test.js minimap.test.js",
+    "prepare:www": "node scripts/prepare-www.js",
+    "icons": "node scripts/generate-icons.js",
+    "cap:sync": "npm run icons && npm run prepare:www && npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:debug": "npm run cap:sync && cd android && ./gradlew assembleDebug",
+    "android:release": "npm run cap:sync && cd android && ./gradlew bundleRelease",
+    "postinstall": "npm run icons && npm run prepare:www"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gvsh-png/brainrot-rumble.git"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@capacitor/android": "^5.7.8",
+    "@capacitor/app": "^5.0.8",
+    "@capacitor/core": "^5.7.8",
+    "@capacitor/keyboard": "^5.0.9",
+    "@capacitor/splash-screen": "^5.0.8",
+    "@capacitor/status-bar": "^5.0.8",
+    "capacitor-google-game-services": "^2.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^5.7.8"
+  },
+  "capacitor": {
+    "platforms": ["android"]
+  }
+}
