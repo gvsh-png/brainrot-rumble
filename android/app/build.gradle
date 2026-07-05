@@ -1,14 +1,14 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "gg.brainrot.rumble"
+    namespace "gg.brainrot.swarm"
     compileSdkVersion rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "gg.brainrot.rumble"
+        applicationId "gg.brainrot.swarm"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 143
-        versionName "1.43.0"
+        versionCode 145
+        versionName "1.45.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

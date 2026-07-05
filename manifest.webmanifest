@@ -1,7 +1,7 @@
 {
-  "name": "Brainrot Rumble",
-  "short_name": "Brainrot",
-  "description": "Italian brainrot bullet-hell survivor — dodge, dash, and survive the swarm.",
+  "name": "Brainrot Swarm",
+  "short_name": "Swarm",
+  "description": "Brainrot bullet-hell survivor — dodge, dash, and survive the swarm.",
   "start_url": "/index.html",
   "display": "fullscreen",
   "orientation": "portrait",

@@ -1,7 +1,7 @@
 {
-  "name": "brainrot-rumble",
-  "version": "1.43.0",
-  "description": "Brainrot Rumble — mobile bullet-hell survivor (web + Android)",
+  "name": "brainrot-swarm",
+  "version": "1.45.0",
+  "description": "Brainrot Swarm — mobile bullet-hell survivor (web + Android)",
   "private": true,
   "scripts": {
     "test": "node --test shop.test.js perf.test.js minimap.test.js",

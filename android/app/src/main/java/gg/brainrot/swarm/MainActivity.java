@@ -1,4 +1,4 @@
-package gg.brainrot.rumble;
+package gg.brainrot.swarm;
 
 import com.getcapacitor.BridgeActivity;
 

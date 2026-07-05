@@ -46,8 +46,8 @@ function hasMoreMilestones(){ return gameMode==='practice' ? true : chalBossIdx<
 // Challenger needs story world 3 cleared; its own progression is independent after that
 const _storyP = +(localStorage.getItem('br_unlocked')||0);
 let chalUnlocked = _storyP >= 3
-  ? Math.max(0, Math.min(10, +(localStorage.getItem('br_ch_unlocked')||0)))
-  : -1;   // -1 = fully locked (need story world 3 first)
+  ? Math.max(0, +(localStorage.getItem('br_ch_unlocked')||0))
+  : -1;   // -1 = fully locked (need story world 3 first); cap applied after WORLDS expands
 function setCoinHUD(){ const c=$('coincount'); if(c){ const s=c.querySelector('span'); if(s) s.textContent=worldCoins; } }
 function setKillHUD(){ const k=$('killtag'); if(k && k.lastElementChild) k.lastElementChild.textContent=kills; }
 function fmtTime(s){ s=Math.max(0,Math.floor(s)); const m=Math.floor(s/60), q=s%60; return (m<10?'0':'')+m+':'+(q<10?'0':'')+q; }
@@ -255,13 +255,16 @@ function foeIsHazard(d){ return !!d.aoe || (d.cast && (d.cast.kind==='geyser'||d
 function foeIsBurst(d){ return !!d.shoot && (d.shoot.type==='ring' || (d.shoot.n||1)>=3); }
 function foeIsSpecial(d){ return foeIsHazard(d) || foeIsBurst(d); }
 function worldBand(){ return curWorld().band||0; }       // 0-indexed difficulty band (drives macro scaling)
-function worldDmgMul(){ return (curWorld().dmgMul||1) * (1 + worldBand()*0.12); }   // per-world enemy damage (band ramp)
+function worldDmgMul(){
+  const b = worldBand(), bandMul = typeof extBandMul==='function' ? extBandMul(0.12, 9) : 1 + b*0.12;
+  return (curWorld().dmgMul||1) * bandMul;
+}
 function chalDmgMul(){ return gameMode==='challenger' ? 1.3 + worldBand()*0.08 : 1; }   // challenger: enemies hit harder, ramps with world
-function worldHpBand(){ return 1 + worldBand()*0.42; }   // enemy HP multiplier per world band
-function worldCoinMul(){ return 1 + worldBand()*0.22; }   // later worlds pay out more (gentle ramp, ~3x by W10 — funds the gear grind)
+function worldHpBand(){ return typeof extBandMul==='function' ? extBandMul(0.42, 9) : 1 + worldBand()*0.42; }
+function worldCoinMul(){ return typeof extBandMul==='function' ? extBandMul(0.22, 9) : 1 + worldBand()*0.22; }
 // coins are scarce early; from wave 20 on they pay out a little more (capped at 3x)
 function coinMult(){ return Math.min(3, wave < 20 ? 1 : 1 + (wave-19)*0.1); }
-// ---- enemy archetypes: the Italian Brainrot bestiary (ordered easy -> hard) ----
+// ---- enemy archetypes (ordered easy -> hard) ----
 const FOES_GRASS = [
   // Tier I — fodder
   { spr:'pigeon',   name:'Spijuniro',     hp:3,  sp:80, r:15, xp:1, score:10 },
@@ -340,7 +343,7 @@ const BOSSES_DIRT = [
 // Sky (world 8): wave 15 = Orcalero Orcala, wave 20 (final) = Madudungdung — the two bosses that
 // otherwise never spawn (every other world only reaches the first 4 entries of its boss list).
 const BOSSES_SKY = [BOSSES_DIRT[0], BOSSES_DIRT[1], BOSSES_DIRT[4], BOSSES_DIRT[5]];
-// ============ WORLD 2 — CITRUS COAST roster (real OG Italian Brainrots, recreated). band 1: easy, mostly chasers. ============
+// ============ WORLD 2 — CITRUS COAST roster. band 1: easy, mostly chasers. ============
 const FOES_W2 = [
   // Tier I — fodder
   { spr:'tralalerito', name:'Tralaleritos',          hp:3, sp:92, r:14, xp:1, score:10 },
@@ -628,7 +631,9 @@ function cutsceneUpdate(dt){
   for(let i=texts.length-1;i>=0;i--){ const tx=texts[i]; tx.t=(tx.t||0)+dt; tx.x+=(tx.vx||0)*dt; tx.y+=(tx.vy||0)*dt; tx.life-=dt; if(tx.life<=0) texts.splice(i,1); }
   if(cut.t > 2.5){
     cut=null;
-    if(_clearData && _clearData.isW1 && !localStorage.getItem('br_seen_w1outro')){
+    if(typeof WorldCine!=='undefined'){
+      WorldCine.afterClear(_clearData, toMenuFromClear);
+    } else if(_clearData && _clearData.isW1 && !localStorage.getItem('br_seen_w1outro')){
       localStorage.setItem('br_seen_w1outro','1');
       startW1Outro(toMenuFromClear);
     } else {
@@ -889,7 +894,7 @@ function setStageEmblem(i){
 }
 function refreshWorldSel(){
   $('wname').textContent = worldLabel(selWorld);
-  const ws=$('worldsub'); if(ws) ws.textContent = gameMode==='practice' ? 'sandbox · no rewards' : 'the italian invasion';
+  const ws=$('worldsub'); if(ws) ws.textContent = gameMode==='practice' ? 'sandbox · no rewards' : 'survive the swarm';
   $('wprev').disabled = selWorld<=0 || gameMode==='practice';
   $('wnext').disabled = gameMode==='practice' || selWorld>=(gameMode==='challenger' ? chalUnlocked : unlockedMax);
   setStageEmblem(selWorld);
@@ -2402,7 +2407,7 @@ function update(dt){
           const critC = P.crit + (P.overdrive ? (P.frenzy||0)*0.001 : 0) + (P.foeClose ? 0.09*(P.daredevil||0) : 0);
           const isCrit = b.luckyCrit ? true : (P.noCrit ? false : Math.random()<critC);
           const rngMul = P.noCrit ? (0.5+Math.random()*0.75) : 1;
-          const dmg = P.dmg * (b.dmgMul||1) * (P.abyssalMul||1) * (1 + (P.frenzy||0)*0.002) * (isCrit?(P.critMul||3):1) * rngMul;
+          const dmg = P.dmg * (b.dmgMul||1) * (P.abyssalMul||1) * (1 + (P.frenzy||0)*0.002) * (isCrit?(P.critMul||3):1) * rngMul * (P._waspDmg||1) * (typeof swarmFuryMul==='function'?swarmFuryMul():1);
           b.hit.add(e);
           hitSpark(b.x,b.y,isCrit?'#ffe14d':'#ff9f3a',isCrit);
           damageEnemy(e,dmg,b.x,b.y,isCrit);
@@ -3312,6 +3317,7 @@ function bossMoves(e){
       if(e.vph>=2) return ['FOREST_FLOOD','TETHER','GEYSER_SWEEP','BURROW_DOUBLE','RING_VOLLEY'];
       return ['FOREST_FLOOD','BURROW_SLAM','GEYSER_SWEEP','ring16'];
   }
+  if(typeof extBossMoves==='function'){ const ext=extBossMoves(e); if(ext) return ext; }
   return ['ring16'];
 }
 const MOVE_COL = { dash:'#e54d4d', spiral:'#e54d4d', aimed3:'#e23b3b', aimed5:'#e23b3b',
@@ -3356,7 +3362,11 @@ const MOVE_COL = { dash:'#e54d4d', spiral:'#e54d4d', aimed3:'#e23b3b', aimed5:'#
   SUMMON_ACT:'#ff5ea8', BALLOON_RING:'#ff5ea8', BLINK:'#ff5ea8', CONFETTI_SPIRAL:'#ffd24a',
   MEGA_STORM:'#ff5acd', CROSS_STORM:'#ff9be0', SPIRAL_LITE:'#ffd24a',
   BLADE_FAN:'#e0e0e0', COCONUT_STORM:'#8d6e63', QUAKE_RING:'#8d6e63',
-  CONFETTI_TOSS:'#ff5ea8', CALLIOPE_RING:'#ffd24a', EMBER_JUGGLE:'#ff7a2a' };
+  CONFETTI_TOSS:'#ff5ea8', CALLIOPE_RING:'#ffd24a', EMBER_JUGGLE:'#ff7a2a',
+  EXT_LANCE:'#b06ff0', EXT_SPORE_FAN:'#7ab955', EXT_ORBIT_BURST:'#9fd0ff', EXT_BEAM_SWEEP:'#e0503f',
+  EXT_PHASE_SLAM:'#a9763e', EXT_VORTEX_PULL:'#d2a0ff', EXT_COLLAPSE:'#c77dff', EXT_HIVE_SPAWN:'#6a4a9a',
+  EXT_SWARM_BURST:'#9a7ad8', EXT_FROST_FAN:'#9fd0ff', EXT_VOID_RAIN:'#6c5ce7', EXT_SHOCK_GRID:'#ff7675',
+  EXT_FINAL_CATACLYSM:'#ff5acd' };
 function pickMove(e){
   let pool=bossMoves(e);
   // bullet-hell injection: a LOT more for final-boss phase 3, a moderate bit for mid-bosses past phase 1
@@ -3366,6 +3376,7 @@ function pickMove(e){
 }
 // run one move; returns how long the boss stays in the "fire" state before recovering
 function execMove(e){
+  if(typeof extExecMove==='function'){ const extR=extExecMove(e); if(extR!=null) return extR; }
   switch(e.mv){
     case 'dash': e.dst='wind'; e.dwin=e.enraged?0.25:0.4; e.da=Math.atan2(P.y-e.y,P.x-e.x); return 0.9;
     case 'spiral': e.spin=0.7; e.spinCol='#e54d4d'; return 0.75;
@@ -3631,6 +3642,7 @@ const GIMMICK = {
 // runs every frame alongside the move cycle; escalates with e.vph. kept forgiving (slow, wide gaps).
 function updateGimmick(e,dt){
   if(!e.gimmick || e.scriptPause) return;
+  if(e.gimmick.startsWith('ext_') && typeof extGimmickUpdate==='function'){ extGimmickUpdate(e,dt); return; }
   const ph=e.vph||1;
   const gm = (e.finalPhase||e.partner) ? 1 : 1.4;   // non-final bosses fire their signature gimmick a bit less often (but often enough to feel unique)
   switch(e.gimmick){
@@ -5101,9 +5113,17 @@ function loop(t){
     update(dt*timeScale);
   } else if(state===ST.MENU) menuUpdate(dt);
   else if(state===ST.CUTSCENE) cutsceneUpdate(dt);
-  else if(state===ST.INTRO) introUpdate(dt);
-  else if(state===ST.OUTRO) w1OutroUpdate(dt);
-  if(state===ST.INTRO) introRender(); else if(state===ST.OUTRO) w1OutroRender(); else render();
+  else if(state===ST.INTRO){
+    if(typeof WorldCine!=='undefined' && WorldCine.isActive()) WorldCine.update(dt);
+    else introUpdate(dt);
+  } else if(state===ST.OUTRO){
+    if(typeof WorldCine!=='undefined' && WorldCine.isActive()) WorldCine.update(dt);
+    else w1OutroUpdate(dt);
+  }
+  if(typeof WorldCine!=='undefined' && WorldCine.isActive()) WorldCine.render();
+  else if(state===ST.INTRO) introRender();
+  else if(state===ST.OUTRO) w1OutroRender();
+  else render();
 }
 
 // menu: gentle drifting enemies around the player anchor for vibes
@@ -5161,7 +5181,7 @@ function setDeathShake(v){
   const dsb=$('sdrop-deathshake'); if(dsb){ dsb.textContent='Death Shake: '+(deathShakeOn?'On':'Off'); dsb.classList.toggle('off', !deathShakeOn); }
 }
 // ---- Graphics / Performance settings (cycling toggles, persisted via GFX/saveGfx in core.js) ----
-const GFX_QUALITY   = [ {lbl:'Low',val:1.0}, {lbl:'Medium',val:1.25}, {lbl:'High',val:1.5} ];
+const GFX_QUALITY   = [ {lbl:'Low',val:1.0}, {lbl:'Medium',val:1.5}, {lbl:'High',val:2.0}, {lbl:'Ultra',val:2.5} ];
 const GFX_FPS       = [ {lbl:'30',val:33.4}, {lbl:'60',val:16}, {lbl:'120',val:8}, {lbl:'Max',val:0} ];
 const GFX_PARTICLES = [ {lbl:'Off',val:0}, {lbl:'Low',val:0.5}, {lbl:'Full',val:1} ];
 function gfxNearest(opts,v){ let bi=0,bd=Infinity; for(let i=0;i<opts.length;i++){ const d=Math.abs(opts[i].val-v); if(d<bd){bd=d;bi=i;} } return bi; }
@@ -5192,7 +5212,7 @@ wireGfxUI();
 (function(){
   const btn=$('settingsbtn'), drop=$('settingsdrop'), closeBtn=$('sdrop-close');
   if(!btn||!drop) return;
-  const open=()=>drop.classList.remove('hidden');
+  const open=()=>{ if(typeof initDebugTools==='function') initDebugTools(); drop.classList.remove('hidden'); };
   const close=()=>drop.classList.add('hidden');
   btn.addEventListener('click', open);
   if(closeBtn) closeBtn.addEventListener('click', close);
@@ -5269,14 +5289,23 @@ requestAnimationFrame(loop);
 $('startbtn').addEventListener('click', ()=>{
   if(gameMode==='practice'){ openPracticeSetup(); return; }
   const m=$('menu'); m.classList.add('leaving');
-  const wantsIntro = gameMode==='story' && selWorld===0 && !localStorage.getItem('br_seen_intro');
+  const wi = selWorld, mode = gameMode;
   setTimeout(()=>{
     m.classList.remove('leaving');
-    if(wantsIntro) startIntro(()=>startGame(0));
-    else startGame(selWorld);
+    if(typeof WorldCine!=='undefined'){
+      WorldCine.beforeStart(wi, mode, ()=>startGame(wi));
+    } else if(mode==='story' && wi===0 && !localStorage.getItem('br_seen_intro')){
+      startIntro(()=>startGame(0));
+    } else {
+      startGame(wi);
+    }
   }, 190);
 });
-$('introskip').addEventListener('click', finishIntro);
+$('introskip').addEventListener('click', ()=>{
+  if(typeof WorldCine!=='undefined' && WorldCine.isActive()) WorldCine.skip();
+  else if(state===ST.OUTRO) finishW1Outro();
+  else finishIntro();
+});
 
 // ===== GAMEMODE POPUP =====
 (function(){

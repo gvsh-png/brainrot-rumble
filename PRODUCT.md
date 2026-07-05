@@ -10,7 +10,7 @@ Players of a browser arcade survival game, mostly using quick sessions where com
 
 ## Product Purpose
 
-Brainrot Rumble is a mobile-first, canvas-based bullet-hell survival game. Success means players can read threats, rewards, progression, and navigation at a glance while the game keeps its chunky arcade personality.
+Brainrot Swarm is a mobile-first, canvas-based bullet-hell survival game. Success means players can read threats, rewards, progression, and navigation at a glance while the game keeps its chunky arcade personality.
 
 ## Brand Personality
 

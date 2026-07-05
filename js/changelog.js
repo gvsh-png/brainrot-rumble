@@ -1,8 +1,13 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.43';
+const CURRENT_VERSION = '1.48';
 const CHANGELOG = [
+  { v: '1.48', notes: 'Debug APK only: Settings → Debug → Unlock All Worlds for testing every story/challenger world. Not included in release builds or web play.' },
+  { v: '1.47', notes: 'Extended worlds W12–W50 now have 4 unique grunts each (2 base + 2 swarm), a unique phased wave-5 boss, and a unique 3-phase final boss with signature attacks and gimmicks per world.' },
+  { v: '1.46', notes: 'Massive content expansion: 50 worlds total (W12–W50 procedural sectors), intro/outro cutscenes for every world, special Challenger cutscenes, 4 new swarm enemy sprites, one world-exclusive skill per world from W8 onward, 12 milestone characters and 12 milestone pets, and HP/damage scaling that continues past World 10.' },
+  { v: '1.45', notes: 'Rebranded to Brainrot Swarm — new title, subtitles, and Android package id (gg.brainrot.swarm). Removed Italian Invasion branding.' },
+  { v: '1.44', notes: 'Mobile graphics fix: sharper canvas resolution on phones (old low-quality default made everything look soft/blurry). Settings → Quality now goes up to Ultra. Existing saves auto-upgrade on next load.' },
   { v: '1.43', notes: 'Removed Supabase — the game is now packaged for Google Play (Capacitor Android) with Google Play Games cloud saves. Web play is guest/local only. Added Android publishing guide in docs/ANDROID_PUBLISH.md.' },
   { v: '1.42', notes: 'Update Log popup is wider on PC and now properly scrolls on mobile instead of getting cut off.' },
   { v: '1.41', notes: 'Pet Recruit now plays a drumroll build-up during the gacha cutscene and a reveal chime when the card flips. Il Professore moved from the Character Shop to a World 9 unlock. Engineer is now in the Character Shop for 15 gems.' },

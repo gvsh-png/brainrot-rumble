@@ -1,4 +1,4 @@
-# BRAINROT SURVIVORS — Italian Brainrot Bullet Hell
+# BRAINROT SWARM — Bullet Hell Survivor
 
 A mobile-first web game. Vanilla JS + Canvas 2D. Ships as a **web game** and a **Google Play Android app** (Capacitor).
 
