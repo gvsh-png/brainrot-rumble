@@ -916,25 +916,38 @@ function worldLabel(i){
 // per-world preview emblem shown on the Battle stage: world ground tones + its end-boss silhouette
 function drawWorldEmblemBase(g,w,sz){
   const th=w.theme;
-  g.fillStyle=th.tile2; g.fillRect(0,0,sz,sz);
-  g.fillStyle=th.tile1; const T=28;                                   // checker ground
+  g.fillStyle=th.bg || th.tile1; g.fillRect(0,0,sz,sz);
+  g.fillStyle=th.tile1; const T=28;
   for(let y=0;y<sz;y+=T) for(let x=0;x<sz;x+=T) if(((x/T+y/T)&1)) g.fillRect(x,y,T,T);
-  const bdef = w.bosses[w.bosses.length-1];                           // headliner = the world's end-boss
+  g.fillStyle=th.tile2;
+  for(let y=0;y<sz;y+=T*2) for(let x=0;x<sz;x+=T*2) g.fillRect(x+T*0.25,y+T*0.25,T*0.5,T*0.5);
+  const foes=w.foes || [];
+  for(let fi=0; fi<Math.min(3, foes.length); fi++){
+    const f=foes[fi], spr=f && SP[f.spr];
+    if(!spr) continue;
+    const pad=spr._nom?spr.width/spr._nom:1, s=sz*0.22*pad;
+    const px=sz*(0.18+fi*0.22), py=sz*0.62;
+    g.drawImage(spr, px-s/2, py-s/2, s, s);
+  }
+  const bdef = w.bosses[w.bosses.length-1];
   const spr = bdef && SP[bdef.spr];
-  if(spr){ const pad=spr._nom?spr.width/spr._nom:1, s=sz*0.72*pad;
-    g.drawImage(spr, (sz-s)/2, (sz-s)/2+8, s, s); }
+  if(spr){ const pad=spr._nom?spr.width/spr._nom:1, s=sz*0.55*pad;
+    g.drawImage(spr, (sz-s)/2, (sz-s)/2-6, s, s); }
 }
+const EMBLEM_CACHE_VER = 'v154';
 const _emblemURL = {};
 function worldEmblemURL(i){
-  if(_emblemURL[i]) return _emblemURL[i];
+  const key=i+'|'+EMBLEM_CACHE_VER;
+  if(_emblemURL[key]) return _emblemURL[key];
   const w=WORLDS[i], sz=220, c=document.createElement('canvas'); c.width=c.height=sz;
   drawWorldEmblemBase(c.getContext('2d'), w, sz);
-  const u=c.toDataURL(); _emblemURL[i]=u; return u;
+  const u=c.toDataURL(); _emblemURL[key]=u; return u;
 }
 // Challenger gets the same scene plus a red danger badge, so it reads as a distinct mode at a glance
 const _chalEmblemURL = {};
 function challengerEmblemURL(i){
-  if(_chalEmblemURL[i]) return _chalEmblemURL[i];
+  const key=i+'|'+EMBLEM_CACHE_VER;
+  if(_chalEmblemURL[key]) return _chalEmblemURL[key];
   const w=WORLDS[i], sz=220, c=document.createElement('canvas'); c.width=c.height=sz;
   const g=c.getContext('2d');
   drawWorldEmblemBase(g, w, sz);
@@ -947,7 +960,7 @@ function challengerEmblemURL(i){
   g.fillStyle='#fff'; g.font='bold 32px sans-serif'; g.textAlign='center'; g.textBaseline='middle';
   g.fillText('⚡',0,2);   // lightning bolt — challenger's danger badge
   g.restore();
-  const u=c.toDataURL(); _chalEmblemURL[i]=u; return u;
+  const u=c.toDataURL(); _chalEmblemURL[key]=u; return u;
 }
 let _trainingEmblemURL=null;
 function trainingEmblemURL(){
@@ -4393,7 +4406,7 @@ function drawDebris(g,gx0,gy0,gx1,gy1){
 
 // Pre-render the whole-world ground (tiles + tufts + debris) to one offscreen canvas, ONCE per theme.
 // Per frame the renderer just blits this instead of re-looping every tile — a big win in DIRT DEPTHS.
-let groundCanvas=null, groundFor=null;
+let groundCanvas=null, groundForWorld=-1;
 let infiniteGroundCanvas=null, infiniteGroundFor=null;
 const INFINITE_GROUND_SPAN = TILE * 12;   // 960px: repeats checker + tuft offset cleanly
 function buildGround(){
@@ -4416,7 +4429,7 @@ function buildGround(){
   }
   if(curTheme.debris) drawDebris(g, 0,0, WORLD.w, WORLD.h);
   if(curObstacles.length && typeof WorldMapLayout!=='undefined') WorldMapLayout.drawObstacles(g, curObstacles, curTheme);
-  groundFor=curTheme;
+  groundForWorld=worldIdx;
 }
 function buildInfiniteGround(){
   if(!infiniteGroundCanvas){ infiniteGroundCanvas=document.createElement('canvas'); }
@@ -4486,22 +4499,6 @@ function drawTurretUnit(tu, ts, bodyCol, visorCol, hpFrac){
   }
 }
 
-function drawReadabilityRim(x, y, r) {
-  if (typeof state === 'undefined' || state === ST.MENU) return;
-  cx.save();
-  cx.strokeStyle = '#ffffff';
-  cx.lineWidth = Math.max(2, r * 0.11);
-  cx.globalAlpha = 0.9;
-  cx.beginPath();
-  cx.ellipse(x, y, r * 0.95, r * 1.02, 0, 0, TAU);
-  cx.stroke();
-  cx.strokeStyle = '#2a1c10';
-  cx.lineWidth = Math.max(1.2, r * 0.065);
-  cx.globalAlpha = 0.4;
-  cx.stroke();
-  cx.restore();
-}
-
 function render(){
   cx.save();
   let sx=0, sy=0;
@@ -4513,12 +4510,12 @@ function render(){
   const vx0=camera.x, vy0=camera.y, vx1=vx0+vw, vy1=vy0+vh;
 
   // --- ground ---
-  cx.fillStyle=curTheme.void;
+  cx.fillStyle=curTheme.bg || curTheme.tile1;
   cx.fillRect(vx0-40, vy0-40, vw+80, vh+80);
   if(infiniteMapMode()){
     renderInfiniteGround(vx0-40, vy0-40, vx1+40, vy1+40);
   } else {
-    if(!groundCanvas || groundFor!==curTheme) buildGround();
+    if(!groundCanvas || groundForWorld!==worldIdx) buildGround();
     const sx0=clamp(vx0-2,0,WORLD.w), sy0=clamp(vy0-2,0,WORLD.h);
     const sx1=clamp(vx1+2,0,WORLD.w), sy1=clamp(vy1+2,0,WORLD.h);
     if(sx1>sx0 && sy1>sy0) cx.drawImage(groundCanvas, sx0,sy0,sx1-sx0,sy1-sy0, sx0,sy0,sx1-sx0,sy1-sy0);
@@ -4697,20 +4694,6 @@ function render(){
     }
   }
 
-  if (state !== ST.MENU && _vis.length) {
-    cx.strokeStyle = '#ffffff';
-    cx.lineWidth = 2.4;
-    cx.globalAlpha = 0.78;
-    cx.beginPath();
-    for (const e of _vis) {
-      if (e.under) continue;
-      cx.moveTo(e.x + e.r * 1.02, e.y);
-      cx.ellipse(e.x, e.y, e.r * 1.02, e.r * 1.06, 0, 0, TAU);
-    }
-    cx.stroke();
-    cx.globalAlpha = 1;
-  }
-
   // batched status overlays: one state-set per effect type instead of per enemy
   cx.fillStyle='#bfe6ff';
   cx.globalAlpha=0.4; cx.beginPath();
@@ -4833,7 +4816,6 @@ function render(){
         const _lean = (_a.faceX||0)*0.16*(_a.walkAmt||0);
         drawPlayerGear(P.x, P.y, P.r*2.6, bob+(flip?-_lean:_lean), flip);
       }
-      drawReadabilityRim(P.x, P.y, P.r * 1.02);
     }
     // Phoenix burn aura
     if(P.burnAura>0){
