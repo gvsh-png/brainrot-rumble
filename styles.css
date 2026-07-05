@@ -435,7 +435,7 @@ html.is-native-android body { padding-top:env(safe-area-inset-top); padding-bott
 .secttl { font-size:clamp(14px,2.6vmin,20px); font-weight:900; color:#fff; text-shadow:0 1px 0 rgba(30,22,14,.5);
   margin:clamp(2px,0.8vmin,8px) 0 clamp(7px,1.4vmin,12px); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .offtag { background:#e8552d; color:#fff; font-size:.72em; padding:1px 7px; border-radius:7px; border:2px solid #3a2d22; }
-.crates { display:grid; grid-template-columns:repeat(3,1fr); gap:clamp(8px,1.6vmin,14px); }
+.crates { display:grid; grid-template-columns:repeat(auto-fit,minmax(108px,1fr)); gap:clamp(8px,1.6vmin,14px); }
 .crate { position:relative; display:flex; flex-direction:column; align-items:center; gap:clamp(6px,1.2vmin,10px); background:#fbf3df;
   border:4px solid var(--glow); border-radius:14px; padding:clamp(10px,2vmin,16px) 6px;
   box-shadow:0 4px 0 rgba(58,45,34,.28); }
@@ -1195,7 +1195,7 @@ html.is-native-android body { padding-top:env(safe-area-inset-top); padding-bott
 
   /* ── Shop: 3-column item grid ── */
   .ggrid { grid-template-columns:repeat(3,1fr); }
-  .crates { grid-template-columns:repeat(3,1fr); }
+  .crates { grid-template-columns:repeat(6,1fr); }
 
   /* ── Character: 2-column card grid, banners span full width ── */
   #charlist {

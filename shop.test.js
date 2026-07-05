@@ -160,6 +160,14 @@ test('daily shop stock scales across all 50 worlds', () => {
   }
 });
 
+test('six crate tiers including premium platinum diamond vault', () => {
+  const { sandbox } = loadShop({ br_gear_reset_v4: '1' });
+  assert.equal(typeof sandbox.cratePrice, 'function');
+  assert.ok(sandbox.cratePrice('platinum') > sandbox.cratePrice('gold'));
+  assert.ok(sandbox.cratePrice('vault') > sandbox.cratePrice('diamond'));
+  assert.equal(sandbox.cratePrice('vault'), 95000);
+});
+
 test('catalog includes new stat types and eight gear slots', () => {
   const { sandbox } = loadShop({ br_gear_reset_v4: '1' });
   const a = sandbox.addGearInstance('rate_epic_0');

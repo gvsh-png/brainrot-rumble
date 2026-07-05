@@ -1336,7 +1336,8 @@ function resetPlayer(){
     soldierStill:false, soldierBullets:false,
     noCards:false, whiteBullets:false, stealthAggro:false, ghostBullets:false,
     auraR:0, auraDmg:0,
-    skibidiCount:0, skibidiBounces:6, skibidiNeverDie:false, skibidiRespawn:7
+    skibidiCount:0, skibidiBounces:6, skibidiNeverDie:false, skibidiRespawn:7,
+    gamblerGoldStacks:0, mimicPetRate:1
   });
   skibidiBullets.length=0; skibidiTimers.length=0;
   turrets.length=0; miniTurrets.length=0; flameTurrets.length=0; placedTurrets.length=0;

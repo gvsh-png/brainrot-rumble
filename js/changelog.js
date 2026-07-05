@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.59';
+const CURRENT_VERSION = '1.60';
 const CHANGELOG = [
+  { v: '1.60', notes: '12 new characters: 7 gem-shop heroes with unique abilities (Voltex, Mimic, Gambler, Bruiser, Artillery, Leech Lord, Eclipse) and 5 challenger unlocks (Tactician W5, Berserker W12, Paladin W20, Ironclad W28, Duelist W38). Daily character shop now shows 5 picks. Three premium crates added — Platinum, Diamond, and Vault — with endgame-tier loot and steep prices.' },
   { v: '1.59', notes: 'Shop card UI cleanup: aligned tags, bonus, and buy button on every card. Restored original high-tier gear prices (shown as 139k / 178k). Much more gold from kills, coin gems, and world scaling so late-game gear is affordable.' },
   { v: '1.58', notes: 'Economy rebalance: softer gear prices (~3.5k top tier vs 177k), coin income scales with world so you can afford your tier\'s gear, endgame dmg/HP gear buffed, and all numbers 10k+ show as 130k style compact format.' },
   { v: '1.57', notes: 'Massive gear expansion: 39 rarity tiers spanning all 50 worlds (Common → Omniscient), 8 equipment slots (Cape/Helmet/Chest/Gloves/Belt/Pants/Ring/Boots), 12 stat types (+Attack Speed, Magnet, Regen, Gold, Vamp, Pierce), 4200+ items, and bigger daily shops in late worlds.' },

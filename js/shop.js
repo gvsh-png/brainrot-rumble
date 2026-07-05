@@ -113,11 +113,14 @@ function gaussOdds(center, spread){
   return odds;
 }
 const CRATES = {
-  wood:   { name:'Wooden Crate', price:35,   glow:'#9aa3af', odds:gaussOdds(4, 4.5) },
-  silver: { name:'Silver Crate', price:220,  glow:'#bcd0e0', odds:gaussOdds(16, 6) },
-  gold:   { name:'Gold Crate',   price:1100, glow:'#e0a92e', odds:gaussOdds(30, 7) },
+  wood:     { name:'Wooden Crate',   price:35,     glow:'#9aa3af', odds:gaussOdds(4, 4.5) },
+  silver:   { name:'Silver Crate',   price:220,    glow:'#bcd0e0', odds:gaussOdds(16, 6) },
+  gold:     { name:'Gold Crate',     price:1100,   glow:'#e0a92e', odds:gaussOdds(30, 7) },
+  platinum: { name:'Platinum Crate', price:6500,   glow:'#c8e0ff', odds:gaussOdds(33, 5) },
+  diamond:  { name:'Diamond Crate',  price:28000,  glow:'#7fe7ff', odds:gaussOdds(36, 4) },
+  vault:    { name:'Vault Crate',    price:95000,  glow:'#e8b0ff', odds:gaussOdds(37, 3.5) },
 };
-const CRATE_ORDER = ['wood','silver','gold'];
+const CRATE_ORDER = ['wood','silver','gold','platinum','diamond','vault'];
 const GEAR_UID_KEY = 'br_gear_uid_seq';
 const SELL_RATE = 0.4;
 const FUSE_BASE = 20;
