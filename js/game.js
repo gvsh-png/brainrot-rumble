@@ -594,50 +594,61 @@ const BOSSES_W11 = [BOSSES_DIRT[3], BOSSES_DIRT[2], BOSSES_DIRT[4], BOSSES_DIRT[
 const WORLDS = [
   { id:'grass', name:'GRASSLANDS', band:0, waveTarget:20, endless:false, map:{w:2200,h:2200}, enemyTint:null,
     theme:{ void:'#4a7828', tile1:'#8ed44e', tile2:'#80c844', tuft:'rgba(50,120,30,0.38)',
+            groundPattern:'checker', accent:'#b8f878',
             wall:null, post:null, bg:'#72c038', tint:null, music:'world_grass' },
     foes:FOES_GRASS, bosses:BOSSES_GRASS },
   { id:'citrus', name:'CITRUS COAST', band:1, waveTarget:20, endless:false, map:{w:4200,h:1400}, enemyTint:null,
     theme:{ void:'#c89820', tile1:'#f5e46a', tile2:'#ecd84a', tuft:'rgba(200,155,40,0.32)',
+            groundPattern:'stripe', accent:'#fff0a0',
             wall:null, post:null, bg:'#f2da58', tint:'#f8dc30', music:'world_citrus' },
     foes:FOES_W2, bosses:BOSSES_W2 },
   { id:'forest', name:'FORESTA FRUTOSA', band:1, waveTarget:20, endless:false,
     map:{w:2000,h:3800}, enemyTint:null,
     theme:{ void:'#5ec43e', tile1:'#8ef85a', tile2:'#72e848',
-            tuft:'rgba(30,110,20,0.30)', wall:'#8a5a32', post:'#a86e40',
+            tuft:'rgba(30,110,20,0.30)', groundPattern:'dots', accent:'#c8ff90',
+            wall:'#8a5a32', post:'#a86e40',
             bg:'#6edc40', tint:null, music:'world_forest' },
     foes:FOES_W3, bosses:BOSSES_W3 },
   { id:'glacier', name:'GELATO GLACIER', band:2, waveTarget:20, endless:false, map:{w:3800,h:3800}, enemyTint:null,
     theme:{ void:'#6abcb4', tile1:'#e8faf4', tile2:'#d2f0ea', tuft:'rgba(100,190,180,0.32)',
+            groundPattern:'wave', accent:'#ffffff',
             wall:'#96d8d0', post:'#daf4ee', postDark:'#5ea8a0', bg:'#d2f0ea', tint:'#d8fff8', music:'world_glacier' },
     foes:FOES_W4, bosses:BOSSES_W4 },
   { id:'circo', name:'CIRCO BRAINROTTO', band:3, waveTarget:20, endless:false, map:{w:2800,h:2800}, enemyTint:null,
     theme:{ void:'#b03020', tile1:'#faeabc', tile2:'#f2d898', tuft:'rgba(180,60,30,0.28)',
+            groundPattern:'diamond', accent:'#ffd838',
             wall:'#c82e20', post:'#f0c830', postDark:'#9a2418', bg:'#f2d898', tint:'#ffd838', music:'world_circo' },
     foes:FOES_W5, bosses:BOSSES_W5 },
   { id:'autumn', name:'AUTUMN WOODS', band:4, waveTarget:20, endless:false, map:{w:4000,h:4000}, enemyTint:'#f07820',
     theme:{ void:'#9a4818', tile1:'#ec9438', tile2:'#e08430', tuft:'rgba(140,60,14,0.36)',
+            groundPattern:'stripe', accent:'#ffd080',
             wall:null, post:null, bg:'#dc8828', tint:'#f07820', music:'world_autumn' },
     foes:FOES_W6, bosses:BOSSES_W6 },
   { id:'swamp', name:'SWAMP', band:5, waveTarget:20, endless:false, map:{w:4800,h:1200}, enemyTint:'#90e850',
     theme:{ void:'#6ac848', tile1:'#8ed85a', tile2:'#7ed050', tuft:'rgba(30,100,20,0.28)',
+            groundPattern:'dots', accent:'#c8ff80',
             wall:'#4a8828', post:'#68a838', postDark:'#3a6818', bg:'#70c840', tint:'#80e040', music:'world_swamp',
             debris:0.55 },
     foes:FOES_SWAMP, bosses:BOSSES_DIRT },
   { id:'sky', name:'SKYLAND', band:6, waveTarget:20, endless:false, map:{w:3000,h:3000}, enemyTint:'#a8d8ff',
     theme:{ void:'#78b8e0', tile1:'#c8eeff', tile2:'#b4e4ff', tuft:'rgba(120,190,230,0.32)',
+            groundPattern:'wave', accent:'#ffffff',
             wall:null, post:null, bg:'#b8e8ff', tint:'#a8d8ff', music:'world_sky' },
     foes:FOES_W8, bosses:BOSSES_SKY },
   { id:'crystal', name:'CRYSTAL CAVES', band:7, waveTarget:20, endless:false, map:{w:1100,h:4400}, enemyTint:'#d070ff',
     theme:{ void:'#d8c0ff', tile1:'#f0e8ff', tile2:'#e0d0ff', tuft:'rgba(180,140,240,0.28)',
+            groundPattern:'diamond', accent:'#e8c0ff',
             wall:'#c8a0f0', post:'#e8d8ff', postDark:'#b090e8', bg:'#e8d8ff', tint:'#c060f0', music:'world_crystal' },
     foes:FOES_W9, bosses:BOSSES_W9 },
   { id:'volcano', name:'VOLCANO', band:8, waveTarget:20, endless:false, map:{w:3400,h:3400}, enemyTint:'#ff6030',
     theme:{ void:'#f0a070', tile1:'#ffb090', tile2:'#ff9878', tuft:'rgba(180,80,40,0.28)',
+            groundPattern:'wave', accent:'#ffe0c0',
             wall:'#e87850', post:'#ffa878', postDark:'#d86840', bg:'#ff9878', tint:'#ff5020', music:'world_volcano',
             debris:0.65 },
     foes:FOES_W10, bosses:BOSSES_W10 },
   { id:'dirt', name:'DIRT DEPTHS', band:9, waveTarget:20, endless:false, map:{w:1000,h:5000}, enemyTint:'#e8a050',
     theme:{ void:'#d8a868', tile1:'#f0c880', tile2:'#e8b868', tuft:'rgba(120,80,30,0.28)',
+            groundPattern:'dots', accent:'#fff0b0',
             wall:'#c89850', post:'#e0b060', postDark:'#b08040', bg:'#e8b868', tint:'#f0a838', music:'world_dirt',
             debris:0.55, edgeDark:0 },
     foes:FOES_W11, bosses:BOSSES_W11 },
@@ -1376,6 +1387,11 @@ function _doStartGame(wi){
   if(typeof equippedPierce==='function') P.pierce += equippedPierce();
   if(typeof registerActiveChar==='function') registerActiveChar();
   if(typeof registerActivePet==='function') registerActivePet();
+  if(!infiniteMapMode() && typeof WorldMapLayout!=='undefined' && WorldMapLayout.findSafeSpawn){
+    const sp = WorldMapLayout.findSafeSpawn(WORLD.w, WORLD.h, P.r + 20, curObstacles, WALL);
+    P.x = sp.x; P.y = sp.y;
+    P.petX = sp.x - 38; P.petY = sp.y;
+  }
   P.startDmg = P.dmg;   // damage at run start (char base + gear + passives); non-engineer turrets scale off this
   timeScale=1.0;
   bullets=[]; ebullets=[]; petBullets=[]; enemies=[]; gems=[]; texts=[]; zones=[]; holes=[]; luckies=[]; clearParts();
@@ -4400,6 +4416,43 @@ function hurtPlayer(dmg, src){
 
 // ============ RENDER ============
 const TILE = 80;
+const GROUND_PATTERNS = ['checker', 'stripe', 'diamond', 'dots', 'wave'];
+function groundPatternForTheme(th, wi) {
+  return th && th.groundPattern ? th.groundPattern : GROUND_PATTERNS[(wi || 0) % GROUND_PATTERNS.length];
+}
+function groundPatternSeed(wi) { return ((wi || 0) * 17 + 31) | 0; }
+function fillGroundCell(g, gx, gy, tile, th, wi) {
+  const pat = groundPatternForTheme(th, wi);
+  const phase = groundPatternSeed(wi);
+  const tx = (gx / tile) | 0, ty = (gy / tile) | 0;
+  let alt = false;
+  if (pat === 'stripe') alt = ((tx + phase) % 3) !== 1;
+  else if (pat === 'diamond') alt = ((tx + ty) % 3 + (tx * ty) % 2) % 2 === 0;
+  else if (pat === 'dots') alt = ((tx * 7 + ty * 13 + phase) % 5) < 2;
+  else if (pat === 'wave') alt = Math.sin(tx * 0.45 + ty * 0.3 + phase * 0.1) > 0;
+  else alt = ((tx + ty) & 1) === 0;
+  g.fillStyle = alt ? th.tile1 : th.tile2;
+  g.fillRect(gx, gy, tile, tile);
+  if (th.accent && ((gx * 31 + gy * 17 + phase) % 89) / 89 < 0.07) {
+    g.fillStyle = th.accent;
+    g.globalAlpha = 0.35;
+    g.beginPath();
+    g.arc(gx + tile * 0.5, gy + tile * 0.5, tile * 0.12, 0, TAU);
+    g.fill();
+    g.globalAlpha = 1;
+  }
+}
+function drawGroundTufts(g, tile, th, spanW, spanH, gxOff, gyOff) {
+  if (!th.tuft) return;
+  g.fillStyle = th.tuft;
+  const x0 = gxOff || 0, y0 = gyOff || 0;
+  for (let gy = y0; gy < spanH; gy += tile) {
+    for (let gx = x0; gx < spanW; gx += tile) {
+      const h = ((gx * 31 + gy * 17) % 97) / 97;
+      if (h < 0.3) g.fillRect((gx + (gx >> 3) % 60) + 10, (gy + (gy >> 2) % 60) + 12, 3, 7);
+    }
+  }
+}
 const _sortByY = (a,b) => a.y - b.y;
 function drawSprite(name, x, y, size, rot, sq, hitT, flip, tint, pulse){
   const img = SP[name]; if(!img) return;
@@ -4495,18 +4548,10 @@ function buildGround(){
   const g=groundCanvas.getContext('2d');
   for(let gy=0; gy<WORLD.h; gy+=TILE){
     for(let gx=0; gx<WORLD.w; gx+=TILE){
-      const odd=((gx/TILE)+(gy/TILE))&1;
-      g.fillStyle = odd ? curTheme.tile1 : curTheme.tile2;
-      g.fillRect(gx, gy, TILE, TILE);
+      fillGroundCell(g, gx, gy, TILE, curTheme, worldIdx);
     }
   }
-  g.fillStyle=curTheme.tuft;
-  for(let gy=0; gy<WORLD.h; gy+=TILE){
-    for(let gx=0; gx<WORLD.w; gx+=TILE){
-      const h=((gx*31+gy*17)%97)/97;
-      if(h<0.3){ g.fillRect((gx+ (gx>>3)%60)+10, (gy+(gy>>2)%60)+12, 3, 7); }
-    }
-  }
+  drawGroundTufts(g, TILE, curTheme, WORLD.w, WORLD.h);
   if(curTheme.debris) drawDebris(g, 0,0, WORLD.w, WORLD.h);
   if(curObstacles.length && typeof WorldMapLayout!=='undefined') WorldMapLayout.drawObstacles(g, curObstacles, curTheme);
   groundForWorld=worldIdx;
@@ -4518,17 +4563,10 @@ function buildInfiniteGround(){
   const g=infiniteGroundCanvas.getContext('2d');
   for(let gy=0; gy<span; gy+=TILE){
     for(let gx=0; gx<span; gx+=TILE){
-      g.fillStyle=((((gx/TILE)|0)+((gy/TILE)|0))&1)?curTheme.tile1:curTheme.tile2;
-      g.fillRect(gx,gy,TILE,TILE);
+      fillGroundCell(g, gx, gy, TILE, curTheme, worldIdx);
     }
   }
-  g.fillStyle=curTheme.tuft;
-  for(let gy=0; gy<span; gy+=TILE){
-    for(let gx=0; gx<span; gx+=TILE){
-      const h=((gx*31+gy*17)%97)/97;
-      if(h<0.3){ g.fillRect((gx+((gx>>>3)%60))+10,(gy+((gy>>>2)%60))+12,3,7); }
-    }
-  }
+  drawGroundTufts(g, TILE, curTheme, span, span);
   infiniteGroundFor=curTheme;
 }
 function renderInfiniteGround(vx0,vy0,vx1,vy1){

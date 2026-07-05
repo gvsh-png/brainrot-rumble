@@ -98,14 +98,19 @@ const EXT_BRAINROT_NAMES = [
   ['ORCALERO PICCOLO', 'GORILLO MELONE', 'HOTSPOT MINI', 'SATURNITA LUNA'],
 ];
 
+const GROUND_PATTERNS = ['checker', 'stripe', 'diamond', 'dots', 'wave'];
+
 function extTheme(i, band) {
   const p = EXT_WORLD_THEMES[i - 11] || EXT_WORLD_THEMES[0];
+  const idx = i - 11;
   const music = band < 20 ? 'world_ext_low' : band < 30 ? 'world_ext_mid' : band < 40 ? 'world_ext_high' : 'world_ext_final';
   return {
     void: p.bg,
     tile1: p.tile1,
     tile2: p.tile2,
-    tuft: 'rgba(80,120,60,0.18)',
+    tuft: p.tuft || 'rgba(80,120,60,0.18)',
+    groundPattern: p.groundPattern || GROUND_PATTERNS[idx % GROUND_PATTERNS.length],
+    accent: p.accent || p.tint,
     wall: p.wall,
     post: p.tile1,
     postDark: p.tile2,

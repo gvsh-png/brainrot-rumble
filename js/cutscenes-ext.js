@@ -3,7 +3,7 @@
 
 const WorldCine = (function () {
   const DUR = { introFull: 14, outroFull: 11, introQuick: 9.5, outroQuick: 8.5, chalIn: 9, chalOut: 8.5 };
-  let t = 0, done = null, kind = null, wi = 0, isChal = false;
+  let t = 0, done = null, kind = null, wi = 0, isChal = false, cheerPlayed = false;
 
   function seenKey(k) { return 'br_cine_' + k; }
   function markSeen(k) { try { localStorage.setItem(seenKey(k), '1'); } catch (e) {} }
@@ -73,23 +73,36 @@ const WorldCine = (function () {
 
   function backdrop(w) {
     const th = w && w.theme ? w.theme : { bg: '#4a6e32', tile1: '#7ec850', tile2: '#6ab840', void: '#3d5c28' };
+    const pat = th.groundPattern || 'checker';
+    const phase = (wi * 17 + 31) | 0;
     cx.fillStyle = th.void || th.bg;
     cx.fillRect(0, 0, W, H);
-    cx.fillStyle = th.tile1;
     const ts = 64;
     for (let gy = 0; gy < H; gy += ts) {
       for (let gx = 0; gx < W; gx += ts) {
-        if (((gx / ts + gy / ts) & 1)) cx.fillRect(gx, gy, ts, ts);
+        const tx = (gx / ts) | 0, ty = (gy / ts) | 0;
+        let alt = false;
+        if (pat === 'stripe') alt = ((tx + phase) % 3) !== 1;
+        else if (pat === 'diamond') alt = ((tx + ty) % 3 + (tx * ty) % 2) % 2 === 0;
+        else if (pat === 'dots') alt = ((tx * 7 + ty * 13 + phase) % 5) < 2;
+        else if (pat === 'wave') alt = Math.sin(tx * 0.45 + ty * 0.3 + phase * 0.1) > 0;
+        else alt = ((tx + ty) & 1) === 0;
+        cx.fillStyle = alt ? th.tile1 : th.tile2;
+        cx.fillRect(gx, gy, ts, ts);
       }
     }
-    cx.fillStyle = th.tile2;
-    for (let gy = 0; gy < H; gy += ts * 2) {
-      for (let gx = 0; gx < W; gx += ts * 2) {
-        if (!(((gx / ts + gy / ts) & 1))) cx.fillRect(gx + ts * 0.25, gy + ts * 0.25, ts * 0.5, ts * 0.5);
+    if (th.accent) {
+      cx.globalAlpha = 0.2;
+      cx.fillStyle = th.accent;
+      for (let i = 0; i < 24; i++) {
+        const ax = (i * 173 + phase * 11) % W;
+        const ay = (i * 97 + phase * 7) % H;
+        cx.beginPath(); cx.arc(ax, ay, 8 + (i % 4), 0, TAU); cx.fill();
       }
+      cx.globalAlpha = 1;
     }
     if (w && w.enemyTint) {
-      cx.globalAlpha = 0.12;
+      cx.globalAlpha = kind === 'intro' || kind === 'chal_in' ? 0.18 : 0.08;
       cx.fillStyle = w.enemyTint;
       cx.fillRect(0, 0, W, H);
       cx.globalAlpha = 1;
@@ -101,13 +114,80 @@ const WorldCine = (function () {
     cx.fillRect(0, 0, W, H);
   }
 
+  function drawBrainrotOverlay(w) {
+    if (kind !== 'intro' && kind !== 'chal_in') return;
+    const tint = w && w.enemyTint ? w.enemyTint : '#e04090';
+    cx.globalAlpha = 0.12 + 0.06 * Math.sin(t * 3.5);
+    cx.fillStyle = tint;
+    cx.fillRect(0, 0, W, H);
+    cx.globalAlpha = 1;
+    for (let i = 0; i < 14; i++) {
+      const bx = (i * 137 + t * 60) % W;
+      const by = H * 0.15 + ((i * 83 + t * 35) % (H * 0.55));
+      cx.globalAlpha = 0.25 + 0.15 * Math.sin(t * 4 + i);
+      cx.fillStyle = tint;
+      cx.beginPath();
+      cx.ellipse(bx, by, 28 + (i % 5) * 8, 18 + (i % 3) * 6, t * 0.3 + i, 0, TAU);
+      cx.fill();
+      cx.globalAlpha = 1;
+    }
+  }
+
+  function drawApplauseCrowd() {
+    if (kind !== 'outro' && kind !== 'chal_out') return;
+    const e = Math.min(1, Math.max(0, (t - 2.4) / 1.2));
+    if (e <= 0) return;
+    const baseY = H * 0.86;
+    for (let i = 0; i < 14; i++) {
+      const px = W * (0.06 + (i / 13) * 0.88);
+      const wave = Math.sin(t * 6 + i * 0.8) * 6 * e;
+      const bodyH = 34 + (i % 3) * 6;
+      cx.globalAlpha = 0.55 + 0.35 * e;
+      cx.fillStyle = i % 2 ? '#f0d890' : '#e8c0a0';
+      cx.fillRect(px - 10, baseY - bodyH + wave, 20, bodyH);
+      cx.fillStyle = '#f5e0c8';
+      cx.beginPath(); cx.arc(px, baseY - bodyH - 10 + wave, 11, 0, TAU); cx.fill();
+      cx.strokeStyle = '#3a2d22'; cx.lineWidth = 2;
+      const armY = baseY - bodyH + 8 + wave;
+      for (const sx of [-1, 1]) {
+        cx.beginPath();
+        cx.moveTo(px + sx * 8, armY);
+        cx.lineTo(px + sx * 18, armY - 16 - Math.abs(Math.sin(t * 8 + i)) * 10);
+        cx.stroke();
+      }
+      cx.globalAlpha = 1;
+    }
+    cx.globalAlpha = 0.35 * e;
+    cx.font = '900 ' + Math.round(H * 0.04) + 'px sans-serif';
+    cx.fillStyle = '#ffe878';
+    cx.textAlign = 'center';
+    for (let i = 0; i < 8; i++) {
+      const cxp = W * (0.1 + i * 0.11);
+      const cyp = H * 0.12 + Math.sin(t * 5 + i) * 12;
+      cx.fillText(i % 2 ? '★' : '♥', cxp, cyp);
+    }
+    cx.globalAlpha = 1;
+  }
+
   function drawVisEffect(effect) {
-    const n = 36;
+    if (effect === 'applause') { drawApplauseCrowd(); return; }
+    const n = effect === 'brainrot' || effect === 'confetti' ? 48 : 36;
     for (let i = 0; i < n; i++) {
       const px = (i / n) * W + Math.sin(t * 2 + i) * 30;
       const py = (i * 47 + t * 40) % H;
       cx.globalAlpha = 0.15 + 0.1 * Math.sin(t * 3 + i);
-      if (effect === 'embers' || effect === 'sparks') {
+      if (effect === 'confetti') {
+        const cols = ['#ff4080', '#ffe040', '#40c8ff', '#80ff60', '#ff8040'];
+        cx.fillStyle = cols[i % cols.length];
+        cx.save(); cx.translate(px, py); cx.rotate(t * 2 + i);
+        cx.fillRect(-4, -2, 8, 4); cx.restore();
+      } else if (effect === 'brainrot') {
+        cx.fillStyle = i % 2 ? '#e040a0' : '#80ff40';
+        cx.beginPath(); cx.arc(px, py, 3 + (i % 4), 0, TAU); cx.fill();
+        cx.globalAlpha = 0.2;
+        cx.strokeStyle = '#ff60c0'; cx.lineWidth = 1.5;
+        cx.beginPath(); cx.moveTo(px, py); cx.lineTo(px + Math.sin(t * 5 + i) * 20, py + 14); cx.stroke();
+      } else if (effect === 'embers' || effect === 'sparks') {
         cx.fillStyle = effect === 'embers' ? '#ff7a3a' : '#ffe08a';
         cx.beginPath(); cx.arc(px, py, 2 + (i % 3), 0, TAU); cx.fill();
       } else if (effect === 'rain' || effect === 'toxic') {
@@ -120,6 +200,9 @@ const WorldCine = (function () {
       } else if (effect === 'void') {
         cx.fillStyle = '#b06ff0';
         cx.beginPath(); cx.arc(px, py, 3, 0, TAU); cx.fill();
+      } else if (effect === 'static') {
+        cx.fillStyle = i % 2 ? '#e8f0ff' : '#a8c0ff';
+        cx.fillRect(px, py, 2 + (i % 3), 2);
       } else {
         cx.fillStyle = '#c8f0a0';
         cx.beginPath(); cx.arc(px, py, 2.5, 0, TAU); cx.fill();
@@ -170,7 +253,7 @@ const WorldCine = (function () {
       ? foes.map(f => f.spr)
       : ['swarmmite', 'swarmwasp', 'swarmbeetle', 'swarmmoth'];
     const march = entranceEase(2.2);
-    const slide = kind === 'outro' || kind === 'chal_out' ? Math.min(1, t / 2.5) * W * 0.4 : 0;
+    const slide = kind === 'outro' || kind === 'chal_out' ? Math.min(1, t / 2.5) * W * 0.55 : 0;
     for (let i = 0; i < 10; i++) {
       const s = sprs[i % sprs.length];
       if (!SP[s]) continue;
@@ -205,7 +288,7 @@ const WorldCine = (function () {
   }
 
   function start(kindIn, worldIndex, onDone, challenger) {
-    kind = kindIn; wi = worldIndex; done = onDone; t = 0; isChal = !!challenger;
+    kind = kindIn; wi = worldIndex; done = onDone; t = 0; isChal = !!challenger; cheerPlayed = false;
     state = kindIn === 'outro' || kindIn === 'chal_out' ? ST.OUTRO : ST.INTRO;
     $('menu') && $('menu').classList.add('hidden');
     $('introskip') && $('introskip').classList.remove('hidden');
@@ -242,6 +325,10 @@ const WorldCine = (function () {
 
   function update(dt) {
     t += dt;
+    if ((kind === 'outro' || kind === 'chal_out') && t > 3.0 && !cheerPlayed) {
+      cheerPlayed = true;
+      if (typeof sfx !== 'undefined' && sfx.cheer) sfx.cheer();
+    }
     if (t >= durFor(kind)) finish();
   }
 
@@ -258,7 +345,9 @@ const WorldCine = (function () {
     cx.save();
     backdrop(w);
     camDrift();
+    if (kind === 'intro' || kind === 'chal_in') drawBrainrotOverlay(w);
     drawVisEffect(st.vis);
+    if (kind === 'outro' || kind === 'chal_out') drawVisEffect('applause');
 
     if (kind === 'intro' || kind === 'chal_in') {
       drawSwarmArmy(w);

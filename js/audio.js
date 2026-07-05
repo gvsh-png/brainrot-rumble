@@ -43,6 +43,7 @@ const sfx = {
   evolve:()=>{ [523,659,880,1175].forEach((f,i)=>setTimeout(()=>beep(f,0.13,'square',0.05),i*85)); },
   warn:  ()=>{ beep(150,0.3,'sawtooth',0.08,-18); setTimeout(()=>beep(150,0.3,'sawtooth',0.08,-18),320); },
   win:   ()=>{ [392,523,659,784].forEach((f,i)=>setTimeout(()=>beep(f,0.14,'triangle',0.06),i*70)); },
+  cheer: ()=>{ [523,659,784,988,1175].forEach((f,i)=>setTimeout(()=>beep(f,0.11,'triangle',0.05),i*48)); },
   drumroll: ()=>{   // gacha suspense build-up: steady taps speeding up, ending in a cymbal crash
     const n=16;
     for(let i=0;i<n;i++){
