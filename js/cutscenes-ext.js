@@ -2,7 +2,7 @@
 // Cutscenes before/after every world + challenger — driven by campaign storyline.
 
 const WorldCine = (function () {
-  const DUR = { introFull: 7, outroFull: 6, introQuick: 4.2, outroQuick: 3.8, chalIn: 5.5, chalOut: 5.5 };
+  const DUR = { introFull: 14, outroFull: 11, introQuick: 9.5, outroQuick: 8.5, chalIn: 9, chalOut: 8.5 };
   let t = 0, done = null, kind = null, wi = 0, isChal = false;
 
   function seenKey(k) { return 'br_cine_' + k; }
@@ -19,11 +19,12 @@ const WorldCine = (function () {
   }
 
   function caption(str, t0, t1, y, opts) {
-    const a = t < t0 || t > t1 ? 0 : Math.min(1, (t - t0) / 0.28, (t1 - t) / 0.28);
+    const a = t < t0 || t > t1 ? 0 : Math.min(1, (t - t0) / 0.4, (t1 - t) / 0.4);
     if (a <= 0) return;
     const big = opts && opts.big;
     const dim = opts && opts.dim;
-    let fs = Math.round(Math.min(W, H) * (big ? 0.048 : 0.038));
+    const title = opts && opts.title;
+    let fs = Math.round(Math.min(W, H) * (title ? 0.052 : big ? 0.046 : 0.036));
     cx.textAlign = 'center';
     cx.font = '900 ' + fs + 'px sans-serif';
     const maxW = W * 0.9;
@@ -31,16 +32,44 @@ const WorldCine = (function () {
       fs = Math.max(11, Math.floor(fs * maxW / cx.measureText(str).width));
       cx.font = '900 ' + fs + 'px sans-serif';
     }
-    cx.globalAlpha = a * (dim ? 0.82 : 1);
-    cx.lineWidth = big ? 6 : 4;
+    const pop = title ? Math.min(1, (t - t0) / 0.5) : 1;
+    cx.save();
+    if (title) {
+      cx.translate(W / 2, y);
+      cx.scale(0.88 + pop * 0.12, 0.88 + pop * 0.12);
+      cx.translate(-W / 2, -y);
+      const barW = Math.min(W * 0.6, cx.measureText(str).width + 48);
+      cx.globalAlpha = a * 0.4;
+      cx.fillStyle = '#000';
+      cx.fillRect(W / 2 - barW / 2, y - fs * 0.8, barW, fs * 1.2);
+    }
+    cx.globalAlpha = a * (dim ? 0.85 : 1);
+    cx.lineWidth = title ? 7 : big ? 6 : 4;
     cx.strokeStyle = '#000';
     cx.strokeText(str, W / 2, y);
-    cx.fillStyle = dim ? '#d8e8ff' : '#fff';
+    cx.fillStyle = title ? '#ffe878' : dim ? '#d8e8ff' : '#fff';
     cx.fillText(str, W / 2, y);
     cx.globalAlpha = 1;
+    cx.restore();
   }
 
   function worldData(i) { return (typeof WORLDS !== 'undefined' && WORLDS[i]) ? WORLDS[i] : null; }
+
+  function camDrift() {
+    const dx = Math.sin(t * 0.35) * 12;
+    const dy = Math.cos(t * 0.28) * 8;
+    const sc = 1 + Math.sin(t * 0.2) * 0.02;
+    cx.translate(W / 2 + dx, H / 2 + dy);
+    cx.scale(sc, sc);
+    cx.translate(-W / 2, -H / 2);
+  }
+
+  function drawLetterbox() {
+    const bar = Math.round(H * 0.06);
+    cx.fillStyle = '#000';
+    cx.fillRect(0, 0, W, bar);
+    cx.fillRect(0, H - bar, W, bar);
+  }
 
   function backdrop(w) {
     const th = w && w.theme ? w.theme : { bg: '#4a6e32', tile1: '#7ec850', tile2: '#6ab840', void: '#3d5c28' };
@@ -73,7 +102,7 @@ const WorldCine = (function () {
   }
 
   function drawVisEffect(effect) {
-    const n = 24;
+    const n = 36;
     for (let i = 0; i < n; i++) {
       const px = (i / n) * W + Math.sin(t * 2 + i) * 30;
       const py = (i * 47 + t * 40) % H;
@@ -99,9 +128,14 @@ const WorldCine = (function () {
     }
   }
 
+  function entranceEase(maxT) {
+    return Math.min(1, t / maxT);
+  }
+
   function drawAlly(st, bob) {
     if (!st.allyChar || typeof drawCharacter !== 'function') return;
-    const ax = W * 0.74;
+    const e = entranceEase(1.8);
+    const ax = W * (0.62 + (1 - e) * 0.2);
     const ay = H * 0.6 + bob;
     cx.strokeStyle = 'rgba(255,220,80,0.7)';
     cx.lineWidth = 3;
@@ -116,14 +150,17 @@ const WorldCine = (function () {
   }
 
   function drawHero(bob) {
+    const e = entranceEase(1.4);
+    const hx = W * (0.22 + (1 - e) * -0.18);
+    const hy = H * 0.62 + bob;
     if (typeof drawCharacter === 'function') {
-      drawCharacter(typeof activeCharId !== 'undefined' ? activeCharId : 'gianni', W * 0.28, H * 0.62 + bob, 95, Math.sin(t * 2) * 0.04, false);
+      drawCharacter(typeof activeCharId !== 'undefined' ? activeCharId : 'gianni', hx, hy, 95, Math.sin(t * 2) * 0.04, false);
     } else if (typeof SP !== 'undefined' && SP.player) {
-      drawSprite('player', W * 0.28, H * 0.62 + bob, 95, 0, 0, 0, false, null);
+      drawSprite('player', hx, hy, 95, 0, 0, 0, false, null);
     }
     cx.strokeStyle = 'rgba(255,255,255,0.55)';
     cx.lineWidth = 3;
-    cx.beginPath(); cx.arc(W * 0.28, H * 0.62 + bob, 52, 0, TAU); cx.stroke();
+    cx.beginPath(); cx.arc(hx, hy, 52, 0, TAU); cx.stroke();
   }
 
   function drawSwarmArmy(w) {
@@ -132,11 +169,12 @@ const WorldCine = (function () {
     const sprs = foes.length
       ? foes.map(f => f.spr)
       : ['swarmmite', 'swarmwasp', 'swarmbeetle', 'swarmmoth'];
-    const slide = kind === 'outro' || kind === 'chal_out' ? Math.min(1, t / 2) * W * 0.35 : 0;
-    for (let i = 0; i < 8; i++) {
+    const march = entranceEase(2.2);
+    const slide = kind === 'outro' || kind === 'chal_out' ? Math.min(1, t / 2.5) * W * 0.4 : 0;
+    for (let i = 0; i < 10; i++) {
       const s = sprs[i % sprs.length];
       if (!SP[s]) continue;
-      const ex = W * 0.55 + (i / 7) * W * 0.32 + Math.sin(t * 2.2 + i * 1.3) * 18 + slide;
+      const ex = W * (0.48 + march * 0.35) + (i / 9) * W * 0.32 + Math.sin(t * 2.2 + i * 1.3) * 18 + slide;
       const ey = H * 0.68 + (i % 3) * 16 + Math.sin(t * 3 + i) * 6;
       cx.strokeStyle = 'rgba(0,0,0,0.5)';
       cx.lineWidth = 3;
@@ -149,19 +187,20 @@ const WorldCine = (function () {
     if (!w || !w.bosses || !w.bosses.length || typeof SP === 'undefined') return;
     const b = kind === 'intro' || kind === 'chal_in' ? w.bosses[w.bosses.length - 1] : w.bosses[0];
     if (!b || !SP[b.spr]) return;
-    const bx = W * 0.5, by = H * 0.48 + Math.sin(t * 2.5) * bob;
+    const rise = entranceEase(2.8);
+    const bx = W * 0.5, by = H * (0.52 + (1 - rise) * 0.12) + Math.sin(t * 2.5) * bob;
     const pulse = 1 + Math.sin(t * 4) * 0.04;
-    cx.globalAlpha = 0.35;
+    cx.globalAlpha = 0.35 * rise;
     cx.fillStyle = w.enemyTint || '#ff5a70';
     cx.beginPath(); cx.arc(bx, by, 70 * pulse, 0, TAU); cx.fill();
     cx.globalAlpha = 1;
     cx.strokeStyle = '#fff';
     cx.lineWidth = 4;
     cx.beginPath(); cx.arc(bx, by, 58 * pulse, 0, TAU); cx.stroke();
-    drawSprite(b.spr, bx, by, 115 * pulse, 0, 0, 0, false, null);
-    const bossCapEnd = durFor(kind) - 0.3;
-    if (t > 1.0 && t < bossCapEnd) {
-      caption(b.name, 1.0, bossCapEnd, H * 0.34, { dim: true });
+    drawSprite(b.spr, bx, by, 115 * pulse * rise, 0, 0, 0, false, null);
+    const bossCapEnd = durFor(kind) - 0.5;
+    if (t > 1.4 && t < bossCapEnd) {
+      caption(b.name, 1.4, bossCapEnd, H * 0.32, { dim: true });
     }
   }
 
@@ -209,7 +248,7 @@ const WorldCine = (function () {
   function renderBeats(beats) {
     for (const b of beats) {
       if (b.ally) continue;
-      captionBeat(b);
+      caption(b.text, b.t0, b.t1, H * b.y, b);
     }
   }
 
@@ -218,6 +257,7 @@ const WorldCine = (function () {
     const st = storyFor(w);
     cx.save();
     backdrop(w);
+    camDrift();
     drawVisEffect(st.vis);
 
     if (kind === 'intro' || kind === 'chal_in') {
@@ -225,18 +265,20 @@ const WorldCine = (function () {
       drawBossSilhouette(w, 10);
       drawHero(Math.sin(t * 2.5) * 4);
       if (st.allyChar) drawAlly(st, Math.sin(t * 2.8) * 3);
-      if (st.heroLine && t > 0.6 && t < 3.5) caption(st.heroLine, 0.6, 3.2, H * 0.9, { dim: true });
+      if (st.heroLine && t > 0.8 && t < 4.5) caption(st.heroLine, 0.8, 4.2, H * 0.9, { dim: true });
       renderBeats(isChal ? st.chalIntroBeats : st.introBeats);
     } else {
       drawBossSilhouette(w, 6);
       drawSwarmArmy(w);
       drawHero(Math.sin(t * 2) * 3);
-      if (st.allyChar && st.milestone) drawAlly(st, Math.sin(t * 2) * 2);
+      if (st.allyChar) drawAlly(st, Math.sin(t * 2) * 2);
       renderBeats(isChal ? st.chalOutroBeats : st.outroBeats);
     }
 
+    drawLetterbox();
+
     if (t > maxFadeStart()) {
-      cx.globalAlpha = Math.min(1, (t - maxFadeStart()) / 0.9);
+      cx.globalAlpha = Math.min(1, (t - maxFadeStart()) / 1.1);
       cx.fillStyle = '#000';
       cx.fillRect(0, 0, W, H);
     }
@@ -245,7 +287,7 @@ const WorldCine = (function () {
 
   function maxFadeStart() {
     const d = durFor(kind);
-    return Math.max(2.8, d - 1.2);
+    return Math.max(4, d - 1.4);
   }
 
   function beforeStart(worldIndex, mode, onReady) {

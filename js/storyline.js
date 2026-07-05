@@ -1,5 +1,5 @@
 'use strict';
-// Campaign storyline — short kid-friendly beats; big story moments every ~5 worlds.
+// Campaign storyline — immersive kid-friendly beats; big twists only on milestone worlds.
 
 (function () {
   const ACTS = [
@@ -40,6 +40,34 @@
     'That zone fears you now.',
   ];
 
+  const ZONE_ATMOSPHERE = {
+    grass: ['Sunny fields used to be peaceful.', 'Now bugs crawl out from every bush.'],
+    citrus: ['Salt air and orange groves.', 'The coast crawls with brainrot bugs.'],
+    forest: ['Tall trees block the sun.', 'Something buzzes in the branches above.'],
+    glacier: ['Cold wind bites your face.', 'Frozen ground cracks under swarm feet.'],
+    circo: ['Bright tents and loud music.', 'The circus turned into a bug trap!'],
+    autumn: ['Leaves fall like orange snow.', 'The woods smell like smoke and bugs.'],
+    swamp: ['Mud sucks at your boots.', 'Glowing eyes watch from the reeds.'],
+    sky: ['Clouds float below your feet.', 'Flying swarms block the sun.'],
+    crystal: ['Purple crystals hum with power.', 'The cave echoes with chittering.'],
+    volcano: ['Heat rises from cracked stone.', 'Lava bugs burst from the ash.'],
+    dirt: ['Deep tunnels go on forever.', 'The hive dug in down here.'],
+  };
+
+  const ZONE_VICTORY = {
+    grass: ['Birds sing again over the hills.'],
+    citrus: ['The tide washes bug goo away.'],
+    forest: ['Fruit trees stand tall once more.'],
+    glacier: ['Ice sparkles clean and bright.'],
+    circo: ['The tents fold up — show\'s over!'],
+    autumn: ['A warm breeze blows the bugs away.'],
+    swamp: ['Frogs croak like they own the place again.'],
+    sky: ['Clouds part and the sun returns.'],
+    crystal: ['Crystals glow a calm soft purple.'],
+    volcano: ['The rumbling finally stops.'],
+    dirt: ['Dust settles. The tunnels go quiet.'],
+  };
+
   // Rare plot surprises — only on milestone worlds (simple, age ~10).
   const MILESTONE_TWISTS = {
     0: 'The grasslands are overrun. You\'re the last hero left!',
@@ -74,6 +102,14 @@
     49: 'Final Vector joins for the last stand!',
   };
 
+  const EXT_ZONE_HOOKS = [
+    ['Strange lights flicker across the zone.', 'The swarm left claw marks on everything.'],
+    ['The air tastes like static and metal.', 'Bug tracks lead deeper into danger.'],
+    ['You hear clicking from every direction.', 'This place was not built for humans.'],
+    ['Walls pulse like they are alive.', 'The hive claimed this sector fast.'],
+    ['Gravity feels a little bit wrong here.', 'Swarm scouts already spotted you.'],
+  ];
+
   const VIS_EFFECTS = ['spores', 'rain', 'embers', 'sparks', 'void', 'frost', 'toxic', 'static'];
 
   function actFor(wi) {
@@ -83,6 +119,21 @@
 
   function pick(arr, wi) {
     return arr[(wi * 5 + 2) % arr.length];
+  }
+
+  function atmosphereFor(wi, world) {
+    const id = world && world.id ? world.id : '';
+    if (ZONE_ATMOSPHERE[id]) return ZONE_ATMOSPHERE[id];
+    const nm = world && world.name ? world.name : ('Zone ' + (wi + 1));
+    const hook = EXT_ZONE_HOOKS[wi % EXT_ZONE_HOOKS.length];
+    return [nm + ' feels dangerous the moment you arrive.', hook[1]];
+  }
+
+  function victoryFor(wi, world) {
+    const id = world && world.id ? world.id : '';
+    if (ZONE_VICTORY[id]) return ZONE_VICTORY[id][0];
+    const nm = world && world.name ? world.name : ('Zone ' + (wi + 1));
+    return nm + ' is safe again — for now.';
   }
 
   function allyForWorld(wi) {
@@ -106,62 +157,77 @@
     const boss = world && world.bosses && world.bosses.length
       ? world.bosses[world.bosses.length - 1].name
       : 'THE BOSS';
+    const midBoss = world && world.bosses && world.bosses.length > 1
+      ? world.bosses[0].name
+      : null;
     const ally = allyForWorld(wi);
     const milestone = isMilestone(wi);
     const twist = MILESTONE_TWISTS[wi] || null;
     const allyLine = MILESTONE_ALLY_LINES[wi] || (ally ? ally.name + ' joins the team!' : null);
+    const atmo = atmosphereFor(wi, world);
+    const victory = victoryFor(wi, world);
 
     let introBeats;
     let outroBeats;
 
     if (milestone) {
       introBeats = [
-        { t0: 0.15, t1: 2.2, y: 0.14, text: isActStart(wi) ? act.title : ('WORLD ' + (wi + 1)), big: true },
+        { t0: 0.2, t1: 3.0, y: 0.12, text: isActStart(wi) ? act.title : ('WORLD ' + (wi + 1)), big: true, title: true },
       ];
       if (isActStart(wi)) {
-        introBeats.push({ t0: 0.4, t1: 2.6, y: 0.24, text: act.tag, dim: true });
+        introBeats.push({ t0: 0.8, t1: 4.0, y: 0.22, text: act.tag, dim: true });
       }
-      introBeats.push({ t0: 1.2, t1: 3.4, y: 0.38, text: name });
-      if (twist) introBeats.push({ t0: 2.0, t1: 4.8, y: 0.52, text: twist });
-      if (allyLine) introBeats.push({ t0: 3.0, t1: 5.8, y: 0.66, text: allyLine, ally: true });
-      introBeats.push({ t0: 4.0, t1: 6.5, y: 0.82, text: 'Beat ' + boss + ' to clear this zone!', dim: true });
+      introBeats.push({ t0: 1.8, t1: 5.2, y: 0.36, text: name, big: true });
+      introBeats.push({ t0: 3.0, t1: 6.4, y: 0.48, text: atmo[0], dim: true });
+      if (twist) introBeats.push({ t0: 4.2, t1: 8.0, y: 0.58, text: twist });
+      if (midBoss) introBeats.push({ t0: 5.8, t1: 9.2, y: 0.68, text: 'Watch out for ' + midBoss + ' at wave 5!', dim: true });
+      if (allyLine) introBeats.push({ t0: 7.0, t1: 11.0, y: 0.76, text: allyLine, ally: true });
+      introBeats.push({ t0: 9.0, t1: 13.0, y: 0.88, text: 'Beat ' + boss + ' to clear this zone!', dim: true });
     } else {
       introBeats = [
-        { t0: 0.15, t1: 2.0, y: 0.24, text: 'WORLD ' + (wi + 1) + ' — ' + name, big: true },
-        { t0: 0.7, t1: 2.8, y: 0.5, text: 'Beat ' + boss + '!' },
+        { t0: 0.2, t1: 2.8, y: 0.14, text: 'WORLD ' + (wi + 1), big: true, title: true },
+        { t0: 1.0, t1: 4.0, y: 0.28, text: name, big: true },
+        { t0: 2.2, t1: 5.4, y: 0.42, text: atmo[0], dim: true },
+        { t0: 3.6, t1: 6.8, y: 0.54, text: atmo[1] },
+        { t0: 5.0, t1: 8.0, y: 0.66, text: 'Your mission: beat ' + boss + '!' },
       ];
       if (ally && allyLine) {
-        introBeats.push({ t0: 1.4, t1: 3.4, y: 0.72, text: allyLine, ally: true });
+        introBeats.push({ t0: 6.4, t1: 9.2, y: 0.78, text: allyLine, ally: true });
       } else {
-        introBeats.push({ t0: 1.5, t1: 3.5, y: 0.76, text: pick(QUICK_INTROS, wi), dim: true });
+        introBeats.push({ t0: 6.8, t1: 9.4, y: 0.8, text: pick(QUICK_INTROS, wi), dim: true });
       }
     }
 
     if (milestone) {
       outroBeats = [
-        { t0: 0.15, t1: 2.4, y: 0.2, text: name + ' — SAVED!', big: true },
-        { t0: 0.9, t1: 3.0, y: 0.42, text: boss + ' is defeated!' },
-        { t0: 1.8, t1: 4.2, y: 0.58, text: wi < 49 ? 'But the swarm is already heading to the next zone…' : 'The hive mind is the last fight!' },
-        { t0: 2.8, t1: 5.5, y: 0.76, text: wi < 49 ? 'World ' + (wi + 2) + ' needs you next!' : 'Go win it all!', dim: true },
+        { t0: 0.2, t1: 3.0, y: 0.16, text: name + ' — SAVED!', big: true, title: true },
+        { t0: 1.2, t1: 4.4, y: 0.32, text: boss + ' is defeated!' },
+        { t0: 2.6, t1: 6.0, y: 0.46, text: victory },
+        { t0: 4.2, t1: 7.6, y: 0.58, text: wi < 49 ? 'But the swarm is already heading to the next zone…' : 'The hive mind is the last fight!' },
+        { t0: 6.0, t1: 10.5, y: 0.72, text: wi < 49 ? 'World ' + (wi + 2) + ' needs you next!' : 'Go win it all!', dim: true },
       ];
     } else {
       outroBeats = [
-        { t0: 0.15, t1: 2.0, y: 0.32, text: name + ' — cleared!', big: true },
-        { t0: 0.7, t1: 2.8, y: 0.62, text: pick(QUICK_WINS, wi) },
-        { t0: 1.6, t1: 3.4, y: 0.84, text: wi < 49 ? 'World ' + (wi + 2) + ' next!' : 'Final zone next!', dim: true },
+        { t0: 0.2, t1: 2.8, y: 0.18, text: name + ' — cleared!', big: true, title: true },
+        { t0: 1.0, t1: 4.0, y: 0.34, text: boss + ' goes down!' },
+        { t0: 2.4, t1: 5.6, y: 0.48, text: victory, dim: true },
+        { t0: 4.0, t1: 7.0, y: 0.62, text: pick(QUICK_WINS, wi) },
+        { t0: 5.8, t1: 8.6, y: 0.78, text: wi < 49 ? 'World ' + (wi + 2) + ' is waiting…' : 'Final zone next!', dim: true },
       ];
     }
 
     const chalIntroBeats = [
-      { t0: 0.2, t1: 2.5, y: 0.24, text: 'CHALLENGER — ' + name, big: true },
-      { t0: 0.9, t1: 3.2, y: 0.5, text: pick(CHAL_INTRO, wi) },
-      { t0: 2.0, t1: 4.5, y: 0.78, text: 'Boss at 5, 10, 15, and 20 min!', dim: true },
+      { t0: 0.3, t1: 3.0, y: 0.18, text: 'CHALLENGER — ' + name, big: true, title: true },
+      { t0: 1.4, t1: 4.6, y: 0.38, text: atmo[0], dim: true },
+      { t0: 3.0, t1: 6.2, y: 0.54, text: pick(CHAL_INTRO, wi) },
+      { t0: 5.0, t1: 8.4, y: 0.72, text: 'Boss at 5, 10, 15, and 20 min!', dim: true },
     ];
 
     const chalOutroBeats = [
-      { t0: 0.2, t1: 2.5, y: 0.28, text: 'CHALLENGER WIN!', big: true },
-      { t0: 0.9, t1: 3.2, y: 0.56, text: pick(CHAL_OUTRO, wi) },
-      { t0: 2.0, t1: 4.2, y: 0.82, text: 'Story mode still has more zones!', dim: true },
+      { t0: 0.3, t1: 3.0, y: 0.2, text: 'CHALLENGER WIN!', big: true, title: true },
+      { t0: 1.2, t1: 4.4, y: 0.4, text: pick(CHAL_OUTRO, wi) },
+      { t0: 3.0, t1: 6.0, y: 0.58, text: victory, dim: true },
+      { t0: 5.0, t1: 8.2, y: 0.76, text: 'Story mode still has more zones!', dim: true },
     ];
 
     return {
@@ -173,8 +239,9 @@
       chalIntroBeats,
       chalOutroBeats,
       allyChar: ally,
-      allyReveal: milestone && !!ally,
+      allyReveal: !!ally,
       heroLine: wi === 0 ? 'You vs the whole swarm. Go!' : null,
+      zoneName: name,
     };
   }
 
