@@ -319,7 +319,7 @@
         let cd = 5;
         onHook('petTick', (dt) => {
           if (typeof P === 'undefined' || typeof enemies === 'undefined') return;
-          cd -= dt;
+          cd -= typeof petCdDt === 'function' ? petCdDt(dt) : dt;
           if (cd > 0) return;
           cd = 5;
           let near = null, nd = Infinity;
@@ -353,7 +353,7 @@
             if (boost <= 0) { P.fireRate /= 1.2; boost = 0; }
             return;
           }
-          cd -= dt;
+          cd -= typeof petCdDt === 'function' ? petCdDt(dt) : dt;
           if (cd <= 0) {
             cd = 18;
             boost = 4;
@@ -383,7 +383,7 @@
           novaBlast(P.x, P.y, 120, P.dmg * 0.35);
           if (typeof floatText === 'function') floatText(P.x, P.y - 48, 'ROYAL BURST', '#fdcb6e', 14);
         });
-        onHook('petTick', (dt) => { if (cd > 0) cd -= dt; });
+        onHook('petTick', (dt) => { if (cd > 0) cd -= typeof petCdDt === 'function' ? petCdDt(dt) : dt; });
       }, draw: drawCrown },
   ];
 })();

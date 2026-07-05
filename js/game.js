@@ -178,6 +178,12 @@ function dropOrb(x,y,tier,smin=90,smax=210){
 // global HP scale: enemies have 10x HP and the player does 10x damage, so the
 // numbers are big enough that % upgrades (e.g. +25%) visibly change the damage.
 const HP_MULT = 10;
+// Compact display for large economy numbers (shop prices, gold HUD, etc.)
+function fmtNum(n){
+  n = Math.round(+n || 0);
+  if(Math.abs(n) >= 10000) return Math.round(n / 1000) + 'k';
+  return String(n);
+}
 // ---- concurrency caps (perf + readability): keep specials few but make them buffy ----
 const MAX_ENEMIES  = IS_TOUCH ? 55 : 90;   // global hard cap on live actors (bosses are few, so this is ~enemies)
 const MAX_SHOOTERS = 14;                    // foes with any `shoot` attack
@@ -261,7 +267,18 @@ function worldDmgMul(){
 }
 function chalDmgMul(){ return gameMode==='challenger' ? 1.3 + worldBand()*0.08 : 1; }   // challenger: enemies hit harder, ramps with world
 function worldHpBand(){ return typeof extBandMul==='function' ? extBandMul(0.42, 9) : 1 + worldBand()*0.42; }
-function worldCoinMul(){ return typeof extBandMul==='function' ? extBandMul(0.22, 9) : 1 + worldBand()*0.22; }
+function worldCoinMul(){
+  const b = worldBand();
+  let mul = typeof extBandMul==='function' ? extBandMul(0.48, 9) : 1 + b * 0.48;
+  const wi = typeof worldIdx === 'number' ? worldIdx : 0;
+  if(wi > 10) mul *= 1 + (wi - 10) * 0.14;
+  return mul;
+}
+function killGoldDrop(e){
+  if(gameMode==='practice' || e.isBoss) return 0;
+  const base = Math.max(4, Math.round((e.score || 10) * 0.22));
+  return Math.round(base * worldCoinMul() * (P.goldMul || 1));
+}
 // coins are scarce early; from wave 20 on they pay out a little more (capped at 3x)
 function coinMult(){ return Math.min(3, wave < 20 ? 1 : 1 + (wave-19)*0.1); }
 // ---- enemy archetypes (ordered easy -> hard) ----
@@ -577,50 +594,61 @@ const BOSSES_W11 = [BOSSES_DIRT[3], BOSSES_DIRT[2], BOSSES_DIRT[4], BOSSES_DIRT[
 const WORLDS = [
   { id:'grass', name:'GRASSLANDS', band:0, waveTarget:20, endless:false, map:{w:2200,h:2200}, enemyTint:null,
     theme:{ void:'#4a7828', tile1:'#8ed44e', tile2:'#80c844', tuft:'rgba(50,120,30,0.38)',
+            groundPattern:'checker', accent:'#b8f878',
             wall:null, post:null, bg:'#72c038', tint:null, music:'world_grass' },
     foes:FOES_GRASS, bosses:BOSSES_GRASS },
   { id:'citrus', name:'CITRUS COAST', band:1, waveTarget:20, endless:false, map:{w:4200,h:1400}, enemyTint:null,
     theme:{ void:'#c89820', tile1:'#f5e46a', tile2:'#ecd84a', tuft:'rgba(200,155,40,0.32)',
+            groundPattern:'stripe', accent:'#fff0a0',
             wall:null, post:null, bg:'#f2da58', tint:'#f8dc30', music:'world_citrus' },
     foes:FOES_W2, bosses:BOSSES_W2 },
   { id:'forest', name:'FORESTA FRUTOSA', band:1, waveTarget:20, endless:false,
     map:{w:2000,h:3800}, enemyTint:null,
     theme:{ void:'#5ec43e', tile1:'#8ef85a', tile2:'#72e848',
-            tuft:'rgba(30,110,20,0.30)', wall:'#8a5a32', post:'#a86e40',
+            tuft:'rgba(30,110,20,0.30)', groundPattern:'dots', accent:'#c8ff90',
+            wall:'#8a5a32', post:'#a86e40',
             bg:'#6edc40', tint:null, music:'world_forest' },
     foes:FOES_W3, bosses:BOSSES_W3 },
   { id:'glacier', name:'GELATO GLACIER', band:2, waveTarget:20, endless:false, map:{w:3800,h:3800}, enemyTint:null,
     theme:{ void:'#6abcb4', tile1:'#e8faf4', tile2:'#d2f0ea', tuft:'rgba(100,190,180,0.32)',
+            groundPattern:'wave', accent:'#ffffff',
             wall:'#96d8d0', post:'#daf4ee', postDark:'#5ea8a0', bg:'#d2f0ea', tint:'#d8fff8', music:'world_glacier' },
     foes:FOES_W4, bosses:BOSSES_W4 },
   { id:'circo', name:'CIRCO BRAINROTTO', band:3, waveTarget:20, endless:false, map:{w:2800,h:2800}, enemyTint:null,
     theme:{ void:'#b03020', tile1:'#faeabc', tile2:'#f2d898', tuft:'rgba(180,60,30,0.28)',
+            groundPattern:'diamond', accent:'#ffd838',
             wall:'#c82e20', post:'#f0c830', postDark:'#9a2418', bg:'#f2d898', tint:'#ffd838', music:'world_circo' },
     foes:FOES_W5, bosses:BOSSES_W5 },
   { id:'autumn', name:'AUTUMN WOODS', band:4, waveTarget:20, endless:false, map:{w:4000,h:4000}, enemyTint:'#f07820',
     theme:{ void:'#9a4818', tile1:'#ec9438', tile2:'#e08430', tuft:'rgba(140,60,14,0.36)',
+            groundPattern:'stripe', accent:'#ffd080',
             wall:null, post:null, bg:'#dc8828', tint:'#f07820', music:'world_autumn' },
     foes:FOES_W6, bosses:BOSSES_W6 },
   { id:'swamp', name:'SWAMP', band:5, waveTarget:20, endless:false, map:{w:4800,h:1200}, enemyTint:'#90e850',
     theme:{ void:'#6ac848', tile1:'#8ed85a', tile2:'#7ed050', tuft:'rgba(30,100,20,0.28)',
+            groundPattern:'dots', accent:'#c8ff80',
             wall:'#4a8828', post:'#68a838', postDark:'#3a6818', bg:'#70c840', tint:'#80e040', music:'world_swamp',
             debris:0.55 },
     foes:FOES_SWAMP, bosses:BOSSES_DIRT },
   { id:'sky', name:'SKYLAND', band:6, waveTarget:20, endless:false, map:{w:3000,h:3000}, enemyTint:'#a8d8ff',
     theme:{ void:'#78b8e0', tile1:'#c8eeff', tile2:'#b4e4ff', tuft:'rgba(120,190,230,0.32)',
+            groundPattern:'wave', accent:'#ffffff',
             wall:null, post:null, bg:'#b8e8ff', tint:'#a8d8ff', music:'world_sky' },
     foes:FOES_W8, bosses:BOSSES_SKY },
   { id:'crystal', name:'CRYSTAL CAVES', band:7, waveTarget:20, endless:false, map:{w:1100,h:4400}, enemyTint:'#d070ff',
     theme:{ void:'#d8c0ff', tile1:'#f0e8ff', tile2:'#e0d0ff', tuft:'rgba(180,140,240,0.28)',
+            groundPattern:'diamond', accent:'#e8c0ff',
             wall:'#c8a0f0', post:'#e8d8ff', postDark:'#b090e8', bg:'#e8d8ff', tint:'#c060f0', music:'world_crystal' },
     foes:FOES_W9, bosses:BOSSES_W9 },
   { id:'volcano', name:'VOLCANO', band:8, waveTarget:20, endless:false, map:{w:3400,h:3400}, enemyTint:'#ff6030',
     theme:{ void:'#f0a070', tile1:'#ffb090', tile2:'#ff9878', tuft:'rgba(180,80,40,0.28)',
+            groundPattern:'wave', accent:'#ffe0c0',
             wall:'#e87850', post:'#ffa878', postDark:'#d86840', bg:'#ff9878', tint:'#ff5020', music:'world_volcano',
             debris:0.65 },
     foes:FOES_W10, bosses:BOSSES_W10 },
   { id:'dirt', name:'DIRT DEPTHS', band:9, waveTarget:20, endless:false, map:{w:1000,h:5000}, enemyTint:'#e8a050',
     theme:{ void:'#d8a868', tile1:'#f0c880', tile2:'#e8b868', tuft:'rgba(120,80,30,0.28)',
+            groundPattern:'dots', accent:'#fff0b0',
             wall:'#c89850', post:'#e0b060', postDark:'#b08040', bg:'#e8b868', tint:'#f0a838', music:'world_dirt',
             debris:0.55, edgeDark:0 },
     foes:FOES_W11, bosses:BOSSES_W11 },
@@ -658,6 +686,7 @@ function loadWorld(idx){
 let cut = null;   // cutscene state
 let _clearData = null;
 function worldCleared(boss){
+  if(typeof clearSuspendedRun === 'function') clearSuspendedRun();
   const isPractice = gameMode==='practice';
   let gemsEarned=0, newChars=[];
   if(!isPractice){   // practice grants no persistent progress at all
@@ -688,6 +717,8 @@ function worldCleared(boss){
   ebullets=[]; bullets=[]; petBullets=[]; zones=[]; skibidiBullets.length=0; skibidiTimers.length=0;
   hitstop=0.25; shake=Math.max(shake,16);
   stopMusic(); sfx.win();
+  if(typeof haptic === 'function') haptic('win');
+  if(typeof finishRunEngagement === 'function') finishRunEngagement('clear');
   bigText(isPractice ? 'TRAINING COMPLETE' : 'WORLD CLEARED', '#ffd24a');
 }
 function cutsceneUpdate(dt){
@@ -916,25 +947,38 @@ function worldLabel(i){
 // per-world preview emblem shown on the Battle stage: world ground tones + its end-boss silhouette
 function drawWorldEmblemBase(g,w,sz){
   const th=w.theme;
-  g.fillStyle=th.tile2; g.fillRect(0,0,sz,sz);
-  g.fillStyle=th.tile1; const T=28;                                   // checker ground
+  g.fillStyle=th.bg || th.tile1; g.fillRect(0,0,sz,sz);
+  g.fillStyle=th.tile1; const T=28;
   for(let y=0;y<sz;y+=T) for(let x=0;x<sz;x+=T) if(((x/T+y/T)&1)) g.fillRect(x,y,T,T);
-  const bdef = w.bosses[w.bosses.length-1];                           // headliner = the world's end-boss
+  g.fillStyle=th.tile2;
+  for(let y=0;y<sz;y+=T*2) for(let x=0;x<sz;x+=T*2) g.fillRect(x+T*0.25,y+T*0.25,T*0.5,T*0.5);
+  const foes=w.foes || [];
+  for(let fi=0; fi<Math.min(3, foes.length); fi++){
+    const f=foes[fi], spr=f && SP[f.spr];
+    if(!spr) continue;
+    const pad=spr._nom?spr.width/spr._nom:1, s=sz*0.22*pad;
+    const px=sz*(0.18+fi*0.22), py=sz*0.62;
+    g.drawImage(spr, px-s/2, py-s/2, s, s);
+  }
+  const bdef = w.bosses[w.bosses.length-1];
   const spr = bdef && SP[bdef.spr];
-  if(spr){ const pad=spr._nom?spr.width/spr._nom:1, s=sz*0.72*pad;
-    g.drawImage(spr, (sz-s)/2, (sz-s)/2+8, s, s); }
+  if(spr){ const pad=spr._nom?spr.width/spr._nom:1, s=sz*0.55*pad;
+    g.drawImage(spr, (sz-s)/2, (sz-s)/2-6, s, s); }
 }
+const EMBLEM_CACHE_VER = 'v155';
 const _emblemURL = {};
 function worldEmblemURL(i){
-  if(_emblemURL[i]) return _emblemURL[i];
+  const key=i+'|'+EMBLEM_CACHE_VER;
+  if(_emblemURL[key]) return _emblemURL[key];
   const w=WORLDS[i], sz=220, c=document.createElement('canvas'); c.width=c.height=sz;
   drawWorldEmblemBase(c.getContext('2d'), w, sz);
-  const u=c.toDataURL(); _emblemURL[i]=u; return u;
+  const u=c.toDataURL(); _emblemURL[key]=u; return u;
 }
 // Challenger gets the same scene plus a red danger badge, so it reads as a distinct mode at a glance
 const _chalEmblemURL = {};
 function challengerEmblemURL(i){
-  if(_chalEmblemURL[i]) return _chalEmblemURL[i];
+  const key=i+'|'+EMBLEM_CACHE_VER;
+  if(_chalEmblemURL[key]) return _chalEmblemURL[key];
   const w=WORLDS[i], sz=220, c=document.createElement('canvas'); c.width=c.height=sz;
   const g=c.getContext('2d');
   drawWorldEmblemBase(g, w, sz);
@@ -947,7 +991,7 @@ function challengerEmblemURL(i){
   g.fillStyle='#fff'; g.font='bold 32px sans-serif'; g.textAlign='center'; g.textBaseline='middle';
   g.fillText('⚡',0,2);   // lightning bolt — challenger's danger badge
   g.restore();
-  const u=c.toDataURL(); _chalEmblemURL[i]=u; return u;
+  const u=c.toDataURL(); _chalEmblemURL[key]=u; return u;
 }
 let _trainingEmblemURL=null;
 function trainingEmblemURL(){
@@ -971,6 +1015,8 @@ function refreshWorldSel(){
   $('wprev').disabled = selWorld<=0 || gameMode==='practice';
   $('wnext').disabled = gameMode==='practice' || selWorld>=(gameMode==='challenger' ? chalUnlocked : unlockedMax);
   setStageEmblem(selWorld);
+  const shopPane=$('tab-shop');
+  if(shopPane && !shopPane.classList.contains('hidden') && typeof renderShop==='function') renderShop();
 }
 function triggerUnlockReveal(){
   refreshWorldSel();
@@ -1186,6 +1232,103 @@ const UPGRADES = [
   { id:'showstopper', name:'Showstopper', icon:'coin', rarity:'epic', cap:1, req:['luckyspin','crit'],
     steps:[{desc:'SYNERGY — JACKPOT hits also critically strike.',f:()=>P.showstopper=true}] },
 
+  // 🍂 World 6 (AUTUMN WOODS)
+  { id:'leafdrift', name:'Falling Leaves', icon:'gem', rarity:'uncommon', cap:5, minWorld:5,
+    steps:[{desc:'your hits slow enemies like leaves in the wind. (+duration per level)',f:()=>P.leafDrift=(P.leafDrift||0)+1}] },
+  { id:'harvestmoon', name:'Harvest Moon', icon:'coin', rarity:'rare', cap:4, minWorld:5,
+    steps:[{desc:'each kill stacks +8% gold (up to 12), fading when you stop killing.',f:()=>{P.harvestGain=(P.harvestGain||0)+1;P.harvestMax=12;}}] },
+  { id:'embertrail', name:'Ember Trail', icon:'gembig', rarity:'epic', minWorld:5,
+    steps:[
+      {desc:'while moving, scatter burning leaves that scorch foes.',f:()=>{P.emberTrail=(P.emberTrail||0)+1;P.emberR=P.emberR||48;}},
+      {desc:'trail burns hotter & wider.',f:()=>{P.emberTrail=(P.emberTrail||0)+1;P.emberR=(P.emberR||48)+14;}},
+      {desc:'trail burns hotter & wider.',f:()=>{P.emberTrail=(P.emberTrail||0)+1;P.emberR=(P.emberR||62)+14;}},
+      {desc:'embers linger longer on the ground.',f:()=>{P.emberLife=(P.emberLife||1.1)+0.45;}},
+    ],
+    evo:{name:'Wildfire Canopy', icon:'gembig', desc:'EVOLVE — embers even when standing still, and burn much harder.',
+         f:()=>{P.emberTrail=(P.emberTrail||0)+2;P.emberAlways=true;P.emberR=(P.emberR||76)+22;P.emberLife=(P.emberLife||1.55)+0.5;}} },
+
+  // 🐸 World 7 (SWAMP)
+  { id:'bogmire', name:'Bog Mire', icon:'gem', rarity:'uncommon', cap:5, minWorld:6,
+    steps:[{desc:'nearby enemies sink in mud, moving slower. (+radius per level)',f:()=>{P.bogAura=(P.bogAura||0)+1;P.bogR=(P.bogR||88)+12;}}] },
+  { id:'toxicmire', name:'Toxic Mire', icon:'crocodilo', rarity:'rare', cap:5, minWorld:6,
+    steps:[{desc:'your hits poison enemies for damage over time. (+poison per level)',f:()=>P.toxicHit=(P.toxicHit||0)+1}] },
+  { id:'swampleech', name:'Swamp Leech', icon:'heart', rarity:'epic', minWorld:6,
+    steps:[
+      {desc:'standing still for a moment lets leeches restore your HP.',f:()=>{P.swampleech=(P.swampleech||0)+1;}},
+      {desc:'leeches heal faster.',f:()=>{P.swampleech=(P.swampleech||0)+1;}},
+      {desc:'leeches heal faster.',f:()=>{P.swampleech=(P.swampleech||0)+1;}},
+      {desc:'you begin healing sooner after moving.',f:()=>{P.swampleech=(P.swampleech||0)+1;P.swampStill=Math.max(0.25,(P.swampStill||0.5)-0.08);}},
+    ],
+    evo:{name:'Bog Heart', icon:'heart', desc:'EVOLVE — constant slow regen, and standing still heals much more.',
+         f:()=>{P.swampleech=(P.swampleech||0)+2;P.swampRegen=2;P.swampStill=0.2;}} },
+
+  // ☁️ World 8 (SKYLAND)
+  { id:'tailwind', name:'Tailwind', icon:'gem', rarity:'uncommon', cap:5, minWorld:7,
+    steps:[{desc:'+10% attack speed riding the sky currents.',f:()=>P.fireRate*=0.90}] },
+  { id:'thunderdrop', name:'Thunder Drop', icon:'gembig', rarity:'rare', minWorld:7,
+    steps:[
+      {desc:'every 5.5s, a bolt strikes your nearest foe.',f:()=>{P.thunder=true;P.thunderCdBase=5.5;P.thunderDmg=1.4;}},
+      {desc:'bolts strike more often & hit harder.',f:()=>{P.thunderCdBase=Math.max(3.8,P.thunderCdBase-0.7);P.thunderDmg=(P.thunderDmg||1.4)+0.25;}},
+      {desc:'bolts strike more often & hit harder.',f:()=>{P.thunderCdBase=Math.max(3.2,P.thunderCdBase-0.6);P.thunderDmg=(P.thunderDmg||1.65)+0.25;}},
+      {desc:'bolts chain to a second nearby enemy.',f:()=>{P.thunderChain=(P.thunderChain||0)+1;}},
+    ],
+    evo:{name:'Storm Caller', icon:'gembig', desc:'EVOLVE — rapid lightning that clears enemy bullets nearby.',
+         f:()=>{P.thunder=true;P.thunderEvo=true;P.thunderCdBase=2.8;P.thunderDmg=(P.thunderDmg||1.9)+0.5;P.thunderChain=(P.thunderChain||0)+2;}} },
+  { id:'updraft', name:'Updraft', icon:'gem', rarity:'uncommon', cap:4, minWorld:7,
+    steps:[{desc:'+15% attack range on the open sky.',f:()=>P.range*=1.15}] },
+
+  // 💎 World 9 (CRYSTAL CAVES)
+  { id:'prismedge', name:'Prism Edge', icon:'coin', rarity:'uncommon', cap:5, minWorld:8,
+    steps:[{desc:'+6% crit chance; critical hits split prism shards.',f:()=>{P.crit=Math.min(0.8,P.crit+0.06);P.prismCrit=(P.prismCrit||0)+1;}}] },
+  { id:'crystalshatter', name:'Crystal Shatter', icon:'gembig', rarity:'rare', minWorld:8,
+    steps:[
+      {desc:'chilled enemies shatter on death, damaging nearby foes.',f:()=>{P.crystalShatter=(P.crystalShatter||0)+1;}},
+      {desc:'shatter hits harder & reaches farther.',f:()=>{P.crystalShatter=(P.crystalShatter||0)+1;}},
+      {desc:'shatter hits harder & reaches farther.',f:()=>{P.crystalShatter=(P.crystalShatter||0)+1;}},
+      {desc:'your hits also chill enemies lightly.',f:()=>{P.leafDrift=(P.leafDrift||0)+1;}},
+    ],
+    evo:{name:'Prismatic Burst', icon:'gembig', desc:'EVOLVE — shatters also freeze foes briefly and drop crystal shards.',
+         f:()=>{P.crystalShatter=(P.crystalShatter||0)+2;P.crystalShatterEvo=true;}} },
+  { id:'shardfield', name:'Shard Field', icon:'gembig', rarity:'epic', minWorld:8,
+    steps:[
+      {desc:'every 6s, erupt a ring of crystal shards around you.',f:()=>{P.fieldPulse=true;P.fpCdBase=6;P.fpR=105;P.fpDps=11;P.fpCol='#c8e8ff';P.fpSlow=true;}},
+      {desc:'field grows & pulses more often.',f:()=>{P.fpR=(P.fpR||105)+22;P.fpCdBase=Math.max(4.2,P.fpCdBase-0.6);}},
+      {desc:'field grows & pulses more often.',f:()=>{P.fpR=(P.fpR||127)+22;P.fpCdBase=Math.max(3.5,P.fpCdBase-0.6);P.fpDps=(P.fpDps||11)+4;}},
+      {desc:'shards cut deeper.',f:()=>{P.fpDps=(P.fpDps||15)+5;}},
+    ],
+    evo:{name:'Crystal Storm', icon:'gembig', desc:'EVOLVE — constant crystal aura that shreds everything nearby.',
+         f:()=>{P.fieldPulse=true;P.fieldPulseEvo=true;P.fpR=(P.fpR||150)+35;P.fpDps=(P.fpDps||20)+8;P.fpCdBase=Math.max(2.8,P.fpCdBase-0.8);}} },
+
+  // 🌋 World 10 (VOLCANO)
+  { id:'scorchaura', name:'Scorch Aura', icon:'flamingo', rarity:'uncommon', cap:5, minWorld:9,
+    steps:[{desc:'a heat aura scorches nearby enemies. (+damage per level)',f:()=>P.burnAura+=5}] },
+  { id:'lavapool', name:'Lava Pool', icon:'rhino', rarity:'rare', cap:5, minWorld:9,
+    steps:[{desc:'kills leave a short-lived lava pool that burns foes.',f:()=>P.lavaKill=(P.lavaKill||0)+1}] },
+  { id:'moltenbloom', name:'Molten Bloom', icon:'gembig', rarity:'epic', minWorld:9,
+    steps:[
+      {desc:'every 5.5s, magma blooms at your feet.',f:()=>{P.fieldPulse=true;P.fpCdBase=5.5;P.fpR=115;P.fpDps=14;P.fpCol='#ff6a20';P.fpSlow=false;}},
+      {desc:'magma spreads wider & blooms faster.',f:()=>{P.fpR=(P.fpR||115)+24;P.fpCdBase=Math.max(4,P.fpCdBase-0.6);}},
+      {desc:'magma burns hotter.',f:()=>{P.fpDps=(P.fpDps||14)+5;}},
+      {desc:'magma lingers longer each bloom.',f:()=>{P.fpLife=(P.fpLife||1.5)+0.4;}},
+    ],
+    evo:{name:'Volcanic Heart', icon:'gembig', desc:'EVOLVE — permanent molten ring and eruptions on kill.',
+         f:()=>{P.fieldPulse=true;P.fieldPulseEvo=true;P.fpR=(P.fpR||139)+30;P.fpDps=(P.fpDps||19)+10;P.lavaKill=(P.lavaKill||0)+2;}} },
+
+  // ⛏️ World 11 (DIRT DEPTHS)
+  { id:'quakedash', name:'Quake Dash', icon:'tralalero', rarity:'uncommon', cap:4, minWorld:10,
+    steps:[{desc:'finishing a dash sends a ground shock through nearby foes. (+power per level)',f:()=>P.quakeDash=(P.quakeDash||0)+1}] },
+  { id:'buriedgold', name:'Buried Gold', icon:'coin', rarity:'rare', cap:4, minWorld:10,
+    steps:[{desc:'kills yank nearby coin drops toward you. (+pull per level)',f:()=>P.buriedGold=(P.buriedGold||0)+1}] },
+  { id:'earthward', name:'Earth Ward', icon:'turtle', rarity:'epic', minWorld:10,
+    steps:[
+      {desc:'rocky armor: -8% damage taken.',f:()=>P.armor*=0.92},
+      {desc:'thorns sprout from your shell.',f:()=>P.thorns+=8},
+      {desc:'thorns sprout harder.',f:()=>P.thorns+=8},
+      {desc:'nearby foes take quake damage when they touch you.',f:()=>{P.earthward=(P.earthward||0)+1;}},
+    ],
+    evo:{name:'Titan Shell', icon:'turtle', desc:'EVOLVE — heavy armor, strong thorns, and quakes when you dash.',
+         f:()=>{P.armor*=0.88;P.thorns+=14;P.quakeDash=(P.quakeDash||0)+2;P.earthward=(P.earthward||0)+2;}} },
+
   { id:'auramonster', name:'Aura Monster', icon:'gembig', rarity:'rare', minWorld:1, cap:3,
     steps:[
       {desc:'gain a green energy aura that damages nearby enemies.',    f:()=>{P.auraR=150; P.auraDmg=16;}},
@@ -1238,6 +1381,13 @@ const CARD_MINWORLD = {
   permafrost:3, coldblood:3, frostbloom:3, glacierheart:3,
   // World 5
   luckyspin:4, bouncy:4, showstopper:4, daredevil:4, knives:4,
+  // World 6–11
+  leafdrift:5, harvestmoon:5, embertrail:5,
+  bogmire:6, toxicmire:6, swampleech:6,
+  tailwind:7, thunderdrop:7, updraft:7,
+  prismedge:8, crystalshatter:8, shardfield:8,
+  scorchaura:9, lavapool:9, moltenbloom:9,
+  quakedash:10, buriedgold:10, earthward:10,
 };
 for(const u of UPGRADES){ if(CARD_MINWORLD[u.id]!=null) u.minWorld = CARD_MINWORLD[u.id]; }
 // returns the next card "move" for an upgrade, or null if exhausted
@@ -1283,6 +1433,20 @@ function resetPlayer(){
     // World 5: CIRCO BRAINROTTO
     jackpot:0, bounce:0, pinball:false, showstopper:false,
     daredevil:0, knives:false, knifeCd:0, knifeCdBase:3.5, knifeN:0, knifeBig:false, knifeEvo:false,
+    // World 6: AUTUMN WOODS
+    leafDrift:0, harvestGain:0, harvestMax:0, harvestStacks:0,
+    emberTrail:0, emberR:0, emberLife:0, emberCd:0, emberAlways:false,
+    // World 7: SWAMP
+    bogAura:0, bogR:0, toxicHit:0, swampleech:0, swampStill:0.5, swampRegen:0, stillT:0,
+    // World 8: SKYLAND
+    thunder:false, thunderCd:0, thunderCdBase:5.5, thunderDmg:1.4, thunderChain:0, thunderEvo:false,
+    // World 9: CRYSTAL CAVES
+    prismCrit:0, crystalShatter:0, crystalShatterEvo:false,
+    fieldPulse:false, fieldPulseEvo:false, fpCd:0, fpCdBase:6, fpR:0, fpDps:0, fpCol:'#bfe6ff', fpSlow:false, fpLife:1.5,
+    // World 10: VOLCANO (lavaKill)
+    lavaKill:0,
+    // World 11: DIRT DEPTHS
+    quakeDash:0, buriedGold:0, earthward:0,
     // World 1 additions
     seeker:0, laststand:0,
     startDmg:10, turretCount:0, turretDmgBase:0, turretDmgMul:1, turretFireMul:1, turretRangeBase:330, turretRangeBonus:0, turretAdaptive:false,
@@ -1304,7 +1468,8 @@ function resetPlayer(){
     soldierStill:false, soldierBullets:false,
     noCards:false, whiteBullets:false, stealthAggro:false, ghostBullets:false,
     auraR:0, auraDmg:0,
-    skibidiCount:0, skibidiBounces:6, skibidiNeverDie:false, skibidiRespawn:7
+    skibidiCount:0, skibidiBounces:6, skibidiNeverDie:false, skibidiRespawn:7,
+    gamblerGoldStacks:0, mimicPetRate:1
   });
   skibidiBullets.length=0; skibidiTimers.length=0;
   turrets.length=0; miniTurrets.length=0; flameTurrets.length=0; placedTurrets.length=0;
@@ -1320,6 +1485,9 @@ function startGame(idx){
   } else { _doStartGame(wi); }
 }
 function _doStartGame(wi){
+  if(typeof clearSuspendedRun === 'function') clearSuspendedRun();
+  if(typeof resetRunEngagement === 'function') resetRunEngagement();
+  resetZoom();
   loadWorld(wi);
   if(infiniteMapMode()){ WORLD.w=999999; WORLD.h=999999; }   // effectively infinite; ground drawn per-frame
   initAudio();
@@ -1333,8 +1501,21 @@ function _doStartGame(wi){
   if(typeof equippedHp==='function'){ const h=equippedHp(); P.maxHp += h; P.hp = P.maxHp; }
   if(typeof equippedSpeedMult==='function') P.speed *= equippedSpeedMult();
   if(typeof equippedRangeMult==='function') P.range *= equippedRangeMult();
+  if(typeof equippedCrit==='function') P.crit = Math.min(0.8, P.crit + equippedCrit());
+  if(typeof equippedArmorMult==='function') P.armor *= equippedArmorMult();
+  if(typeof equippedRateMult==='function') P.fireRate /= equippedRateMult();
+  if(typeof equippedMagnetMult==='function') P.magnet *= equippedMagnetMult();
+  if(typeof equippedRegen==='function') P.regen += equippedRegen();
+  if(typeof equippedGoldMult==='function'){ const g=equippedGoldMult(); P.goldMul *= g; P.xpMul *= g; }
+  if(typeof equippedVamp==='function') P.vamp += equippedVamp();
+  if(typeof equippedPierce==='function') P.pierce += equippedPierce();
   if(typeof registerActiveChar==='function') registerActiveChar();
   if(typeof registerActivePet==='function') registerActivePet();
+  if(!infiniteMapMode() && typeof WorldMapLayout!=='undefined' && WorldMapLayout.findSafeSpawn){
+    const sp = WorldMapLayout.findSafeSpawn(WORLD.w, WORLD.h, P.r + 20, curObstacles, WALL);
+    P.x = sp.x; P.y = sp.y;
+    P.petX = sp.x - 38; P.petY = sp.y;
+  }
   P.startDmg = P.dmg;   // damage at run start (char base + gear + passives); non-engineer turrets scale off this
   timeScale=1.0;
   bullets=[]; ebullets=[]; petBullets=[]; enemies=[]; gems=[]; texts=[]; zones=[]; holes=[]; luckies=[]; clearParts();
@@ -1384,6 +1565,7 @@ function startChallengerSpawn(){
 }
 
 function chalWorldCleared(e){
+  if(typeof clearSuspendedRun === 'function') clearSuspendedRun();
   const prevChalUnlocked=chalUnlocked;
   chalUnlocked=Math.min(WORLDS.length-1, Math.max(chalUnlocked, worldIdx+1));
   localStorage.setItem('br_ch_unlocked', chalUnlocked); if(window.markDirty) window.markDirty();
@@ -1418,18 +1600,31 @@ function chalWorldCleared(e){
   bigText('CHALLENGER CLEARED','#ff5a70');
 }
 
-// lock the field into a small bounded arena around the player; boss arrives after a delay
+// lock the field into a bounded arena with a clear fight floor; boss arrives after a delay
 function startBossArena(){
   const base = ARENA_SIZE * (gameMode==='challenger' ? CHAL_ARENA_MUL : 1);
   const usableW = WORLD.w - 2*WALL, usableH = WORLD.h - 2*WALL;
-  // shape arena to match world aspect ratio: 45% of each world dimension, min 600px, 80px margin each side
-  const aw = Math.min(Math.max(600, usableW * 0.45), base, usableW - 80);
-  const ah = Math.min(Math.max(600, usableH * 0.45), base, usableH - 80);
-  const cxw = clamp(P.x, WALL+aw/2, WORLD.w-WALL-aw/2);
-  const cyw = clamp(P.y, WALL+ah/2, WORLD.h-WALL-ah/2);
-  arena = { x:cxw-aw/2, y:cyw-ah/2, w:aw, h:ah };
-  luckies=[];                                // clear lucky blocks: they'd be stranded outside the arena
-  bossPending = ARENA_LEAD;                  // no auto zoom-in on boss arrival — keep the player's current zoom
+  const aw = Math.min(Math.max(640, usableW * 0.5), base, usableW - 80);
+  const ah = Math.min(Math.max(640, usableH * 0.5), base, usableH - 80);
+  let ax, ay;
+  if(typeof WorldMapLayout!=='undefined' && WorldMapLayout.findSafeArena){
+    const spot = WorldMapLayout.findSafeArena(WORLD.w, WORLD.h, aw, ah, curObstacles, WALL, P.x, P.y);
+    ax = spot.x; ay = spot.y;
+    if(WorldMapLayout.stripObsInArena) curObstacles = WorldMapLayout.stripObsInArena(curObstacles, ax, ay, aw, ah);
+  } else {
+    const cxw = clamp(P.x, WALL+aw/2, WORLD.w-WALL-aw/2);
+    const cyw = clamp(P.y, WALL+ah/2, WORLD.h-WALL-ah/2);
+    ax = cxw - aw/2; ay = cyw - ah/2;
+  }
+  arena = { x:ax, y:ay, w:aw, h:ah };
+  P.x = arena.x + arena.w/2;
+  P.y = arena.y + arena.h*0.58;
+  if(typeof WorldMapLayout!=='undefined' && WorldMapLayout.resolveCircle){
+    const r = WorldMapLayout.resolveCircle(P.x, P.y, P.r, curObstacles);
+    P.x = r.x; P.y = r.y;
+  }
+  luckies=[];
+  bossPending = ARENA_LEAD;
   const bw=$('bosswarn'); bw.textContent='BOSS INCOMING'; bw.classList.remove('hidden');
   sfx.warn();
 }
@@ -1440,8 +1635,16 @@ function spawnRingDist(){
   if(gameMode==='challenger') return Math.min(W,H)/Math.max(zoom,0.0001)*0.58 + 60;
   return Math.max(W,H)/Math.max(zoom,0.0001)*0.52 + 60;   // world-space ring radius; scales with viewport so it stays off-screen on wide/zoomed-out monitors
 }
-function ringPos(){ // spawn point on a ring around player, clamped to world
-  const a = rand(0,TAU), d = spawnRingDist();
+function ringPos(){ // spawn point on a ring around player, clamped to world + clear of obstacles
+  const d = spawnRingDist();
+  for(let attempt=0; attempt<20; attempt++){
+    const a = rand(0,TAU);
+    const x = clamp(P.x+Math.cos(a)*d, WALL+30, WORLD.w-WALL-30);
+    const y = clamp(P.y+Math.sin(a)*d, WALL+30, WORLD.h-WALL-30);
+    if(!curObstacles.length || typeof WorldMapLayout==='undefined' || WorldMapLayout.isCircleFree(x, y, 16, curObstacles))
+      return { x, y };
+  }
+  const a = rand(0,TAU);
   return { x: clamp(P.x+Math.cos(a)*d, WALL+30, WORLD.w-WALL-30),
            y: clamp(P.y+Math.sin(a)*d, WALL+30, WORLD.h-WALL-30) };
 }
@@ -1850,6 +2053,7 @@ function gainXp(n){
 function openLevelUp(){
   state = ST.LEVELUP;
   sfx.level();
+  if(typeof haptic === 'function') haptic('level');
   // candidates = every card with a remaining move whose synergy gate (req) is satisfied
   const cands = [];
   for(const u of UPGRADES){
@@ -1907,6 +2111,9 @@ function openLevelUp(){
                   `<div class="cstars">${stars}</div>`;
     d.onclick = ()=>{
       m.evolve ? sfx.evolve() : sfx.pick();
+      if(typeof haptic === 'function') haptic(m.evolve ? 'evolve' : 'pick');
+      if(m.evolve && typeof engageOnEvolve === 'function') engageOnEvolve();
+      if(u.req && u.req.length && typeof engageSynergyUnlock === 'function') engageSynergyUnlock(m.name);
       m.apply(); P.up[u.id]=(P.up[u.id]||0)+1;
       const allCards = [...$('cards').querySelectorAll('.card')];
       allCards.forEach(c => { c.style.pointerEvents='none'; });
@@ -1917,10 +2124,17 @@ function openLevelUp(){
         if(i===2) c.style.setProperty('--rej-rot',(12+Math.random()*10)+'deg');
         c.classList.add(rejClass[i]);
       });
+      const lv = $('levelup');
+      lv.classList.add('leaving');
       setTimeout(()=>{
-        $('levelup').classList.add('hidden');
+        lv.classList.add('hidden');
+        lv.classList.remove('leaving');
+        allCards.forEach(c => {
+          c.classList.remove('card-selected','card-rejected-left','card-rejected-mid','card-rejected-right');
+          c.style.removeProperty('--rej-rot');
+        });
         state=ST.PLAY;
-      }, 220);
+      }, 860);
     };
     wrap.appendChild(d);
   });
@@ -1929,14 +2143,17 @@ function openLevelUp(){
 
 // ============ DEATH ============
 function gameOver(){
+  if(typeof clearSuspendedRun === 'function') clearSuspendedRun();
   state = ST.OVER;
   arena=null; bossPending=0;
   stopMusic();
   sfx.die();
+  if(typeof haptic === 'function') haptic('heavy');
   shake = 22; hitstop = 0.12;
   $('fwave').textContent = timerMode() ? 'time '+fmtTime(chalElapsed) : 'wave '+wave;
   $('fcoins').textContent = worldCoins;
   $('fkills').textContent = kills;
+  if(typeof showRunDebrief === 'function') showRunDebrief('over');
   $('hud').classList.add('hidden');
   $('dashbtn').classList.add('hidden');
   $('zoomctl').classList.add('hidden');
@@ -1952,7 +2169,7 @@ function tryDash(){
     placedTurrets.push({x:P.x,y:P.y,hp:25,maxHp:25,cd:0,face:0,inv:0});
     P.dashCd=P.dashMax;
     sfx.dash();
-    if(navigator.vibrate) navigator.vibrate(20);
+    if(typeof haptic === 'function') haptic('dash');
     return;
   }
   if(typeof fireHook==='function') fireHook('onDash');
@@ -1966,7 +2183,7 @@ function tryDash(){
   else { mx/=ml; my/=ml; }
   P.dvx=mx; P.dvy=my; P.dashT=0.18; P.dashCd=P.dashMax; P.inv=Math.max(P.inv,0.25);
   sfx.dash();
-  if(navigator.vibrate) navigator.vibrate(20);
+  if(typeof haptic === 'function') haptic('dash');
 }
 
 // O(1) removal for arrays where order doesn't matter (bullets/projectiles): overwrite slot i with
@@ -2031,9 +2248,40 @@ function separate(e){
   if(sx||sy){ e.x+=clamp(sx,-12,12); e.y+=clamp(sy,-12,12); }   // capped so nothing teleports
 }
 
+function resolveEnemyObstacles(e){
+  if(!e || !curObstacles.length || typeof WorldMapLayout==='undefined') return;
+  const r = WorldMapLayout.resolveCircle(e.x, e.y, e.r, curObstacles);
+  e.x = r.x; e.y = r.y;
+}
+
+function steerEnemyAngle(e, a, step){
+  if(!curObstacles.length || typeof WorldMapLayout==='undefined' || step<=0) return a;
+  const nx0 = e.x + Math.cos(a)*step, ny0 = e.y + Math.sin(a)*step;
+  if(WorldMapLayout.isCircleFree(nx0, ny0, e.r, curObstacles)) return a;
+  const tx=P.x, ty=P.y;
+  let best=a, bestD=Infinity;
+  const offs=[Math.PI/4,-Math.PI/4,Math.PI/2,-Math.PI/2,Math.PI*3/4,-Math.PI*3/4,Math.PI,-Math.PI/6,Math.PI/6];
+  for(const off of offs){
+    const ta=a+off;
+    const nx=e.x+Math.cos(ta)*step, ny=e.y+Math.sin(ta)*step;
+    if(!WorldMapLayout.isCircleFree(nx, ny, e.r, curObstacles)) continue;
+    const d=(tx-nx)*(tx-nx)+(ty-ny)*(ty-ny);
+    if(d<bestD){ bestD=d; best=ta; }
+  }
+  return best;
+}
+
+function clampEnemyWorld(e){
+  e.x = clamp(e.x, WALL, WORLD.w-WALL); e.y = clamp(e.y, WALL, WORLD.h-WALL);
+  if(arena){ e.x=clamp(e.x, arena.x+e.r, arena.x+arena.w-e.r); e.y=clamp(e.y, arena.y+e.r, arena.y+arena.h-e.r); }
+  resolveEnemyObstacles(e);
+}
+
 // ============ UPDATE ============
 
 function update(dt){
+  if(typeof tickRunAutosave === 'function') tickRunAutosave(dt);
+  if(typeof engageTick === 'function') engageTick(dt);
   elapsed += dt;
   // Challenger/practice-timer-based: advance separate timer (paused during boss), trigger milestones
   if(timerMode() && state===ST.PLAY){
@@ -2073,10 +2321,32 @@ function update(dt){
   if(ml>0.05){ P.face=Math.atan2(my,mx); P.walk+=dt*10; P.moving=true; P.walkAmt=Math.min(1,(P.walkAmt||0)+dt*8); }
   else { P.walk*=0.9; P.moving=false; P.walkAmt=Math.max(0,(P.walkAmt||0)-dt*6); }
 
+  // Swamp Leech: track standing still
+  if(P.swampleech>0 || P.swampRegen>0){
+    if(P.moving || P.dashT>0) P.stillT=0;
+    else P.stillT=(P.stillT||0)+dt;
+  }
+
+  // Ember Trail: burning leaves while moving (or always after evolve)
+  if(P.emberTrail>0 && (P.moving || P.emberAlways)){
+    P.emberCd=(P.emberCd||0)-dt;
+    if(P.emberCd<=0){
+      P.emberCd=Math.max(0.14,0.32-P.emberTrail*0.03);
+      const er=P.emberR||48, el=P.emberLife||1.1;
+      addZone(P.x,P.y,er,{tele:0.05,life:el,dps:6+P.emberTrail*3,col:'#ff8a3a',friendly:true});
+      if(Math.random()<0.35) spawnPart(P.x+rand(-10,10),P.y+rand(-10,10),0,-rand(20,50),0.35,0.35,'#ff6a20',rand(2,5));
+    }
+  }
+
   if(P.dashT>0){
     P.dashT-=dt;
     P.x += P.dvx*640*dt; P.y += P.dvy*640*dt;
     if(Math.random()<0.6) spawnPart(P.x,P.y,0,0,0.25,0.25,'#bfe3ff',6);
+    if(P.dashT<=0 && P.quakeDash>0){
+      const R=62+P.quakeDash*10, qd=P.dmg*(1.2+P.quakeDash*0.35)*(P.abyssalMul||1);
+      forEnemiesNear(P.x,P.y,R,(o)=>{ if(o.iv>0||o.under||o.lead) return; if(dist2(P.x,P.y,o.x,o.y)<R*R){ o.hp-=qd; o.hitT=Math.max(o.hitT,0.08); } });
+      spawnPart(P.x,P.y,0,0,0.3,0.3,'#8a5d2c',R,1,R*2.2); burst(P.x,P.y,'#caa15a',12,260); shake=Math.max(shake,5);
+    }
   } else {
     const spd = P.speed * (P.slowT>0 ? 0.5 : 1);   // chilled by cold zones
     P.x += mx*spd*dt; P.y += my*spd*dt;
@@ -2292,11 +2562,54 @@ function update(dt){
     }
   }
 
+  // --- Generic field pulse (Shard Field, Molten Bloom, W12+ themed cards) ---
+  if(P.fieldPulse){
+    P.fpCd -= dt;
+    if(P.fpCd<=0){
+      P.fpCd = P.fpCdBase;
+      const fl = P.fieldPulseEvo ? (P.fpLife||1.5)+0.8 : (P.fpLife||1.5);
+      addZone(P.x,P.y,P.fpR,{tele:0.08,life:fl,dps:P.fpDps,slow:!!P.fpSlow,col:P.fpCol||'#bfe6ff',friendly:true});
+      burst(P.x,P.y,P.fpCol||'#bfe6ff',P.fieldPulseEvo?20:12,280);
+      if(P.fpSlow) forEnemiesNear(P.x,P.y,P.fpR,(e)=>{ if(!e.isBoss&&!e.lead&&dist2(P.x,P.y,e.x,e.y)<P.fpR*P.fpR) e.chillT=Math.max(e.chillT||0,1.0); });
+    }
+  }
+
+  // --- Thunder Drop: periodic bolt on nearest foe ---
+  if(P.thunder){
+    P.thunderCd -= dt;
+    if(P.thunderCd<=0){
+      P.thunderCd = P.thunderCdBase;
+      let best=null, bd=Infinity;
+      forEnemiesNear(P.x,P.y,P.range,(e)=>{ if(e.iv>0||e.lead) return; const d=dist2(P.x,P.y,e.x,e.y); if(d<bd){bd=d;best=e;} });
+      if(best){
+        const td=P.dmg*(P.thunderDmg||1.4)*(P.abyssalMul||1);
+        damageEnemy(best,td,P.x,P.y,false);
+        burst(best.x,best.y,'#ffd24a',P.thunderEvo?18:10,320); sfx.boss();
+        if(P.thunderEvo){ for(let bi=ebullets.length-1;bi>=0;bi--){ if(dist2(best.x,best.y,ebullets[bi].x,ebullets[bi].y)<90*90) swapRemove(ebullets,bi); } }
+        const chains=P.thunderChain||0;
+        if(chains>0){
+          let second=null, sd=Infinity;
+          forEnemiesNear(best.x,best.y,160,(e)=>{ if(e===best||e.iv>0||e.lead) return; const d=dist2(best.x,best.y,e.x,e.y); if(d<sd){sd=d;second=e;} });
+          if(second){ damageEnemy(second,td*0.7,P.x,P.y,false); burst(second.x,second.y,'#fff6bf',8,220); }
+        }
+      }
+    }
+  }
+
   // --- Killing Frenzy stacks decay when you stop killing ---
   if(P.frenzy>0) P.frenzy = Math.max(0, P.frenzy - dt*2);
 
+  // --- Harvest Moon gold stacks decay when you stop killing ---
+  if(P.harvestStacks>0) P.harvestStacks = Math.max(0, P.harvestStacks - dt*1.5);
+
   // --- Regeneration ---
   if(P.regen>0 && P.hp<P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.regen*dt);
+
+  // --- Swamp Leech: heal while standing still ---
+  if((P.swampleech>0||P.swampRegen>0) && P.stillT>=(P.swampStill||0.5)){
+    const rate = (P.swampRegen||0) + P.swampleech*1.4;
+    if(rate>0 && P.hp<P.maxHp) P.hp = Math.min(P.maxHp, P.hp + rate*dt);
+  }
 
   // --- Aegis Bubble recharge ---
   if(P.shieldMax>0 && P.shield<P.shieldMax){
@@ -2310,12 +2623,21 @@ function update(dt){
     if(P.phoenixCd<=0){ P.phoenix++; P.phoenixCd=P.phoenixCdBase; floatText(P.x,P.y-P.r-10,'phoenix ready','#ff7a3a',12); }
   }
 
-  // --- Phoenix burn aura: enemies near you smoulder ---
+  // --- Phoenix burn aura / Scorch Aura: enemies near you smoulder ---
   if(P.burnAura>0){
     forEnemiesNear(P.x,P.y,80,(e)=>{
       if(e.iv>0 || e.lead) return;
       if(dist2(P.x,P.y,e.x,e.y) < 80*80){ e.hp -= P.burnAura*dt; e.hitT=Math.max(e.hitT,0.05);
         if(Math.random()<0.18) spawnPart(e.x+rand(-8,8),e.y+rand(-8,8),0,-rand(20,50),0.4,0.4,'#ff8a3a',rand(2,4)); }
+    });
+  }
+
+  // --- Bog Mire: mud aura slows nearby foes ---
+  if(P.bogAura>0){
+    const br=P.bogR||88;
+    forEnemiesNear(P.x,P.y,br,(e)=>{
+      if(e.iv>0 || e.lead || e.isBoss) return;
+      if(dist2(P.x,P.y,e.x,e.y) < br*br) e.chillT = Math.max(e.chillT||0, 0.25 + 0.12*P.bogAura);
     });
   }
 
@@ -2489,6 +2811,11 @@ function update(dt){
           hitSpark(b.x,b.y,isCrit?'#ffe14d':'#ff9f3a',isCrit);
           damageEnemy(e,dmg,b.x,b.y,isCrit);
           if(isCrit && P.critHeal>0) P.hp=Math.min(P.maxHp,P.hp+P.critHeal);   // Blood Crit
+          if(isCrit && P.prismCrit>0){   // Prism Edge: crits split shards
+            for(let s=0;s<2+P.prismCrit;s++){ const a=rand(0,TAU);
+              bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*380,vy:Math.sin(a)*380,r:5,pierce:1,hit:new Set([e]),dist:220,dmgMul:0.35*(b.dmgMul||1),col:'#c8e8ff'}); }
+            burst(e.x,e.y,'#c8e8ff',6,140);
+          }
           if(P.ricochet>0 && !b.ric){   // Ricochet: fling weaker bolts at nearby foes (don't ricochet a ricochet)
             const R=P.ricochetEvo?220:140, mul=P.ricochetEvo?0.7:0.5; let n=0;
             forEnemiesNear(b.x,b.y,R,(o)=>{ if(n>=P.ricochet||o===e||o.iv>0||o.under||o.lead||b.hit.has(o)) return;
@@ -2616,6 +2943,16 @@ function update(dt){
       if(Math.random()<dt*10) spawnPart(e.x+rand(-e.r*.5,e.r*.5),e.y-e.r*.2,rand(-18,18),rand(-90,-35),.38,.38,Math.random()<.5?'#ff6a00':'#ffcc00',rand(2,5));
       if(e.fire.dur<=0){ e.fire=null; e.fireImmune=1; }
     }
+    if(e.poison){
+      e.poison.dur-=dt; e.poison.tickCd-=dt;
+      if(e.poison.tickCd<=0){
+        e.poison.tickCd=0.5;
+        e.hp-=e.poison.dmg; e.hitT=Math.max(e.hitT,0.06);
+        floatText(e.x,e.y-e.r-4,Math.round(e.poison.dmg),'#5fe66a',11);
+      }
+      if(Math.random()<dt*8) spawnPart(e.x+rand(-e.r*.5,e.r*.5),e.y-e.r*.2,rand(-18,18),rand(-90,-35),.35,.35,'#40c820',rand(2,4));
+      if(e.poison.dur<=0) e.poison=null;
+    }
 
     if(e.isBoss){
       updateBoss(e,dt);
@@ -2624,6 +2961,7 @@ function update(dt){
       e.digT-=dt;
       const a=Math.atan2(P.y-e.y,P.x-e.x);
       e.x=clamp(e.x+Math.cos(a)*e.sp*1.35*dt,WALL,WORLD.w-WALL); e.y=clamp(e.y+Math.sin(a)*e.sp*1.35*dt,WALL,WORLD.h-WALL);
+      clampEnemyWorld(e);
       if(e.digT<=0){ e.under=false; e.iv=0.2; burst(e.x,e.y,'#7a5a30',16,220); }
     } else {
       if(e.iv>0) e.iv-=dt;
@@ -2639,7 +2977,7 @@ function update(dt){
       let dashing=false;
       if(e.dash){
         if(e.dst==='wind'){ e.dwin-=dt; dashing=true; if(e.dwin<=0){ e.dst='dash'; e.ddur=0.32; } }
-        else if(e.dst==='dash'){ e.ddur-=dt; dashing=true; e.x+=Math.cos(e.da)*460*dt; e.y+=Math.sin(e.da)*460*dt; if(e.ddur<=0){ e.dst='idle'; e.dcd=rand(2.6,4.6); } }
+        else if(e.dst==='dash'){ e.ddur-=dt; dashing=true; e.x+=Math.cos(e.da)*460*dt; e.y+=Math.sin(e.da)*460*dt; resolveEnemyObstacles(e); if(e.ddur<=0){ e.dst='idle'; e.dcd=rand(2.6,4.6); } }
         else { e.dcd-=dt; if(e.dcd<=0 && e.iv<=0 && dist2(e.x,e.y,P.x,P.y)<380*380){ e.dst='wind'; e.dwin=0.5; e.da=Math.atan2(P.y-e.y,P.x-e.x); dashing=true; } }
       }
       // Fantasma's stealth: enemies stay put (and hold fire) unless he's close or they've been shot recently
@@ -2662,13 +3000,19 @@ function update(dt){
             else if(e.shoot && e.shoot.move){ a = toP + Math.PI/2; } // in range + mobile: strafe
             else { move=false; }                                  // in range + stationary: hold
           }
-          if(move){ e.x += Math.cos(a)*e.sp*fs*_cSpd*dt; e.y += Math.sin(a)*e.sp*fs*_cSpd*dt; }
+          if(move){
+            const step = e.sp*fs*_cSpd*dt;
+            a = steerEnemyAngle(e, a, step);
+            e.x += Math.cos(a)*step; e.y += Math.sin(a)*step;
+          }
           e.face = Math.cos(toP)>=0 ? 1 : -1;
           e.moving = move;
         } else {
           // asleep to Fantasma: slow drifting wander instead of chasing
           const wa = e.t*0.6 + e.wob*7;
-          e.x += Math.cos(wa)*e.sp*0.3*fs*dt; e.y += Math.sin(wa)*e.sp*0.3*fs*dt;
+          const wStep = e.sp*0.3*fs*dt;
+          const sa = steerEnemyAngle(e, wa, wStep);
+          e.x += Math.cos(sa)*wStep; e.y += Math.sin(sa)*wStep;
           e.face = Math.cos(wa)>=0 ? 1 : -1;
           e.moving = true;
         }
@@ -2676,14 +3020,14 @@ function update(dt){
       // ease walk-pose blend toward moving/idle target instead of snapping legs straight when motion starts/stops
       e.walkAmt = (e.walkAmt||0) + ((e.moving?1:0)-(e.walkAmt||0)) * Math.min(1, dt*8);
       separate(e);   // resolve overlaps with nearby foes so the pack spreads + flows around
-      e.x = clamp(e.x, WALL, WORLD.w-WALL); e.y = clamp(e.y, WALL, WORLD.h-WALL);
-      if(arena){ e.x=clamp(e.x, arena.x+e.r, arena.x+arena.w-e.r); e.y=clamp(e.y, arena.y+e.r, arena.y+arena.h-e.r); }
+      clampEnemyWorld(e);
       // chaos gravity: scatter away (>0) or rush in (<0)
       if(_gravOn&&e.iv<=0){
         const ga=chaosGravT>0?Math.atan2(e.y-P.y,e.x-P.x):Math.atan2(P.y-e.y,P.x-e.x);
         const gs=chaosGravT>0?270:420;
         e.x=clamp(e.x+Math.cos(ga)*gs*dt,WALL,WORLD.w-WALL);
         e.y=clamp(e.y+Math.sin(ga)*gs*dt,WALL,WORLD.h-WALL);
+        resolveEnemyObstacles(e);
       }
       // skip shooting / casting / aoe / support for enemies well outside player's screen
       const _eDist2 = dist2(e.x,e.y,P.x,P.y);
@@ -2739,6 +3083,11 @@ function update(dt){
       const hitLands = P.inv<=0 && P.dashT<=0 && P.shield<=0;   // the contact actually deals damage this frame
       hurtPlayer((e.isBoss?20:10)*(e.dmgBuff||1)*chalDmgMul(), e);
       if(P.thorns>0 && hitLands && !e.isBoss) damageEnemy(e, P.thorns, P.x, P.y, false);   // Spiky Peel
+      if(P.earthward>0 && hitLands && !e.isBoss){   // Earth Ward: quake when foes touch you
+        const R=48+P.earthward*8, qd=P.dmg*0.45*P.earthward*(P.abyssalMul||1);
+        forEnemiesNear(P.x,P.y,R,(o)=>{ if(o===e||o.iv>0||o.lead) return; if(dist2(P.x,P.y,o.x,o.y)<R*R){ o.hp-=qd; o.hitT=Math.max(o.hitT,0.08); } });
+        spawnPart(P.x,P.y,0,0,0.25,0.25,'#8a5d2c',R*0.6,1);
+      }
       if(e.kb && e.dst==='dash'){   // charging boulder bowls the player back
         const a=Math.atan2(P.y-e.y,P.x-e.x);
         P.x=clamp(P.x+Math.cos(a)*120, WALL+P.r, WORLD.w-WALL-P.r); P.y=clamp(P.y+Math.sin(a)*120, WALL+P.r, WORLD.h-WALL-P.r);
@@ -2761,9 +3110,12 @@ function update(dt){
     if(e.hp<=0 && !e.lead){   // duo partner (e.lead) is never killed on its own -> damage routes to the lead
       enemies.splice(i,1);
       kills++; setKillHUD();
+      if(typeof engageOnKill === 'function') engageOnKill();
       if(typeof fireHook==='function') fireHook('onKill', e);
       sfx.hit();
       if(deathShakeOn) shake=Math.max(shake,e.isBoss?16:8);
+      if(e.isBoss && typeof haptic === 'function') haptic('boss');
+      if(e.isBoss && typeof engageOnBossKill === 'function') engageOnBossKill();
       // Hit-stop only on boss kills. Normal kills are constant in a survivor game, so freezing the
       // sim 50ms each one stacked into near-continuous choppiness — feedback comes from burst+sfx instead.
       hitstop=Math.max(hitstop,e.isBoss?0.06:0);
@@ -2776,6 +3128,27 @@ function update(dt){
       }
       if(P.vamp>0){ P.hp=Math.min(P.maxHp,P.hp+P.vamp); }
       if(P.frenzyGain>0) P.frenzy=Math.min(P.frenzyMax, P.frenzy+P.frenzyGain);
+      if(P.harvestGain>0) P.harvestStacks=Math.min(P.harvestMax||12, (P.harvestStacks||0)+1);
+      if(P.lavaKill>0){
+        const lr=52+P.lavaKill*8;
+        addZone(e.x,e.y,lr,{tele:0.08,life:1.1+P.lavaKill*0.12,dps:9+P.lavaKill*3,col:'#ff5020',friendly:true});
+        burst(e.x,e.y,'#ff6a20',8,200);
+      }
+      if(P.buriedGold>0){
+        const pull=180+P.buriedGold*45;
+        for(const g of gems){
+          const d=dist2(e.x,e.y,g.x,g.y);
+          if(d<pull*pull && d>1){ const dd=Math.sqrt(d); g.vx=(g.vx||0)+(P.x-g.x)/dd*220; g.vy=(g.vy||0)+(P.y-g.y)/dd*220; }
+        }
+      }
+      if(P.crystalShatter>0 && (e.chillT>0||e.frz>0)){
+        const R=68+P.crystalShatter*12, sd=P.dmg*(1.4+P.crystalShatter*0.45)*(P.abyssalMul||1);
+        forEnemiesNear(e.x,e.y,R,(o)=>{ if(o.iv>0||o.lead) return; if(dist2(e.x,e.y,o.x,o.y)<R*R){ o.hp-=sd; o.hitT=Math.max(o.hitT,0.1);
+          if(P.crystalShatterEvo && !o.isBoss) o.frz=Math.max(o.frz||0,0.6); } });
+        burst(e.x,e.y,'#c8e8ff',P.crystalShatterEvo?16:10,260);
+        if(P.crystalShatterEvo){ for(let s=0;s<4;s++){ const a=s*(TAU/4)+rand(0,0.5);
+          bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*360,vy:Math.sin(a)*360,r:5,pierce:1,hit:new Set(),dist:260,dmgMul:0.45,col:'#c8e8ff'}); } }
+      }
       if(P.frostfire && e.frz>0){          // Frostfire Core: frozen foes shatter into shards
         for(let s=0;s<4;s++){ const a=s*(TAU/4)+rand(0,0.6);
           bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*420,vy:Math.sin(a)*420,r:6,pierce:1,hit:new Set(),dist:300,dmgMul:0.5}); }
@@ -2833,7 +3206,12 @@ function update(dt){
         if(e.death && e.death.type==='ring'){ const n=e.death.n||4; for(let k=0;k<n;k++) fireEB(e.x,e.y,k*TAU/n,150,'#e58a3a'); }
         if(e.death && e.death.type==='split') spawnSplit(e);
         dropOrb(e.x, e.y, orbTier(e.xp));
-        if(Math.random()<0.03){ const a=rand(0,TAU), s=rand(90,210); gems.push({x:e.x,y:e.y,coin:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s}); }
+        const coinChance = Math.min(0.22, 0.04 + worldIdx * 0.0035);
+        if(Math.random()<coinChance){ const a=rand(0,TAU), s=rand(90,210); gems.push({x:e.x,y:e.y,coin:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s}); }
+        if(gameMode!=='practice'){
+          const kg = killGoldDrop(e);
+          if(kg>0){ gold+=kg; saveGold(); if(window.markDirty) window.markDirty(); floatText(e.x,e.y-18,'+'+fmtNum(kg),'#f5c542',11); }
+        }
         if(Math.random()<0.025){ const a=rand(0,TAU), s=rand(90,210); gems.push({x:e.x,y:e.y,heart:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s}); }
       }
     }
@@ -2924,7 +3302,7 @@ function update(dt){
     if(d < (P.r+12)*(P.r+12)){
       gems.splice(i,1);
       if(g.heart){ const h=g.heal||(g.big?50:25); P.hp=Math.min(P.maxHp,P.hp+h); floatText(P.x,P.y-24,'+'+h,'#e8556a',g.big?20:16); burst(P.x,P.y,'#ff97a6',g.big?14:8,140); sfx.coin(); }
-      else if(g.coin){ const v=Math.round(5*(P.goldMul||1)*coinMult()*worldCoinMul()*(gameMode==='challenger'?Math.min(3.5,1.3+worldIdx*0.3):1)); worldCoins+=v; if(gameMode!=='practice'){ gold+=v; saveGold(); if(window.markDirty) window.markDirty(); } setCoinHUD(); floatText(g.x,g.y,'+'+v,'#f5c542',13); sfx.coin(); }
+      else if(g.coin){ const harvestMul=P.harvestGain>0?(1+0.08*(P.harvestStacks||0)):1; const v=Math.round(15*(P.goldMul||1)*harvestMul*coinMult()*worldCoinMul()*(gameMode==='challenger'?Math.min(3.5,1.3+worldIdx*0.3):1)); worldCoins+=v; if(gameMode!=='practice'){ gold+=v; saveGold(); if(window.markDirty) window.markDirty(); } setCoinHUD(); floatText(g.x,g.y,'+'+fmtNum(v),'#f5c542',13); sfx.coin(); }
       else if(g.magnet){ for(const o of gems) o.vac=true; floatText(P.x,P.y-24,'MAGNET','#9fe0ff',16); burst(P.x,P.y,'#9fe0ff',12,160); sfx.level(); }   // pull in every pickup on the map
       else { gainXp(g.v); sfx.gem(2); }
     }
@@ -3013,6 +3391,8 @@ function damageEnemy(e,dmg,fx,fy,crit){
     dmg *= 2;
     if(P.showstopper && !crit){ dmg *= P.critMul; crit=true; }                // Showstopper: jackpots also crit
     floatText(e.x,e.y-e.r-20,'JACKPOT!','#ffd24a',16);
+    if(typeof haptic === 'function') haptic('jackpot');
+    if(typeof engageOnJackpot === 'function') engageOnJackpot();
   }
   e.hp -= dmg; e.hitT=0.12; e.sq=1;
   if(!e.isBoss && !e.under && fx!=null && fy!=null && !(fx===e.x && fy===e.y)){   // small knockback away from the hit source
@@ -3023,6 +3403,8 @@ function damageEnemy(e,dmg,fx,fy,crit){
   if(P.stealthAggro && !e.isBoss) e.aggroT=Math.max(e.aggroT||0,3);   // getting shot wakes the enemy up
   if(P.freeze && !e.isBoss) e.frz=1.2;
   if(P.chillHit && !e.isBoss && e.frz<=0) e.chillT = Math.max(e.chillT||0, 0.8 + 0.25*P.chillHit);   // Permafrost: chill-on-hit
+  if(P.leafDrift && !e.isBoss && e.frz<=0) e.chillT = Math.max(e.chillT||0, 0.7 + 0.22*P.leafDrift);   // Falling Leaves
+  if(P.toxicHit && !e.isBoss && !e.poison) e.poison={dur:2.2+P.toxicHit*0.35,dmg:2+P.toxicHit*1.1,tickCd:0.5};   // Toxic Mire
   if(P.burnHit && !e.isBoss && !e.fire) e.fire={dur:2,dmg:3,tickCd:0.5};   // Ember Sage: burn-on-hit
   sfx.hit();
   const _dvx=(Math.random()-0.5)*120;
@@ -3097,6 +3479,7 @@ function spawnMini(spr,x,y,summoner){
   enemies.push({ spr:def.spr, name:def.name||'', x:clamp(x,WALL,WORLD.w-WALL), y:clamp(y,WALL,WORLD.h-WALL),
     r:def.r||15, hp:(def.hp||3)*HP_MULT, maxHp:(def.hp||3)*HP_MULT, sp:def.sp||84, xp:def.xp||1, score:def.score||8,
     t:rand(0,TAU), wob:rand(2,4), shootCd:99, frz:0, iv:0, isBoss:false, hitT:0, sq:0, face:1, summoner });
+  resolveEnemyObstacles(enemies[enemies.length-1]);
 }
 function summonAdds(e,spr,n,cap){
   const live = enemies.filter(o=>o.summoner===e).length;
@@ -3832,7 +4215,12 @@ function expandFinalArena(e){
   const grow = gameMode==='challenger' ? CHAL_FINAL_ARENA_GROW : FINAL_ARENA_GROW;
   const naw=Math.min(arena.w*grow, WORLD.w-2*WALL), nah=Math.min(arena.h*grow, WORLD.h-2*WALL);
   const ncx=clamp(cx0,WALL+naw/2,WORLD.w-WALL-naw/2), ncy=clamp(cy0,WALL+nah/2,WORLD.h-WALL-nah/2);
-  arena={x:ncx-naw/2,y:ncy-nah/2,w:naw,h:nah};
+  const ax = ncx - naw/2, ay = ncy - nah/2;
+  arena={x:ax,y:ay,w:naw,h:nah};
+  if(typeof WorldMapLayout!=='undefined' && WorldMapLayout.stripObsInArena)
+    curObstacles = WorldMapLayout.stripObsInArena(curObstacles, ax, ay, naw, nah);
+  P.x = clamp(P.x, arena.x + P.r + 20, arena.x + arena.w - P.r - 20);
+  P.y = clamp(P.y, arena.y + P.r + 20, arena.y + arena.h - P.r - 20);
 }
 
 // ============================================================
@@ -4262,6 +4650,8 @@ function updateBoss(e,dt){
   }
   e.x = clamp(e.x, WALL+e.r, WORLD.w-WALL-e.r); e.y = clamp(e.y, WALL+e.r, WORLD.h-WALL-e.r);
   if(arena){ e.x=clamp(e.x, arena.x+e.r, arena.x+arena.w-e.r); e.y=clamp(e.y, arena.y+e.r, arena.y+arena.h-e.r); }
+  resolveEnemyObstacles(e);
+  if(e.mate){ resolveEnemyObstacles(e.mate); }
 }
 
 function hurtPlayer(dmg, src){
@@ -4282,7 +4672,7 @@ function hurtPlayer(dmg, src){
   P.hp -= dmg*(P.shieldDR||1)*(P.armor||1)*worldDmgMul(); P.inv = 0.8; P.hitT = 0.25;
   shake = Math.max(shake,10); hitFlash = 1; hitstop=Math.max(hitstop,0.04);
   sfx.hurt(); burst(P.x,P.y,'#e54d4d',12,200);
-  if(navigator.vibrate) navigator.vibrate(60);
+  if(typeof haptic === 'function') haptic('hurt');
   if(P.hp<=0){
     if(typeof fireHook==='function') fireHook('onHpZero');
     if(P.phoenix>0){   // Phoenix: rise from the ashes instead of dying
@@ -4307,6 +4697,45 @@ function hurtPlayer(dmg, src){
 
 // ============ RENDER ============
 const TILE = 80;
+function groundPatternForTheme(th, wi) {
+  const patterns = typeof GROUND_PATTERNS !== 'undefined'
+    ? GROUND_PATTERNS
+    : ['checker', 'stripe', 'diamond', 'dots', 'wave'];
+  return th && th.groundPattern ? th.groundPattern : patterns[(wi || 0) % patterns.length];
+}
+function groundPatternSeed(wi) { return ((wi || 0) * 17 + 31) | 0; }
+function fillGroundCell(g, gx, gy, tile, th, wi) {
+  const pat = groundPatternForTheme(th, wi);
+  const phase = groundPatternSeed(wi);
+  const tx = (gx / tile) | 0, ty = (gy / tile) | 0;
+  let alt = false;
+  if (pat === 'stripe') alt = ((tx + phase) % 3) !== 1;
+  else if (pat === 'diamond') alt = ((tx + ty) % 3 + (tx * ty) % 2) % 2 === 0;
+  else if (pat === 'dots') alt = ((tx * 7 + ty * 13 + phase) % 5) < 2;
+  else if (pat === 'wave') alt = Math.sin(tx * 0.45 + ty * 0.3 + phase * 0.1) > 0;
+  else alt = ((tx + ty) & 1) === 0;
+  g.fillStyle = alt ? th.tile1 : th.tile2;
+  g.fillRect(gx, gy, tile, tile);
+  if (th.accent && ((gx * 31 + gy * 17 + phase) % 89) / 89 < 0.07) {
+    g.fillStyle = th.accent;
+    g.globalAlpha = 0.35;
+    g.beginPath();
+    g.arc(gx + tile * 0.5, gy + tile * 0.5, tile * 0.12, 0, TAU);
+    g.fill();
+    g.globalAlpha = 1;
+  }
+}
+function drawGroundTufts(g, tile, th, spanW, spanH, gxOff, gyOff) {
+  if (!th.tuft) return;
+  g.fillStyle = th.tuft;
+  const x0 = gxOff || 0, y0 = gyOff || 0;
+  for (let gy = y0; gy < spanH; gy += tile) {
+    for (let gx = x0; gx < spanW; gx += tile) {
+      const h = ((gx * 31 + gy * 17) % 97) / 97;
+      if (h < 0.3) g.fillRect((gx + (gx >> 3) % 60) + 10, (gy + (gy >> 2) % 60) + 12, 3, 7);
+    }
+  }
+}
 const _sortByY = (a,b) => a.y - b.y;
 function drawSprite(name, x, y, size, rot, sq, hitT, flip, tint, pulse){
   const img = SP[name]; if(!img) return;
@@ -4393,7 +4822,7 @@ function drawDebris(g,gx0,gy0,gx1,gy1){
 
 // Pre-render the whole-world ground (tiles + tufts + debris) to one offscreen canvas, ONCE per theme.
 // Per frame the renderer just blits this instead of re-looping every tile — a big win in DIRT DEPTHS.
-let groundCanvas=null, groundFor=null;
+let groundCanvas=null, groundForWorld=-1;
 let infiniteGroundCanvas=null, infiniteGroundFor=null;
 const INFINITE_GROUND_SPAN = TILE * 12;   // 960px: repeats checker + tuft offset cleanly
 function buildGround(){
@@ -4402,21 +4831,13 @@ function buildGround(){
   const g=groundCanvas.getContext('2d');
   for(let gy=0; gy<WORLD.h; gy+=TILE){
     for(let gx=0; gx<WORLD.w; gx+=TILE){
-      const odd=((gx/TILE)+(gy/TILE))&1;
-      g.fillStyle = odd ? curTheme.tile1 : curTheme.tile2;
-      g.fillRect(gx, gy, TILE, TILE);
+      fillGroundCell(g, gx, gy, TILE, curTheme, worldIdx);
     }
   }
-  g.fillStyle=curTheme.tuft;
-  for(let gy=0; gy<WORLD.h; gy+=TILE){
-    for(let gx=0; gx<WORLD.w; gx+=TILE){
-      const h=((gx*31+gy*17)%97)/97;
-      if(h<0.3){ g.fillRect((gx+ (gx>>3)%60)+10, (gy+(gy>>2)%60)+12, 3, 7); }
-    }
-  }
+  drawGroundTufts(g, TILE, curTheme, WORLD.w, WORLD.h);
   if(curTheme.debris) drawDebris(g, 0,0, WORLD.w, WORLD.h);
   if(curObstacles.length && typeof WorldMapLayout!=='undefined') WorldMapLayout.drawObstacles(g, curObstacles, curTheme);
-  groundFor=curTheme;
+  groundForWorld=worldIdx;
 }
 function buildInfiniteGround(){
   if(!infiniteGroundCanvas){ infiniteGroundCanvas=document.createElement('canvas'); }
@@ -4425,17 +4846,10 @@ function buildInfiniteGround(){
   const g=infiniteGroundCanvas.getContext('2d');
   for(let gy=0; gy<span; gy+=TILE){
     for(let gx=0; gx<span; gx+=TILE){
-      g.fillStyle=((((gx/TILE)|0)+((gy/TILE)|0))&1)?curTheme.tile1:curTheme.tile2;
-      g.fillRect(gx,gy,TILE,TILE);
+      fillGroundCell(g, gx, gy, TILE, curTheme, worldIdx);
     }
   }
-  g.fillStyle=curTheme.tuft;
-  for(let gy=0; gy<span; gy+=TILE){
-    for(let gx=0; gx<span; gx+=TILE){
-      const h=((gx*31+gy*17)%97)/97;
-      if(h<0.3){ g.fillRect((gx+((gx>>>3)%60))+10,(gy+((gy>>>2)%60))+12,3,7); }
-    }
-  }
+  drawGroundTufts(g, TILE, curTheme, span, span);
   infiniteGroundFor=curTheme;
 }
 function renderInfiniteGround(vx0,vy0,vx1,vy1){
@@ -4486,22 +4900,6 @@ function drawTurretUnit(tu, ts, bodyCol, visorCol, hpFrac){
   }
 }
 
-function drawReadabilityRim(x, y, r) {
-  if (typeof state === 'undefined' || state === ST.MENU) return;
-  cx.save();
-  cx.strokeStyle = '#ffffff';
-  cx.lineWidth = Math.max(2, r * 0.11);
-  cx.globalAlpha = 0.9;
-  cx.beginPath();
-  cx.ellipse(x, y, r * 0.95, r * 1.02, 0, 0, TAU);
-  cx.stroke();
-  cx.strokeStyle = '#2a1c10';
-  cx.lineWidth = Math.max(1.2, r * 0.065);
-  cx.globalAlpha = 0.4;
-  cx.stroke();
-  cx.restore();
-}
-
 function render(){
   cx.save();
   let sx=0, sy=0;
@@ -4513,12 +4911,12 @@ function render(){
   const vx0=camera.x, vy0=camera.y, vx1=vx0+vw, vy1=vy0+vh;
 
   // --- ground ---
-  cx.fillStyle=curTheme.void;
+  cx.fillStyle=curTheme.bg || curTheme.tile1;
   cx.fillRect(vx0-40, vy0-40, vw+80, vh+80);
   if(infiniteMapMode()){
     renderInfiniteGround(vx0-40, vy0-40, vx1+40, vy1+40);
   } else {
-    if(!groundCanvas || groundFor!==curTheme) buildGround();
+    if(!groundCanvas || groundForWorld!==worldIdx) buildGround();
     const sx0=clamp(vx0-2,0,WORLD.w), sy0=clamp(vy0-2,0,WORLD.h);
     const sx1=clamp(vx1+2,0,WORLD.w), sy1=clamp(vy1+2,0,WORLD.h);
     if(sx1>sx0 && sy1>sy0) cx.drawImage(groundCanvas, sx0,sy0,sx1-sx0,sy1-sy0, sx0,sy0,sx1-sx0,sy1-sy0);
@@ -4697,20 +5095,6 @@ function render(){
     }
   }
 
-  if (state !== ST.MENU && _vis.length) {
-    cx.strokeStyle = '#ffffff';
-    cx.lineWidth = 2.4;
-    cx.globalAlpha = 0.78;
-    cx.beginPath();
-    for (const e of _vis) {
-      if (e.under) continue;
-      cx.moveTo(e.x + e.r * 1.02, e.y);
-      cx.ellipse(e.x, e.y, e.r * 1.02, e.r * 1.06, 0, 0, TAU);
-    }
-    cx.stroke();
-    cx.globalAlpha = 1;
-  }
-
   // batched status overlays: one state-set per effect type instead of per enemy
   cx.fillStyle='#bfe6ff';
   cx.globalAlpha=0.4; cx.beginPath();
@@ -4833,7 +5217,6 @@ function render(){
         const _lean = (_a.faceX||0)*0.16*(_a.walkAmt||0);
         drawPlayerGear(P.x, P.y, P.r*2.6, bob+(flip?-_lean:_lean), flip);
       }
-      drawReadabilityRim(P.x, P.y, P.r * 1.02);
     }
     // Phoenix burn aura
     if(P.burnAura>0){
@@ -5249,12 +5632,12 @@ document.body.style.background = curTheme.bg;
 // populate the main menu (world emblem on the Battle stage + saved gold)
 setStageEmblem(selWorld);
 $('goldicon').src = SP['coin'].toDataURL();
-$('goldtxt').textContent = gold;
+$('goldtxt').textContent = fmtNum(gold);
 // top resource bar: a "player level" badge from worlds unlocked + a progress fill + gold
 function refreshTopbar(){
   const lv=$('topLvl'); if(lv) lv.textContent = unlockedMax+1;
   const xf=$('topxpfill'); if(xf) xf.style.width = Math.round(((unlockedMax+1)/WORLDS.length)*100)+'%';
-  const gt=$('goldtxt'); if(gt) gt.textContent = gold;
+  const gt=$('goldtxt'); if(gt) gt.textContent = fmtNum(typeof gold!=='undefined'?gold:0);
 }
 refreshTopbar();
 // wire house-drawn icons into static markup (tab bar, kill counter, ...)
@@ -5344,34 +5727,60 @@ wireGfxUI();
 const _dm=$('sdrop-music'); if(_dm) _dm.addEventListener('click',()=>setMusicMuted(!muted));
 const _ds=$('sdrop-sfx'); if(_ds) _ds.addEventListener('click',()=>setSfxMuted(!sfxMuted));
 const _dds=$('sdrop-deathshake'); if(_dds) _dds.addEventListener('click',()=>setDeathShake(!deathShakeOn));
+const _dh=$('sdrop-haptic'); if(_dh) _dh.addEventListener('click',()=>setHapticOn(!hapticOn));
 $('pausemute').addEventListener('click', ()=>setMusicMuted(!muted));
 $('pausesfx').addEventListener('click', ()=>setSfxMuted(!sfxMuted));
 refreshMute();
 setDeathShake(deathShakeOn);
+if(typeof setHapticOn === 'function') setHapticOn(hapticOn);
 
 // ---- pause / resume / quit ----
-function pauseGame(){ if(state!==ST.PLAY) return; state=ST.PAUSE; $('pause').classList.remove('hidden'); }
+function refreshRunResumeUI(){
+  const panel=$('run-resume'), start=$('startbtn'), meta=$('run-resume-meta');
+  const hint=document.querySelector('#menubot .hint');
+  const has = typeof hasSuspendedRun === 'function' && hasSuspendedRun();
+  if(panel) panel.classList.toggle('hidden', !has);
+  if(start) start.classList.toggle('hidden', has);
+  if(hint) hint.classList.toggle('hidden', has);
+  if(has && meta && typeof getSuspendedRunMeta === 'function'){
+    const m=getSuspendedRunMeta();
+    if(m) meta.textContent = m.world+' · '+m.progress+' · Lv '+m.lv;
+  }
+}
+function pauseGame(){
+  if(state!==ST.PLAY) return;
+  state=ST.PAUSE;
+  $('pause').classList.remove('hidden');
+  if(typeof saveSuspendedRun === 'function') saveSuspendedRun();
+}
 function resumeGame(){ if(state!==ST.PAUSE) return; state=ST.PLAY; $('pause').classList.add('hidden'); }
 function togglePause(){ if(state===ST.PLAY) pauseGame(); else if(state===ST.PAUSE) resumeGame(); }
+function suspendToMenu(){
+  if(typeof saveSuspendedRun === 'function' && canSuspendRun && canSuspendRun()) saveSuspendedRun();
+  quitToMenu();
+}
 function quitToMenu(){
   state=ST.MENU; arena=null; bossPending=0; boss=null;
   bullets=[]; ebullets=[]; petBullets=[]; enemies=[]; gems=[]; texts=[]; zones=[]; holes=[]; luckies=[]; clearParts();
   resetPlayer(); computeCamera();
   $('pause').classList.add('hidden');
+  $('levelup').classList.add('hidden');
   $('hud').classList.add('hidden');
   $('dashbtn').classList.add('hidden');
   $('zoomctl').classList.add('hidden');
   $('bossbar').classList.add('hidden');
   $('menu').classList.remove('hidden');
   refreshTopbar();
+  refreshRunResumeUI();
   playMusic(muted ? null : 'menu');
 }
 $('pausebtn').addEventListener('click', pauseGame);
 $('resumebtn').addEventListener('click', resumeGame);
-$('quitbtn').addEventListener('click', quitToMenu);
+$('quitbtn').addEventListener('click', suspendToMenu);
 // when the page is tabbed away / minimized: stop music + pause; resume on return
 document.addEventListener('visibilitychange', ()=>{
   if(document.hidden){
+    if(typeof saveSuspendedRun === 'function' && canSuspendRun && canSuspendRun()) saveSuspendedRun();
     stopMusic(); if(AC){ try{ AC.suspend(); }catch(e){} }
     if(state===ST.PLAY) pauseGame();
   } else {
@@ -5410,6 +5819,21 @@ $('startbtn').addEventListener('click', ()=>{
       startGame(wi);
     }
   }, 190);
+});
+const _runCont=$('run-continue-btn');
+if(_runCont) _runCont.addEventListener('click', ()=>{
+  sfx.pick();
+  const m=$('menu'); m.classList.add('leaving');
+  setTimeout(()=>{
+    m.classList.remove('leaving');
+    if(typeof continueSuspendedRun === 'function' && continueSuspendedRun()) return;
+    refreshRunResumeUI();
+  }, 190);
+});
+const _runAbandon=$('run-abandon-btn');
+if(_runAbandon) _runAbandon.addEventListener('click', ()=>{
+  sfx.pick();
+  if(typeof clearSuspendedRun === 'function') clearSuspendedRun();
 });
 $('introskip').addEventListener('click', ()=>{
   if(typeof WorldCine!=='undefined' && WorldCine.isActive()) WorldCine.skip();
@@ -5585,6 +6009,8 @@ $('wnext').addEventListener('click', ()=>{
   if(selWorld<maxW){ selWorld++; refreshWorldSel(); sfx.pick(); }
 });
 refreshWorldSel();
+refreshRunResumeUI();
+if(typeof refreshDailyBountiesUI === 'function') refreshDailyBountiesUI();
 $('retrybtn').addEventListener('click', startGame);
 $('wc-continue').addEventListener('click', ()=>{
   $('world-cleared').classList.add('hidden');
