@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.64';
+const CURRENT_VERSION = '1.65';
 const CHANGELOG = [
+  { v: '1.65', notes: 'Part 1 storyline (Worlds 1–5): connected arc from Grasslands through Circo Brainrotto with peace → invasion → chaos → hero scenes (~15s intros, ~12.5s outros). Zone-specific props, marching swarms, chaos flashes, and victory retreats. Card blur only on the final exit frames.' },
   { v: '1.64', notes: 'Cutscenes now fill the full screen — removed cinematic black letterbox bars. End-of-scene fades use each world\'s theme color. Level-up card pick: chosen card rises and fades out, rejected cards drift away with smooth ease-out (~0.7s) instead of vanishing instantly.' },
   { v: '1.63', notes: 'Android fullscreen: hides status bar and navigation bar (immersive edge-to-edge). Game canvas fills the whole screen on every phone — no black bars top/bottom. HUD and buttons respect notch/safe areas.' },
   { v: '1.62', notes: 'Fixed infinite loading screen — duplicate GROUND_PATTERNS declaration crashed game.js on startup. Loading now dismisses immediately with a safety timeout fallback.' },

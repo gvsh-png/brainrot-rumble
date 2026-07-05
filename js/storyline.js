@@ -9,8 +9,96 @@
     { start: 40, end: 49, title: 'PART 4 — FINAL FIGHT', tag: 'Stop the hive mind for good!' },
   ];
 
-  // Full story scene (twist + ally) every ~5 worlds — not every single one.
+  const ACT1_END = 4; // Worlds 1–5 (0-indexed) share one connected arc + full cutscenes.
+
+  // Connected Part 1 storyline — each world picks up where the last left off.
+  const ACT1_ARC = [
+    {
+      peace: 'Green hills stretch as far as you can see.',
+      invasion: 'Brainrot bugs pour from every bush!',
+      chaos: 'Villagers flee — the grasslands are overrun!',
+      hero: 'Gianni steps up. The fight for Part 1 begins!',
+      outVictory: 'GRASSLANDS — SAVED!',
+      outCelebrate: 'Birds sing again over the hills.',
+      outTease: 'But Sahur\'s swarm scuttles east toward the coast…',
+      outNext: 'WORLD 2 — CITRUS COAST awaits!',
+    },
+    {
+      peace: 'Salt air. Orange trees. A quiet morning on the shore.',
+      invasion: 'Sahur\'s swarm hit the CITRUS COAST — slime on every beach!',
+      chaos: 'Tourists scatter as bugs crawl out of the tide pools!',
+      hero: 'Push them back before they nest in the sand!',
+      outVictory: 'CITRUS COAST — SAVED!',
+      outCelebrate: 'The tide washes bug goo off the orange groves.',
+      outTease: 'Footprints lead inland — the swarm fled to the forest!',
+      outNext: 'WORLD 3 — FORESTA FRUTOSA is next!',
+    },
+    {
+      peace: 'Towering fruit trees sway in a warm breeze.',
+      invasion: 'The swarm pushed into FORESTA FRUTOSA!',
+      chaos: 'Rotten fruit rains down. Bugs hide in every branch!',
+      hero: 'Burn a path through the canopy before rot spreads!',
+      outVictory: 'FORESTA FRUTOSA — SAVED!',
+      outCelebrate: 'Monkeys toss fresh fruit — the woods breathe again.',
+      outTease: 'Frost tracks on the northern trail… they fled to the ice!',
+      outNext: 'WORLD 4 — GELATO GLACIER lies ahead!',
+    },
+    {
+      peace: 'Crystal ice glitters under a pale arctic sun.',
+      invasion: 'Brainrot cracks spread across GELATO GLACIER!',
+      chaos: 'Frozen bugs burst from the ice shelf!',
+      hero: 'Il Cecchino joins! Snipe them from the ridge!',
+      outVictory: 'GELATO GLACIER — SAVED!',
+      outCelebrate: 'Penguins slide on clean ice while tourists applaud.',
+      outTease: 'Distant spotlights flicker on the horizon… a circus?',
+      outNext: 'WORLD 5 — CIRCO BRAINROTTO. Act 1 finale!',
+    },
+    {
+      peace: 'Spotlights warm the big top. Laughter fills the tents.',
+      invasion: 'CIRCO BRAINROTTO — the swarm\'s last stand in Part 1!',
+      chaos: 'Trap doors snap! Fake-out attacks from every direction!',
+      hero: 'Beat IL GRAN PAGLIACCIO and end Act 1!',
+      outVictory: 'CIRCO BRAINROTTO — SAVED!',
+      outCelebrate: 'The crowd ROARS! Confetti rains as the circus returns to normal.',
+      outTease: 'Part 1 is over — but the swarm dug deeper underground…',
+      outNext: 'WORLD 6 — AUTUMN WOODS. A whole new chapter!',
+    },
+  ];
+
   const STORY_MILESTONES = new Set([0, 4, 9, 14, 19, 24, 29, 34, 39, 44, 49]);
+
+  function isAct1(wi) { return wi >= 0 && wi <= ACT1_END; }
+
+  function act1Arc(wi) { return ACT1_ARC[wi] || ACT1_ARC[0]; }
+
+  function buildAct1Intro(wi, name, boss, midBoss, allyLine) {
+    const arc = act1Arc(wi);
+    const beats = [
+      { t0: 0.2, t1: 3.2, y: 0.12, text: wi === 0 ? 'PART 1 — SWARM ATTACK!' : ('WORLD ' + (wi + 1)), big: true, title: true },
+      { t0: 0.8, t1: 3.8, y: 0.2, text: wi === 0 ? 'Brainrot monsters invade your home!' : 'PART 1 — SWARM ATTACK!', dim: true },
+      { t0: 1.4, t1: 4.6, y: 0.3, text: name, big: true },
+      { t0: 2.0, t1: 5.5, y: 0.4, text: arc.peace, dim: true, scene: 'peace' },
+      { t0: 3.6, t1: 7.5, y: 0.5, text: arc.invasion, brainrot: true, scene: 'invasion' },
+      { t0: 7.0, t1: 10.8, y: 0.6, text: arc.chaos, scene: 'chaos' },
+      { t0: 10.2, t1: 13.8, y: 0.72, text: arc.hero, scene: 'hero' },
+    ];
+    if (allyLine && wi === 3) beats.push({ t0: 10.8, t1: 14.2, y: 0.8, text: allyLine, ally: true, scene: 'hero' });
+    if (midBoss) beats.push({ t0: 11.2, t1: 14.4, y: 0.86, text: 'Watch out for ' + midBoss + ' at wave 5!', dim: true, scene: 'hero' });
+    beats.push({ t0: 12.0, t1: 14.8, y: 0.9, text: 'Beat ' + boss + ' to clear this zone!', dim: true, scene: 'hero' });
+    return beats;
+  }
+
+  function buildAct1Outro(wi, boss) {
+    const arc = act1Arc(wi);
+    return [
+      { t0: 0.2, t1: 3.2, y: 0.14, text: arc.outVictory, big: true, title: true, scene: 'victory' },
+      { t0: 1.0, t1: 4.2, y: 0.28, text: boss + ' is defeated!', scene: 'victory' },
+      { t0: 2.4, t1: 5.8, y: 0.42, text: arc.outCelebrate, applause: true, scene: 'celebrate' },
+      { t0: 4.0, t1: 7.6, y: 0.56, text: arc.outTease, dim: true, scene: 'tease' },
+      { t0: 6.0, t1: 9.8, y: 0.7, text: arc.outNext, scene: 'tease' },
+      { t0: 8.8, t1: 12.0, y: 0.84, text: wi < ACT1_END ? 'The story continues…' : 'Act 2 begins now!', dim: true, scene: 'fade' },
+    ];
+  }
 
   const QUICK_INTROS = [
     'The swarm is here. Time to fight!',
@@ -233,8 +321,12 @@
 
     let introBeats;
     let outroBeats;
+    const act1 = isAct1(wi);
 
-    if (milestone) {
+    if (act1) {
+      introBeats = buildAct1Intro(wi, name, boss, midBoss, allyLine);
+      outroBeats = buildAct1Outro(wi, boss);
+    } else if (milestone) {
       introBeats = [
         { t0: 0.2, t1: 3.0, y: 0.12, text: isActStart(wi) ? act.title : ('WORLD ' + (wi + 1)), big: true, title: true },
       ];
@@ -301,6 +393,8 @@
     return {
       act,
       milestone,
+      act1,
+      fullCutscene: act1,
       vis: visFor(wi, world),
       introBeats,
       outroBeats,
@@ -316,4 +410,5 @@
   }
 
   window.getWorldStory = worldStory;
+  window.isAct1World = isAct1;
 })();

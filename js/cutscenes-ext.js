@@ -2,7 +2,7 @@
 // Cutscenes before/after every world + challenger — driven by campaign storyline.
 
 const WorldCine = (function () {
-  const DUR = { introFull: 14, outroFull: 11, introQuick: 9.5, outroQuick: 8.5, chalIn: 9, chalOut: 8.5 };
+  const DUR = { act1In: 15, act1Out: 12.5, introFull: 14, outroFull: 11, introQuick: 9.5, outroQuick: 8.5, chalIn: 9, chalOut: 8.5 };
   let t = 0, done = null, kind = null, wi = 0, isChal = false, cheerPlayed = false;
 
   function seenKey(k) { return 'br_cine_' + k; }
@@ -62,6 +62,218 @@ const WorldCine = (function () {
     cx.translate(W / 2 + dx, H / 2 + dy);
     cx.scale(sc, sc);
     cx.translate(-W / 2, -H / 2);
+  }
+
+  function isAct1Cine() {
+    return wi >= 0 && wi <= 4 && !isChal;
+  }
+
+  function scenePhase() {
+    if (!isAct1Cine()) return 'default';
+    const outro = kind === 'outro';
+    if (outro) {
+      if (t < 3.2) return 'victory';
+      if (t < 7) return 'celebrate';
+      if (t < 10.5) return 'tease';
+      return 'fade';
+    }
+    if (t < 3.5) return 'peace';
+    if (t < 8) return 'invasion';
+    if (t < 11.5) return 'chaos';
+    return 'hero';
+  }
+
+  function sceneEase(maxT) {
+    const e = typeof easeOut === 'function' ? easeOut : function (x) { return 1 - (1 - x) * (1 - x); };
+    return e(Math.min(1, t / maxT));
+  }
+
+  function applySceneShake() {
+    const ph = scenePhase();
+    if (ph !== 'chaos' || !isAct1Cine()) return;
+    const ramp = Math.min(1, Math.max(0, (t - 7) / 2.5));
+    const amt = ramp * 9;
+    if (amt > 0 && typeof rand === 'function') {
+      cx.translate(rand(-amt, amt), rand(-amt, amt));
+    }
+  }
+
+  const PEACE_NPCS = [
+    { x: 0.22, y: 0.68, p: 0 }, { x: 0.38, y: 0.74, p: 1.2 }, { x: 0.55, y: 0.66, p: 2.1 },
+    { x: 0.68, y: 0.72, p: 0.6 }, { x: 0.44, y: 0.58, p: 3.0 },
+  ];
+
+  function drawPeacefulNPCs(flee) {
+    const fleeT = flee ? Math.max(0, t - 7) : 0;
+    for (const h of PEACE_NPCS) {
+      const wob = Math.sin((t + h.p) * 1.5) * 8;
+      const fx = fleeT > 0 ? -fleeT * fleeT * 220 : 0;
+      const hx = h.x * W + wob + fx;
+      const hy = h.y * H;
+      cx.fillStyle = '#e0c39a';
+      cx.beginPath(); cx.arc(hx, hy, 7, 0, TAU); cx.fill();
+      cx.fillStyle = '#3a2d22';
+      cx.beginPath(); cx.arc(hx, hy - 9, 5, 0, TAU); cx.fill();
+    }
+  }
+
+  function drawZoneDecor(w) {
+    const id = w && w.id ? w.id : 'grass';
+    const th = w && w.theme ? w.theme : {};
+    cx.save();
+    if (id === 'citrus') {
+      cx.fillStyle = th.accent || '#fff0a0';
+      for (let i = 0; i < 5; i++) {
+        const tx = W * (0.12 + i * 0.18);
+        cx.beginPath(); cx.arc(tx, H * 0.42, 22, 0, TAU); cx.fill();
+        cx.fillStyle = '#5a9a30';
+        cx.fillRect(tx - 4, H * 0.42, 8, H * 0.22);
+        cx.fillStyle = th.accent || '#fff0a0';
+      }
+    } else if (id === 'forest') {
+      cx.fillStyle = '#3d6a28';
+      for (let i = 0; i < 6; i++) {
+        const tx = W * (0.08 + i * 0.16);
+        cx.beginPath();
+        cx.moveTo(tx, H * 0.38); cx.lineTo(tx - 28, H * 0.68); cx.lineTo(tx + 28, H * 0.68);
+        cx.closePath(); cx.fill();
+      }
+    } else if (id === 'glacier') {
+      cx.fillStyle = 'rgba(200,235,255,0.55)';
+      for (let i = 0; i < 4; i++) {
+        const bx = W * (0.15 + i * 0.22);
+        cx.beginPath();
+        cx.moveTo(bx, H * 0.55); cx.lineTo(bx - 50, H * 0.72); cx.lineTo(bx + 50, H * 0.72);
+        cx.closePath(); cx.fill();
+      }
+    } else if (id === 'circo') {
+      cx.fillStyle = '#e8463c';
+      cx.fillRect(W * 0.2, H * 0.28, W * 0.6, 14);
+      cx.fillStyle = '#ffd838';
+      for (let i = 0; i < 8; i++) cx.fillRect(W * 0.2 + i * (W * 0.075), H * 0.28 + (i % 2) * 14, W * 0.037, 14);
+      cx.strokeStyle = '#fff'; cx.lineWidth = 3;
+      cx.beginPath(); cx.moveTo(W * 0.5, H * 0.28); cx.lineTo(W * 0.5, H * 0.62); cx.stroke();
+    } else {
+      cx.fillStyle = 'rgba(90,150,50,0.35)';
+      for (let i = 0; i < 8; i++) {
+        cx.beginPath(); cx.arc(W * (0.1 + i * 0.11), H * 0.48, 10 + (i % 3) * 4, 0, TAU); cx.fill();
+      }
+    }
+    cx.restore();
+  }
+
+  function drawInvasionMarch(w) {
+    if (typeof SP === 'undefined') return;
+    const foes = w && w.foes && w.foes.length ? w.foes : [];
+    const sprs = foes.length ? foes.map(f => f.spr) : ['swarmmite', 'swarmwasp', 'swarmbeetle'];
+    const e = sceneEase(2.8);
+    const boss = w && w.bosses && w.bosses.length ? w.bosses[w.bosses.length - 1] : null;
+    const bossX = W * 1.12 - e * (W * 0.58);
+    const bossY = H * 0.54;
+    for (let i = 0; i < 8; i++) {
+      const lag = 0.4 + i * 0.16;
+      const eFn = typeof easeOut === 'function' ? easeOut : function (x) { return 1 - (1 - x) * (1 - x); };
+      const e2 = eFn(Math.min(1, Math.max(0, (t - lag) / 2.5)));
+      const ax = W * 1.2 - e2 * (W * 0.55) + Math.sin(i * 1.5) * 24;
+      const ay = bossY + 60 + (i % 3) * 22 - 22;
+      const s = sprs[i % sprs.length];
+      if (SP[s]) drawSprite(s, ax, ay, 44, Math.sin(t * 3 + i) * 0.1, 0, 0, i % 2 === 0, w ? w.enemyTint : null);
+    }
+    if (boss && SP[boss.spr]) {
+      drawSprite(boss.spr, bossX, bossY, 105 + Math.sin(t * 2) * 6, Math.sin(t * 2.5) * 0.04, 0, 0, false, null);
+    }
+  }
+
+  function drawChaosFlash() {
+    if (t < 7 || t > 11.5) return;
+    const ramp = Math.min(1, Math.max(0, (t - 7) / 1.5));
+    cx.globalAlpha = (0.12 + 0.08 * Math.sin(t * 14)) * ramp;
+    cx.fillStyle = wi === 4 ? '#ff6040' : '#ff2828';
+    cx.fillRect(0, 0, W, H);
+    cx.globalAlpha = 1;
+  }
+
+  function drawSwarmRetreat(w) {
+    if (typeof SP === 'undefined') return;
+    const foes = w && w.foes && w.foes.length ? w.foes : [];
+    const sprs = foes.length ? foes.map(f => f.spr) : ['swarmmite', 'swarmwasp'];
+    const e = sceneEase(2.2);
+    const slide = e * W * 0.65;
+    for (let i = 0; i < 8; i++) {
+      const s = sprs[i % sprs.length];
+      if (!SP[s]) continue;
+      const ex = W * (0.35 + (i / 7) * 0.4) + slide;
+      const ey = H * 0.7 + (i % 3) * 14;
+      drawSprite(s, ex, ey, 40, Math.PI, 0, 0, true, w ? w.enemyTint : null);
+    }
+  }
+
+  function renderAct1Intro(w, st) {
+    const ph = scenePhase();
+    backdrop(w);
+    camDrift();
+    drawZoneDecor(w);
+
+    if (ph === 'peace') {
+      drawPeacefulNPCs(false);
+      drawVisEffect(st.vis);
+    } else if (ph === 'invasion') {
+      drawPeacefulNPCs(true);
+      drawBrainrotOverlay(w);
+      drawInvasionMarch(w);
+      drawVisEffect(st.vis);
+      drawHero(Math.sin(t * 2) * 2, 0.18);
+    } else if (ph === 'chaos') {
+      applySceneShake();
+      drawBrainrotOverlay(w);
+      drawChaosFlash();
+      drawSwarmArmy(w);
+      drawBossSilhouette(w, 12);
+      drawVisEffect('brainrot');
+    } else {
+      const heroBob = Math.sin(t * 2.5) * 4;
+      const heroRise = sceneEase(1.2);
+      drawSwarmArmy(w);
+      drawBossSilhouette(w, 10);
+      drawHero(heroBob, 0.22 + (1 - heroRise) * -0.08);
+      if (st.allyChar) drawAlly(st, Math.sin(t * 2.8) * 3);
+      if (wi === 0 && t > 11.2) {
+        cx.globalAlpha = 0.45 * heroRise * (0.6 + 0.4 * Math.sin(t * 5));
+        cx.strokeStyle = '#9fe0ff'; cx.lineWidth = 4;
+        cx.beginPath(); cx.arc(W * 0.22, H * 0.62 + heroBob, 56, 0, TAU); cx.stroke();
+        cx.globalAlpha = 1;
+      }
+    }
+    renderBeats(st.introBeats);
+  }
+
+  function renderAct1Outro(w, st) {
+    const ph = scenePhase();
+    backdrop(w);
+    camDrift();
+
+    if (ph === 'victory') {
+      drawBossSilhouette(w, 4);
+      const fall = Math.min(1, t / 2.5);
+      cx.globalAlpha = 0.5 * fall;
+      cx.fillStyle = w.enemyTint || '#ff5a70';
+      cx.beginPath(); cx.ellipse(W * 0.5, H * 0.68, 80, 24, 0, 0, TAU); cx.fill();
+      cx.globalAlpha = 1;
+      drawHero(Math.sin(t * 2) * 2, 0.24);
+    } else if (ph === 'celebrate') {
+      drawHero(Math.sin(t * 2) * 3, 0.24);
+      if (st.allyChar) drawAlly(st, Math.sin(t * 2.5) * 2);
+      drawVisEffect(st.vis);
+      drawVisEffect('applause');
+      drawVisEffect('confetti');
+    } else if (ph === 'tease') {
+      drawSwarmRetreat(w);
+      drawHero(Math.sin(t * 1.8) * 2, 0.26);
+      drawVisEffect('applause');
+    } else {
+      drawHero(Math.sin(t * 1.5) * 2, 0.28);
+    }
+    renderBeats(st.outroBeats);
   }
 
   function drawEdgeVignette(w) {
@@ -240,9 +452,10 @@ const WorldCine = (function () {
     }
   }
 
-  function drawHero(bob) {
+  function drawHero(bob, xNorm) {
     const e = entranceEase(1.4);
-    const hx = W * (0.22 + (1 - e) * -0.18);
+    const baseX = xNorm != null ? xNorm : 0.22;
+    const hx = W * (baseX + (1 - e) * -0.18);
     const hy = H * 0.62 + bob;
     if (typeof drawCharacter === 'function') {
       drawCharacter(typeof activeCharId !== 'undefined' ? activeCharId : 'gianni', hx, hy, 95, Math.sin(t * 2) * 0.04, false);
@@ -325,6 +538,10 @@ const WorldCine = (function () {
   }
 
   function durFor(k) {
+    if (isAct1Cine()) {
+      if (k === 'intro') return DUR.act1In;
+      if (k === 'outro') return DUR.act1Out;
+    }
     if (k === 'intro') return isMilestoneWorld() ? DUR.introFull : DUR.introQuick;
     if (k === 'outro') return isMilestoneWorld() ? DUR.outroFull : DUR.outroQuick;
     if (k === 'chal_in') return DUR.chalIn;
@@ -351,25 +568,32 @@ const WorldCine = (function () {
     const w = worldData(wi);
     const st = storyFor(w);
     cx.save();
-    backdrop(w);
-    camDrift();
-    if (kind === 'intro' || kind === 'chal_in') drawBrainrotOverlay(w);
-    drawVisEffect(st.vis);
-    if (kind === 'outro' || kind === 'chal_out') drawVisEffect('applause');
 
-    if (kind === 'intro' || kind === 'chal_in') {
-      drawSwarmArmy(w);
-      drawBossSilhouette(w, 10);
-      drawHero(Math.sin(t * 2.5) * 4);
-      if (st.allyChar) drawAlly(st, Math.sin(t * 2.8) * 3);
-      if (st.heroLine && t > 0.8 && t < 4.5) caption(st.heroLine, 0.8, 4.2, H * 0.9, { dim: true });
-      renderBeats(isChal ? st.chalIntroBeats : st.introBeats);
+    if (isAct1Cine() && kind === 'intro') {
+      renderAct1Intro(w, st);
+    } else if (isAct1Cine() && kind === 'outro') {
+      renderAct1Outro(w, st);
     } else {
-      drawBossSilhouette(w, 6);
-      drawSwarmArmy(w);
-      drawHero(Math.sin(t * 2) * 3);
-      if (st.allyChar) drawAlly(st, Math.sin(t * 2) * 2);
-      renderBeats(isChal ? st.chalOutroBeats : st.outroBeats);
+      backdrop(w);
+      camDrift();
+      if (kind === 'intro' || kind === 'chal_in') drawBrainrotOverlay(w);
+      drawVisEffect(st.vis);
+      if (kind === 'outro' || kind === 'chal_out') drawVisEffect('applause');
+
+      if (kind === 'intro' || kind === 'chal_in') {
+        drawSwarmArmy(w);
+        drawBossSilhouette(w, 10);
+        drawHero(Math.sin(t * 2.5) * 4);
+        if (st.allyChar) drawAlly(st, Math.sin(t * 2.8) * 3);
+        if (st.heroLine && t > 0.8 && t < 4.5) caption(st.heroLine, 0.8, 4.2, H * 0.9, { dim: true });
+        renderBeats(isChal ? st.chalIntroBeats : st.introBeats);
+      } else {
+        drawBossSilhouette(w, 6);
+        drawSwarmArmy(w);
+        drawHero(Math.sin(t * 2) * 3);
+        if (st.allyChar) drawAlly(st, Math.sin(t * 2) * 2);
+        renderBeats(isChal ? st.chalOutroBeats : st.outroBeats);
+      }
     }
 
     drawEdgeVignette(w);
