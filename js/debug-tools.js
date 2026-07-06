@@ -6,6 +6,14 @@
     return window.__BR_DEBUG_APK__ === true;
   }
 
+  function grantBestDebugGear() {
+    if (typeof addGearInstance !== 'function' || typeof RAR_ORDER === 'undefined' || typeof GEAR_CATS === 'undefined') return;
+    const bestRar = RAR_ORDER[RAR_ORDER.length - 1];
+    for (let ci = 0; ci < GEAR_CATS.length; ci++) addGearInstance('dmg_' + bestRar + '_' + ci);
+    if (typeof autoEquipBest === 'function') autoEquipBest();
+    else if (typeof renderInventory === 'function') renderInventory();
+  }
+
   function unlockAllWorlds() {
     if (!isDebugApk() || typeof WORLDS === 'undefined') return;
     const max = WORLDS.length - 1;
@@ -14,11 +22,12 @@
     chalUnlocked = max;
     localStorage.setItem('br_ch_unlocked', String(max));
     selWorld = max;
+    grantBestDebugGear();
     if (window.markDirty) window.markDirty();
     if (typeof refreshWorldSel === 'function') refreshWorldSel();
     if (typeof refreshTopbar === 'function') refreshTopbar();
     if (typeof sfx !== 'undefined' && sfx.pick) sfx.pick();
-    if (typeof bigText === 'function') bigText('DEBUG: ALL WORLDS UNLOCKED', '#4ad0c0');
+    if (typeof bigText === 'function') bigText('DEBUG: ALL WORLDS + BEST GEAR', '#4ad0c0');
   }
 
   function initDebugTools() {

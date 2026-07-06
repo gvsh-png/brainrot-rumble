@@ -19,20 +19,97 @@
   ];
 
   const FIN_ARCH = [
-    { gimmick: 'ext_fin_hive', p1: ['EXT_HIVE_SPAWN', 'EXT_LANCE', 'ring16'], p2: ['EXT_SWARM_BURST', 'EXT_SPORE_FAN', 'aimed5'], p3: ['EXT_FINAL_CATACLYSM', 'EXT_HIVE_SPAWN', 'MEGA_STORM'] },
-    { gimmick: 'ext_fin_void', p1: ['warp', 'EXT_VOID_RAIN', 'ring16'], p2: ['EXT_COLLAPSE', 'EXT_VORTEX_PULL', 'PRISM_SPLIT'], p3: ['EXT_FINAL_CATACLYSM', 'EXT_VOID_RAIN', 'TWIN_STORM'] },
-    { gimmick: 'ext_fin_plasma', p1: ['LAVA_POOL', 'EXT_PHASE_SLAM', 'ring16'], p2: ['ERUPTION', 'EXT_BEAM_SWEEP', 'aimed5'], p3: ['MELTDOWN', 'EXT_FINAL_CATACLYSM', 'MEGA_STORM'] },
-    { gimmick: 'ext_fin_crystal', p1: ['CRYSTAL_SPIKE', 'EXT_FROST_FAN', 'ring16'], p2: ['PRISM_SPLIT', 'EXT_SHOCK_GRID', 'aimed5'], p3: ['EXT_FINAL_CATACLYSM', 'CRYSTAL_SPIKE', 'TWIN_STORM'] },
-    { gimmick: 'ext_fin_storm', p1: ['spiral', 'EXT_ORBIT_BURST', 'ring16'], p2: ['SPIRAL_STORM', 'EXT_BEAM_SWEEP', 'aimed5'], p3: ['EXT_FINAL_CATACLYSM', 'MEGA_STORM', 'CROSS_STORM'] },
-    { gimmick: 'ext_fin_toxic', p1: ['SPORE_FIELD', 'EXT_SPORE_FAN', 'ring16'], p2: ['SWAMP_FLOOD', 'EXT_SHOCK_GRID', 'aimed5'], p3: ['EXT_FINAL_CATACLYSM', 'SPORE_FIELD', 'MEGA_STORM'] },
-    { gimmick: 'ext_fin_gravity', p1: ['pull', 'TETHER', 'ring16'], p2: ['EXT_VORTEX_PULL', 'DEVOUR', 'aimed5'], p3: ['EXT_FINAL_CATACLYSM', 'EXT_COLLAPSE', 'TWIN_STORM'] },
-    { gimmick: 'ext_fin_clock', p1: ['SWEEP', 'EXT_BEAM_SWEEP', 'ring16'], p2: ['SWEEP_DUAL', 'QUAKE_CROSS', 'aimed5'], p3: ['EXT_FINAL_CATACLYSM', 'RICOCHET', 'CROSS_STORM'] },
-    { gimmick: 'ext_fin_frost', p1: ['EXT_FROST_FAN', 'ring16', 'aimed5'], p2: ['CRYSTAL_SPIKE', 'EXT_SHOCK_GRID', 'ring2'], p3: ['EXT_FINAL_CATACLYSM', 'EXT_FROST_FAN', 'MEGA_STORM'] },
-    { gimmick: 'ext_fin_ember', p1: ['EMBER_RAIN', 'EXT_PHASE_SLAM', 'ring16'], p2: ['ERUPTION', 'CARPET_RUN', 'aimed5'], p3: ['MELTDOWN', 'EXT_FINAL_CATACLYSM', 'MEGA_STORM'] },
-    { gimmick: 'ext_fin_quantum', p1: ['warp', 'PRISM_SPLIT', 'ring16'], p2: ['EXPAND_IMPLODE', 'EXT_ORBIT_BURST', 'aimed5'], p3: ['EXT_FINAL_CATACLYSM', 'EXT_VOID_RAIN', 'TWIN_STORM'] },
-    { gimmick: 'ext_fin_bone', p1: ['BURROW_SLAM', 'SUMMON', 'ring16'], p2: ['BROOD_BURST', 'EXT_SWARM_BURST', 'aimed5'], p3: ['EXT_FINAL_CATACLYSM', 'DEVOUR', 'MEGA_STORM'] },
-    { gimmick: 'ext_fin_omega', p1: ['TETHER', 'EXT_LANCE', 'ring16'], p2: ['EXT_VORTEX_PULL', 'EXT_PHASE_SLAM', 'aimed5'], p3: ['EXT_FINAL_CATACLYSM', 'DEVOUR', 'CROSS_STORM'] },
+    { gimmick: 'ext_fin_hive',    p1: ['EXT_HIVE_SPAWN', 'FIN_H0_P1', 'ring16'],       p2: ['EXT_SWARM_BURST', 'FIN_H0_P2', 'aimed5'],       p3: ['FIN_H0_P3', 'EXT_HIVE_SPAWN', 'EXT_LANCE'] },
+    { gimmick: 'ext_fin_void',    p1: ['warp', 'FIN_H1_P1', 'ring16'],                 p2: ['EXT_COLLAPSE', 'FIN_H1_P2', 'PRISM_SPLIT'],     p3: ['FIN_H1_P3', 'EXT_VOID_RAIN', 'EXT_LANCE'] },
+    { gimmick: 'ext_fin_plasma',  p1: ['LAVA_POOL', 'FIN_H2_P1', 'ring16'],            p2: ['ERUPTION', 'FIN_H2_P2', 'aimed5'],              p3: ['FIN_H2_P3', 'MELTDOWN', 'EXT_PHASE_SLAM'] },
+    { gimmick: 'ext_fin_crystal', p1: ['CRYSTAL_SPIKE', 'FIN_H3_P1', 'ring16'],        p2: ['PRISM_SPLIT', 'FIN_H3_P2', 'aimed5'],           p3: ['FIN_H3_P3', 'CRYSTAL_SPIKE', 'EXT_FROST_FAN'] },
+    { gimmick: 'ext_fin_storm',   p1: ['spiral', 'FIN_H4_P1', 'ring16'],               p2: ['SPIRAL_STORM', 'FIN_H4_P2', 'aimed5'],           p3: ['FIN_H4_P3', 'EXT_ORBIT_BURST', 'EXT_BEAM_SWEEP'] },
+    { gimmick: 'ext_fin_toxic',   p1: ['SPORE_FIELD', 'FIN_H5_P1', 'ring16'],         p2: ['SWAMP_FLOOD', 'FIN_H5_P2', 'aimed5'],           p3: ['FIN_H5_P3', 'SPORE_FIELD', 'EXT_SPORE_FAN'] },
+    { gimmick: 'ext_fin_gravity', p1: ['pull', 'FIN_H6_P1', 'ring16'],                 p2: ['EXT_VORTEX_PULL', 'FIN_H6_P2', 'aimed5'],       p3: ['FIN_H6_P3', 'EXT_COLLAPSE', 'DEVOUR'] },
+    { gimmick: 'ext_fin_clock',   p1: ['SWEEP', 'FIN_H7_P1', 'ring16'],                p2: ['SWEEP_DUAL', 'FIN_H7_P2', 'aimed5'],             p3: ['FIN_H7_P3', 'RICOCHET', 'QUAKE_CROSS'] },
+    { gimmick: 'ext_fin_frost',   p1: ['EXT_FROST_FAN', 'FIN_H8_P1', 'ring16'],        p2: ['CRYSTAL_SPIKE', 'FIN_H8_P2', 'ring2'],          p3: ['FIN_H8_P3', 'EXT_FROST_FAN', 'EXT_SHOCK_GRID'] },
+    { gimmick: 'ext_fin_ember',   p1: ['EMBER_RAIN', 'FIN_H9_P1', 'ring16'],           p2: ['ERUPTION', 'FIN_H9_P2', 'aimed5'],              p3: ['FIN_H9_P3', 'MELTDOWN', 'CARPET_RUN'] },
+    { gimmick: 'ext_fin_quantum', p1: ['warp', 'FIN_H10_P1', 'ring16'],                p2: ['EXPAND_IMPLODE', 'FIN_H10_P2', 'aimed5'],       p3: ['FIN_H10_P3', 'EXT_VOID_RAIN', 'PRISM_SPLIT'] },
+    { gimmick: 'ext_fin_bone',    p1: ['BURROW_SLAM', 'FIN_H11_P1', 'ring16'],         p2: ['BROOD_BURST', 'FIN_H11_P2', 'aimed5'],          p3: ['FIN_H11_P3', 'DEVOUR', 'EXT_SWARM_BURST'] },
+    { gimmick: 'ext_fin_omega',   p1: ['TETHER', 'FIN_H12_P1', 'ring16'],               p2: ['EXT_VORTEX_PULL', 'FIN_H12_P2', 'aimed5'],      p3: ['FIN_H12_P3', 'DEVOUR', 'EXT_PHASE_SLAM'] },
   ];
+
+  // unique fake bullet-hell per extended final archetype + phase (flashy, gapped, low dmg)
+  const FIN_HELL = [
+    { p1: { k: 'echo', n: 14, gap: 0.44, col: '#9a7ad8' }, p2: { k: 'orbit', n: 14, col: '#9a7ad8' }, p3: { k: 'storm_echo', n: 5, echoN: 12, twin: true, col: '#9a7ad8' } },
+    { p1: { k: 'gap', n: 16, gap: 0.42 }, p2: { k: 'wall', col: '#6c5ce7' }, p3: { k: 'storm', n: 6, twin: true, col: '#6c5ce7' } },
+    { p1: { k: 'gap', n: 14, gap: 0.43, col: '#e0503f' }, p2: { k: 'echo', n: 12, gap: 0.40, col: '#ff7a2a' }, p3: { k: 'storm', n: 5, col: '#e0503f' } },
+    { p1: { k: 'echo', n: 14, gap: 0.43, col: '#b08fe0' }, p2: { k: 'wall', col: '#b08fe0' }, p3: { k: 'cross', col: '#b08fe0' } },
+    { p1: { k: 'orbit', n: 12, col: '#9fd0ff' }, p2: { k: 'gap', n: 14, gap: 0.40 }, p3: { k: 'storm_wall', n: 5, twin: true, col: '#9fd0ff' } },
+    { p1: { k: 'echo', n: 14, gap: 0.44, col: '#7ab955' }, p2: { k: 'grid', n: 4 }, p3: { k: 'storm', n: 5, twin: true, col: '#7ab955' } },
+    { p1: { k: 'gap', n: 14, gap: 0.42, col: '#d2a0ff' }, p2: { k: 'echo', n: 14, gap: 0.41, col: '#d2a0ff' }, p3: { k: 'storm', n: 6, twin: true, col: '#d2a0ff' } },
+    { p1: { k: 'gap', n: 12, gap: 0.40, col: '#ffd24a' }, p2: { k: 'echo', n: 14, gap: 0.42, col: '#ffd24a' }, p3: { k: 'wall', col: '#ffd24a' } },
+    { p1: { k: 'echo', n: 14, gap: 0.44, col: '#9fd0ff' }, p2: { k: 'wall', col: '#bfe6ff' }, p3: { k: 'storm', n: 5, twin: true, col: '#9fd0ff' } },
+    { p1: { k: 'orbit', n: 10, col: '#ff7a2a' }, p2: { k: 'echo', n: 12, gap: 0.43, col: '#ff7a2a' }, p3: { k: 'storm', n: 5, col: '#e0503f' } },
+    { p1: { k: 'gap', n: 14, gap: 0.42, col: '#7ec8ff' }, p2: { k: 'orbit', n: 12, col: '#c77dff' }, p3: { k: 'storm_echo', n: 5, echoN: 10, twin: true, col: '#6c5ce7' } },
+    { p1: { k: 'gap', n: 14, gap: 0.43, col: '#9a7a52' }, p2: { k: 'echo', n: 14, gap: 0.42, col: '#9a7a52' }, p3: { k: 'storm', n: 5, twin: true, col: '#9a7a52' } },
+    { p1: { k: 'echo', n: 14, gap: 0.43, col: '#ff5acd' }, p2: { k: 'wall', col: '#ff5acd' }, p3: { k: 'cross', col: '#ff5acd' } },
+  ];
+
+  function extHellDmg(e) {
+    return typeof bossHellDmg === 'function' ? bossHellDmg(e) : 0.34;
+  }
+
+  function runFinHell(e, spec) {
+    const col = spec.col || bossCol(e);
+    const dm = extHellDmg(e);
+    switch (spec.k) {
+      case 'echo':
+        if (typeof bossHellEcho === 'function') bossHellEcho(e, { dur: 2.1, n: spec.n || 14, spd: 94, col, gap: spec.gap || 0.43, dmg: dm });
+        else { e.echo = { t: 2.1, ivT: 0, n: spec.n || 14, spd: 94, col, gap: spec.gap || 0.43, at: rand(0, TAU), dmgMul: dm }; sfx.warn(); }
+        return 2.1;
+      case 'gap':
+        mRingGap(e, spec.n || 14, 100, col, spec.gap || 0.42, null, dm);
+        shake = Math.max(shake, 4); return 0.4;
+      case 'orbit':
+        if (typeof bossHellOrbit === 'function') bossHellOrbit(e, spec.n || 12, col, 0.75, 30);
+        return 0.55;
+      case 'wall':
+        if (arena) {
+          const side = pick(['left', 'right', 'top', 'bottom']);
+          const gapAt = (side === 'left' || side === 'right') ? P.y + rand(-40, 40) : P.x + rand(-40, 40);
+          mWall(side, 110, col, gapAt, 108, 10, dm);
+        }
+        return 1.0;
+      case 'storm':
+        if (typeof bossHellStorm === 'function') bossHellStorm(e, { dur: 2.4, n: spec.n || 5, spd: 100, step: 0.31, col, cd: 0.15, twin: !!spec.twin, shake: 4 });
+        return 2.4;
+      case 'storm_echo':
+        if (typeof bossHellStorm === 'function') bossHellStorm(e, { dur: 2.3, n: spec.n || 5, spd: 98, step: 0.32, col, cd: 0.15, twin: !!spec.twin, shake: 4 });
+        if (typeof bossHellEcho === 'function') bossHellEcho(e, { dur: 2.0, n: spec.echoN || 12, spd: 92, col, gap: 0.44, dmg: dm, warn: false });
+        return 2.3;
+      case 'storm_wall':
+        if (typeof bossHellStorm === 'function') bossHellStorm(e, { dur: 2.2, n: spec.n || 5, spd: 102, step: 0.30, col, cd: 0.15, twin: !!spec.twin, shake: 4 });
+        if (arena) mWall(pick(['left', 'right']), 108, col, P.y, 105, 9, dm);
+        return 2.2;
+      case 'cross': {
+        mRingGap(e, 14, 108, col, 0.38, null, dm);
+        mRingGap(e, 12, 78, col, 0.42, null, dm);
+        shake = Math.max(shake, 5); return 0.4;
+      }
+      case 'grid': {
+        const n = spec.n || 4;
+        if (arena) for (let k = 0; k < n; k++) addZone(rand(arena.x + 50, arena.x + arena.w - 50), rand(arena.y + 50, arena.y + arena.h - 50), 48, { tele: 0.85, life: 0.5, dps: 12, col });
+        sfx.warn(); return 0.45;
+      }
+      default: return 0.3;
+    }
+  }
+
+  function finHellMove(e, mv) {
+    const m = /^FIN_H(\d+)_P(\d+)$/.exec(mv);
+    if (!m) return null;
+    const arch = parseInt(m[1], 10) % FIN_HELL.length;
+    const ph = 'p' + m[2];
+    const spec = FIN_HELL[arch][ph];
+    if (!spec) return null;
+    return runFinHell(e, spec);
+  }
 
   function archPool(arch, vph) {
     if (vph >= 3) return arch.p3.slice();
@@ -93,7 +170,7 @@
         e.gT -= dt;
         if (e.gT <= 0) {
           e.gT = (ph >= 3 ? 2.2 : 2.8) * gm;
-          mRingGap(e, ph >= 3 ? 14 : 12, 115, col, 0.32);
+          mRingGap(e, ph >= 3 ? 14 : 12, 115, col, 0.34, null, extHellDmg(e));
         }
         break;
       case 'ext_blink':
@@ -120,7 +197,7 @@
         e.gT -= dt;
         if (e.gT <= 0) {
           e.gT = (ph >= 3 ? 1.6 : 2.2) * gm;
-          mRingGap(e, 10, 105, '#9fd0ff', 0.34);
+          mRingGap(e, 10, 105, '#9fd0ff', 0.36, null, extHellDmg(e));
         }
         break;
       case 'ext_ember':
@@ -143,7 +220,7 @@
         e.gT -= dt;
         if (e.gT <= 0) {
           e.gT = (ph >= 3 ? 1.2 : 1.6) * gm;
-          mRingGap(e, ph >= 3 ? 16 : 12, 125, col, 0.30);
+          mRingGap(e, ph >= 3 ? 14 : 12, 118, col, 0.34, null, extHellDmg(e));
         }
         break;
       case 'ext_bone':
@@ -190,6 +267,8 @@
 
   function extExecMove(e) {
     const col = bossCol(e);
+    const finR = finHellMove(e, e.mv);
+    if (finR != null) return finR;
     switch (e.mv) {
       case 'EXT_LANCE':
         mAimed(e, 5, 0.18, 165, col);
@@ -218,25 +297,25 @@
         e.spin = 0.9; e.spinCol = col;
         return 1.0;
       case 'EXT_COLLAPSE':
-        mRing(e, 20, 155, col);
-        e.pull = 1.3; e.pullStr = 130;
-        return 1.1;
+        mRingGap(e, 14, 118, col, 0.36, null, extHellDmg(e));
+        e.pull = 1.1; e.pullStr = 115;
+        return 1.0;
       case 'EXT_HIVE_SPAWN':
         if (curFoes[2]) summonAdds(e, curFoes[2].spr, 3, e.vph >= 3 ? 6 : 4);
         else summonAdds(e, 'swarmmite', 3, 4);
-        mRingGap(e, 12, 120, col, 0.33);
+        mRingGap(e, 12, 118, col, 0.35, null, extHellDmg(e));
         return 0.4;
       case 'EXT_SWARM_BURST':
         if (curFoes[3]) summonAdds(e, curFoes[3].spr, 4, e.vph >= 3 ? 8 : 5);
-        mRing(e, 18, 150, col);
+        mRingGap(e, 14, 118, col, 0.36, null, extHellDmg(e));
         return 0.35;
       case 'EXT_FROST_FAN':
         mAimed(e, 6, 0.17, 130, '#9fd0ff');
-        mRingGap(e, 10, 110, '#bfe6ff', 0.35);
+        mRingGap(e, 10, 108, '#bfe6ff', 0.38, null, extHellDmg(e));
         return 0.25;
       case 'EXT_VOID_RAIN':
-        debrisDrop(e.vph >= 3 ? 6 : 4, col);
-        mRingGap(e, 14, 125, col, 0.32);
+        debrisDrop(e.vph >= 3 ? 5 : 3, col);
+        mRingGap(e, 12, 115, col, 0.36, null, extHellDmg(e));
         return 0.35;
       case 'EXT_SHOCK_GRID': {
         const n = e.vph >= 3 ? 6 : 4;
@@ -245,14 +324,15 @@
         sfx.warn();
         return 0.45;
       }
-      case 'EXT_FINAL_CATACLYSM':
-        mRing(e, 22, 165, col);
-        mRing(e, 16, 110, col);
-        for (let k = 0; k < 4; k++) addZone(P.x + rand(-140, 140), P.y + rand(-140, 140), 68, { tele: 0.7, life: 0.8, dps: 22, col });
-        e.storm = 2.2; e.stormN = 7; e.stormSpd = 130; e.stormStep = 0.28; e.stormDir = Math.random() < 0.5 ? 1 : -1; e.stormCol = col; e.stormCd = 0.12;
-        shake = Math.max(shake, 12);
-        sfx.warn();
-        return 2.2;
+      case 'EXT_FINAL_CATACLYSM': {
+        const dm = extHellDmg(e);
+        mRingGap(e, 14, 108, col, 0.38, null, dm);
+        mRingGap(e, 12, 78, col, 0.42, null, dm);
+        for (let k = 0; k < 3; k++) addZone(P.x + rand(-120, 120), P.y + rand(-120, 120), 58, { tele: 0.8, life: 0.55, dps: 12, col });
+        if (typeof bossHellStorm === 'function') bossHellStorm(e, { dur: 2.0, n: 4, spd: 96, step: 0.33, col, cd: 0.16, twin: true, shake: 6 });
+        else { e.storm = 2.0; e.stormN = 4; e.stormSpd = 96; e.stormStep = 0.33; e.stormCol = col; e.stormCd = 0.16; e.stormTwin = true; e.stormDmgMul = dm; sfx.warn(); }
+        return 2.0;
+      }
     }
     return null;
   }
@@ -262,3 +342,8 @@
     for (let i = 0; i < MID_ARCH.length; i++) GIMMICK['extmid' + i] = MID_ARCH[i].gimmick;
     for (let i = 0; i < FIN_ARCH.length; i++) GIMMICK['extfin' + i] = FIN_ARCH[i].gimmick;
   }
+
+  window.extBossMoves = extBossMoves;
+  window.extExecMove = extExecMove;
+  window.extGimmickUpdate = extGimmickUpdate;
+})();

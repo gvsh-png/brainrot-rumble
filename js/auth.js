@@ -111,7 +111,7 @@ function rehydrate(){
   if(typeof updateCharBadge==='function')  updateCharBadge();
   if(typeof updatePetBadge==='function')   updatePetBadge();
   if(typeof refreshGemsUI==='function')    refreshGemsUI();
-  const gt=$('goldtxt'); if(gt) gt.textContent = (typeof gold!=='undefined'?gold:0);
+  const gt=$('goldtxt'); if(gt) gt.textContent = typeof fmtNum==='function' ? fmtNum(typeof gold!=='undefined'?gold:0) : (typeof gold!=='undefined'?gold:0);
 }
 
 const _ric = window.requestIdleCallback ? (fn)=>window.requestIdleCallback(fn,{timeout:2000}) : (fn)=>setTimeout(fn,0);
@@ -183,7 +183,11 @@ function doSignOut(){
 }
 
 function showLogin(){ const o=$('login'); if(o) o.classList.remove('hidden'); }
-function hideLogin(){ const o=$('login'); if(o) o.classList.add('hidden'); }
+function hideLogin(){
+  const o=$('login'); if(o) o.classList.add('hidden');
+  if(typeof refreshRunResumeUI === 'function') refreshRunResumeUI();
+  if(typeof refreshDailyBountiesUI === 'function') refreshDailyBountiesUI();
+}
 function loginMsg(t){ const m=$('loginmsg'); if(m){ m.textContent=t; m.classList.remove('hidden'); } }
 function updateAcctUI(){
   const un=$('sdrop-username'), si=$('sdrop-acct'); if(!un) return;

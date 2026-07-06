@@ -13,6 +13,7 @@ let placedTurrets=[];  // Engineer "place turret" (replaces dash): stationary, d
 let timeScale=1.0;
 let _vis=[];   // reused per-frame scratch list of visible enemies (depth sort) — avoids GC churn
 let wave=1, kills=0, spawnTimer=0, waveEnemiesLeft=0, betweenWaves=false, boss=null;
+let runSpawnGrace=0;   // brief spawn slowdown + invuln right after a run starts (prevents start-of-round deaths)
 let worldCoins=0;
 // ---- CHAOS EVENTS ----
 let chaosSchedule=[],chaosWaveIdx=0,chaosMidTimer=-1;
@@ -23,7 +24,7 @@ let chaosShrinkT=0,chaosDisarmT=0,chaosBerserkT=0,chaosBombRainT=0,chaosBombRain
 let _lastSec=-1;    // throttles the survival-timer DOM update to once per second
 const MMH = window.MINIMAP_HELPERS;
 // ===== CHALLENGER MODE STATE =====
-let gameMode = 'story';     // 'story' | 'challenger' | 'practice'
+let gameMode = 'story';     // 'story' | 'challenger' | 'practice' | 'bossrush'
 let chalElapsed = 0;        // challenger timer — pauses during boss fights
 let chalBossIdx = 0;        // index of next boss milestone (0-3 → 5/10/15/20 min)
 let chalBossActive = false; // true while a challenger boss is alive
@@ -43,12 +44,84 @@ function timerMode(){ return gameMode==='challenger' || (gameMode==='practice' &
 function infiniteMapMode(){ return gameMode==='challenger' || (gameMode==='practice' && practiceCfg.infiniteMap); }
 function nextBossTimeSec(){ return gameMode==='practice' ? practiceCfg.bossIntervalSec*(chalBossIdx+1) : (curChalBossTimes()[chalBossIdx]||300); }
 function hasMoreMilestones(){ return gameMode==='practice' ? true : chalBossIdx<curChalBossTimes().length; }
+
+// ===== BOSS RUSH MODE =====
+// Unlocks when story world 5 is reachable (cleared through world 4). Endless boss gauntlet:
+// character + pet only — no gear, no level-up cards. Flat W1 boss HP for every fight.
+const RUSH_UNLOCK_STORY = 4;   // br_unlocked >= 4 → world 5 on the carousel
+const RUSH_HP_MULT = 0.62;     // same scale as story wave-5 bosses in world 1
+const RUSH_BASE_HP = 150;      // Tralalero base — every rush boss uses this pool
+let rushBossIdx = 0;           // 0-based index of the boss currently spawning
+let rushBossesBeaten = 0;      // cleared this run (score / game-over stat)
+let rushGemsEarned = 0;        // gems awarded this run (persistent via addGems)
+let rushGapT = 0;              // short breathe between chained boss arenas
+function rushUnlocked(){ return unlockedMax >= RUSH_UNLOCK_STORY; }
+function rushIsActive(){ return gameMode === 'bossrush'; }
+let _rushCatalog = null;
+function rushCatalog(){
+  if(_rushCatalog) return _rushCatalog;
+  const seen = new Set();
+  const regular = [], finals = [];
+  const hellSpr = new Set(['vaca','toucan','cocofanto','ice_bearlini','gran_pagliaccio','bobritto','tralala2','madudung',
+    'tralalero','crocodilo','sahur','tatasahur','hotspot','saturnita','orcalero','gorillo','trippi','eccocavallo','tracotucotulu']);
+  for(let wi=0; wi<WORLDS.length; wi++){
+    const list = WORLDS[wi].bosses;
+    if(!list) continue;
+    for(let i=0; i<list.length; i++){
+      const b = list[i];
+      const key = (b.moveKey||b.spr) + '|' + b.name;
+      if(seen.has(key)) continue;
+      seen.add(key);
+      const slotFinal = i === list.length-1 || !!b.final;
+      const entry = { def:b, wi, hell:hellSpr.has(b.moveKey||b.spr), weight:1 };
+      if(slotFinal) finals.push(entry);
+      else regular.push(entry);
+    }
+  }
+  _rushCatalog = { regular, finals };
+  return _rushCatalog;
+}
+function rushUnlockedWorldCap(){
+  return Math.min(typeof unlockedMax==='number' ? unlockedMax : 0, WORLDS.length - 1);
+}
+function pickRushWeighted(pool){
+  if(!pool.length) return null;
+  const tot = pool.reduce((s,e)=>s+e.weight, 0);
+  let r = Math.random() * tot;
+  for(const e of pool){
+    r -= e.weight;
+    if(r <= 0) return e.def;
+  }
+  return pool[pool.length-1].def;
+}
+function pickRushBossDef(idx){
+  const cat = rushCatalog();
+  const wc = rushUnlockedWorldCap();
+  const tier = Math.floor(idx / 5);
+  const isMilestone = (idx % 5) === 4;
+  const src = isMilestone ? cat.finals : cat.regular;
+  let pool = src.filter(e => e.wi <= wc);
+  if(!pool.length) pool = src.filter(e => e.wi === 0);
+  if(!pool.length) pool = src.slice(0, 4);
+  const hellBoost = 1 + tier * 0.4;
+  const weighted = pool.map(e => ({ def:e.def, weight:e.weight * (e.hell ? hellBoost : 1) }));
+  return pickRushWeighted(weighted) || pool[0].def;
+}
 // Challenger needs story world 3 cleared; its own progression is independent after that
 const _storyP = +(localStorage.getItem('br_unlocked')||0);
 let chalUnlocked = _storyP >= 3
   ? Math.max(0, +(localStorage.getItem('br_ch_unlocked')||0))
   : -1;   // -1 = fully locked (need story world 3 first); cap applied after WORLDS expands
-function setCoinHUD(){ const c=$('coincount'); if(c){ const s=c.querySelector('span'); if(s) s.textContent=worldCoins; } }
+function setCoinHUD(){
+  const c=$('coincount');
+  if(!c) return;
+  const s=c.querySelector('span');
+  if(!s) return;
+  const prev=+(s.dataset.prev||s.textContent.replace(/,/g,'')||0);
+  s.textContent=fmtNum(worldCoins);
+  s.dataset.prev=worldCoins;
+  if(prev!==worldCoins && typeof uiPulse==='function') uiPulse(c,'juice-pulse');
+}
 function setKillHUD(){ const k=$('killtag'); if(k && k.lastElementChild) k.lastElementChild.textContent=kills; }
 function fmtTime(s){ s=Math.max(0,Math.floor(s)); const m=Math.floor(s/60), q=s%60; return (m<10?'0':'')+m+':'+(q<10?'0':'')+q; }
 // re-sync the whole in-game HUD to current state (called on start so nothing shows a stale value)
@@ -94,6 +167,12 @@ const BOSS_WIND=0.9;      // boss attack wind-up: how long the telegraph shows b
 // Tier 4 is the gold "lucky" gem — only dropped by lucky blocks, never rolled by orbTier().
 const ORB = [null, {spr:'orbS',v:1,sz:28}, {spr:'orbM',v:4,sz:34}, {spr:'orbL',v:10,sz:44}, {spr:'orbGold',v:6,sz:40}];
 function orbTier(xp){ return xp<=1 ? 1 : xp<=3 ? 2 : 3; }
+// Swarm XP is flat in every world — W1-sized orbs only (small blue / medium green), never large gold or lucky-tier.
+function normalizeSwarmXp(xp){
+  const x = Math.round(+xp || 1);
+  return x <= 1 ? 1 : 2;
+}
+function swarmOrbTier(xp){ return normalizeSwarmXp(xp) <= 1 ? 1 : 2; }
 // ---- lucky blocks: stationary, shootable ? blocks that spawn around the map and drop a reward ----
 const LUCKY_CAP = 2;                 // most live at once (overworld spawns 2 at the start of each wave)
 let luckyTimer = 0;                  // countdown to the next spawn batch
@@ -102,7 +181,7 @@ let bossLuckyT = 0;                  // countdown to the next boss-fight lucky b
 function spawnBossLucky(n, heal){   // heal = fixed HP each block drops when popped (25 final, 15 emergency)
   const ax0 = arena ? arena.x+60 : WALL+80, ax1 = arena ? arena.x+arena.w-60 : WORLD.w-WALL-80;
   const ay0 = arena ? arena.y+60 : WALL+80, ay1 = arena ? arena.y+arena.h-60 : WORLD.h-WALL-80;
-  const hp = 4*HP_MULT*(1+(wave-1)*0.07);   // softer than world blocks so they're breakable mid-fight
+  const hp = rushIsActive() ? 4*HP_MULT : 4*HP_MULT*(1+(wave-1)*0.07);   // softer than world blocks so they're breakable mid-fight
   for(let k=0;k<n;k++){
     if(luckies.length>=6) break;
     let x,y,tries=0;
@@ -178,6 +257,29 @@ function dropOrb(x,y,tier,smin=90,smax=210){
 // global HP scale: enemies have 10x HP and the player does 10x damage, so the
 // numbers are big enough that % upgrades (e.g. +25%) visibly change the damage.
 const HP_MULT = 10;
+// Compact display for large economy numbers (shop prices, gold HUD, stats, etc.)
+function _fmtCompactUnit(val, suffix){
+  const abs = Math.abs(val);
+  let out;
+  if(abs >= 100) out = String(Math.round(val));
+  else { out = String(Math.round(val * 10) / 10).replace(/\.0$/, ''); }
+  return out + suffix;
+}
+function fmtNum(n){
+  n = Math.round(+n || 0);
+  if(!isFinite(n)) return '0';
+  const sign = n < 0 ? '-' : '';
+  const v = Math.abs(n);
+  if(v >= 1e9) return sign + _fmtCompactUnit(v / 1e9, 'B');
+  if(v >= 1e6) return sign + _fmtCompactUnit(v / 1e6, 'M');
+  if(v >= 1000) return sign + _fmtCompactUnit(v / 1000, 'k');
+  return String(n);
+}
+function fmtPlus(n){
+  n = Math.round(+n || 0);
+  if(n < 0) return fmtNum(n);
+  return '+' + (n >= 1000 ? fmtNum(n) : String(n));
+}
 // ---- concurrency caps (perf + readability): keep specials few but make them buffy ----
 const MAX_ENEMIES  = IS_TOUCH ? 55 : 90;   // global hard cap on live actors (bosses are few, so this is ~enemies)
 const MAX_SHOOTERS = 14;                    // foes with any `shoot` attack
@@ -255,13 +357,53 @@ function foeIsHazard(d){ return !!d.aoe || (d.cast && (d.cast.kind==='geyser'||d
 function foeIsBurst(d){ return !!d.shoot && (d.shoot.type==='ring' || (d.shoot.n||1)>=3); }
 function foeIsSpecial(d){ return foeIsHazard(d) || foeIsBurst(d); }
 function worldBand(){ return curWorld().band||0; }       // 0-indexed difficulty band (drives macro scaling)
+// W11+ (index 10): card regen/vamp scale as % of max HP; HP bonuses stay flat.
+function usesPercentStats(){ return worldIdx >= 10; }
+function bumpMaxHp(flat, pct){
+  P.maxHp += flat;
+}
+function bumpRegen(flat, pct){
+  if(usesPercentStats()) P.regen += Math.max(0.5, P.maxHp * (pct != null ? pct : 0.002));
+  else P.regen += flat;
+}
+function bumpVamp(flat, pct){
+  if(usesPercentStats()) P.vamp += Math.max(1, Math.round(P.maxHp * (pct != null ? pct : 0.012)));
+  else P.vamp += flat;
+}
+function bumpCritHeal(flat, pct){
+  if(usesPercentStats()) P.critHeal += Math.max(1, Math.round(P.maxHp * (pct != null ? pct : 0.005)));
+  else P.critHeal += flat;
+}
 function worldDmgMul(){
   const b = worldBand(), bandMul = typeof extBandMul==='function' ? extBandMul(0.12, 9) : 1 + b*0.12;
   return (curWorld().dmgMul||1) * bandMul;
 }
 function chalDmgMul(){ return gameMode==='challenger' ? 1.3 + worldBand()*0.08 : 1; }   // challenger: enemies hit harder, ramps with world
 function worldHpBand(){ return typeof extBandMul==='function' ? extBandMul(0.42, 9) : 1 + worldBand()*0.42; }
-function worldCoinMul(){ return typeof extBandMul==='function' ? extBandMul(0.22, 9) : 1 + worldBand()*0.22; }
+// Anti-cheat ceilings scale with equipped gear so legit endgame loadouts don't get kicked to menu.
+function legitStatCeil(){
+  const flatDmg = typeof equippedFlatDmg==='function' ? equippedFlatDmg(worldIdx) : 0;
+  const flatHp = typeof equippedHp==='function' ? equippedHp(worldIdx) : 0;
+  const gMul = typeof gearWorldDmgMul==='function' ? gearWorldDmgMul(worldIdx) : 1;
+  return {
+    dmg: Math.max(22000, Math.round((24 + flatDmg * gMul) * 5.5)),
+    maxHp: Math.max(6000, Math.round((100 + flatHp) * 3.5)),
+    speed: 3000,
+    shots: 36
+  };
+}
+function worldCoinMul(){
+  const b = worldBand();
+  let mul = typeof extBandMul==='function' ? extBandMul(0.48, 9) : 1 + b * 0.48;
+  const wi = typeof worldIdx === 'number' ? worldIdx : 0;
+  if(wi > 10) mul *= 1 + (wi - 10) * 0.14;
+  return mul;
+}
+function killGoldDrop(e){
+  if(gameMode==='practice' || e.isBoss) return 0;
+  const base = Math.max(4, Math.round((e.score || 10) * 0.22));
+  return Math.round(base * worldCoinMul() * (P.goldMul || 1));
+}
 // coins are scarce early; from wave 20 on they pay out a little more (capped at 3x)
 function coinMult(){ return Math.min(3, wave < 20 ? 1 : 1 + (wave-19)*0.1); }
 // ---- enemy archetypes (ordered easy -> hard) ----
@@ -577,50 +719,61 @@ const BOSSES_W11 = [BOSSES_DIRT[3], BOSSES_DIRT[2], BOSSES_DIRT[4], BOSSES_DIRT[
 const WORLDS = [
   { id:'grass', name:'GRASSLANDS', band:0, waveTarget:20, endless:false, map:{w:2200,h:2200}, enemyTint:null,
     theme:{ void:'#4a7828', tile1:'#8ed44e', tile2:'#80c844', tuft:'rgba(50,120,30,0.38)',
+            groundPattern:'checker', accent:'#b8f878',
             wall:null, post:null, bg:'#72c038', tint:null, music:'world_grass' },
     foes:FOES_GRASS, bosses:BOSSES_GRASS },
   { id:'citrus', name:'CITRUS COAST', band:1, waveTarget:20, endless:false, map:{w:4200,h:1400}, enemyTint:null,
     theme:{ void:'#c89820', tile1:'#f5e46a', tile2:'#ecd84a', tuft:'rgba(200,155,40,0.32)',
+            groundPattern:'stripe', accent:'#fff0a0',
             wall:null, post:null, bg:'#f2da58', tint:'#f8dc30', music:'world_citrus' },
     foes:FOES_W2, bosses:BOSSES_W2 },
   { id:'forest', name:'FORESTA FRUTOSA', band:1, waveTarget:20, endless:false,
     map:{w:2000,h:3800}, enemyTint:null,
     theme:{ void:'#5ec43e', tile1:'#8ef85a', tile2:'#72e848',
-            tuft:'rgba(30,110,20,0.30)', wall:'#8a5a32', post:'#a86e40',
+            tuft:'rgba(30,110,20,0.30)', groundPattern:'dots', accent:'#c8ff90',
+            wall:'#8a5a32', post:'#a86e40',
             bg:'#6edc40', tint:null, music:'world_forest' },
     foes:FOES_W3, bosses:BOSSES_W3 },
   { id:'glacier', name:'GELATO GLACIER', band:2, waveTarget:20, endless:false, map:{w:3800,h:3800}, enemyTint:null,
     theme:{ void:'#6abcb4', tile1:'#e8faf4', tile2:'#d2f0ea', tuft:'rgba(100,190,180,0.32)',
+            groundPattern:'wave', accent:'#ffffff',
             wall:'#96d8d0', post:'#daf4ee', postDark:'#5ea8a0', bg:'#d2f0ea', tint:'#d8fff8', music:'world_glacier' },
     foes:FOES_W4, bosses:BOSSES_W4 },
   { id:'circo', name:'CIRCO BRAINROTTO', band:3, waveTarget:20, endless:false, map:{w:2800,h:2800}, enemyTint:null,
     theme:{ void:'#b03020', tile1:'#faeabc', tile2:'#f2d898', tuft:'rgba(180,60,30,0.28)',
+            groundPattern:'diamond', accent:'#ffd838',
             wall:'#c82e20', post:'#f0c830', postDark:'#9a2418', bg:'#f2d898', tint:'#ffd838', music:'world_circo' },
     foes:FOES_W5, bosses:BOSSES_W5 },
   { id:'autumn', name:'AUTUMN WOODS', band:4, waveTarget:20, endless:false, map:{w:4000,h:4000}, enemyTint:'#f07820',
     theme:{ void:'#9a4818', tile1:'#ec9438', tile2:'#e08430', tuft:'rgba(140,60,14,0.36)',
+            groundPattern:'stripe', accent:'#ffd080',
             wall:null, post:null, bg:'#dc8828', tint:'#f07820', music:'world_autumn' },
     foes:FOES_W6, bosses:BOSSES_W6 },
   { id:'swamp', name:'SWAMP', band:5, waveTarget:20, endless:false, map:{w:4800,h:1200}, enemyTint:'#90e850',
     theme:{ void:'#6ac848', tile1:'#8ed85a', tile2:'#7ed050', tuft:'rgba(30,100,20,0.28)',
+            groundPattern:'dots', accent:'#c8ff80',
             wall:'#4a8828', post:'#68a838', postDark:'#3a6818', bg:'#70c840', tint:'#80e040', music:'world_swamp',
             debris:0.55 },
     foes:FOES_SWAMP, bosses:BOSSES_DIRT },
   { id:'sky', name:'SKYLAND', band:6, waveTarget:20, endless:false, map:{w:3000,h:3000}, enemyTint:'#a8d8ff',
     theme:{ void:'#78b8e0', tile1:'#c8eeff', tile2:'#b4e4ff', tuft:'rgba(120,190,230,0.32)',
+            groundPattern:'wave', accent:'#ffffff',
             wall:null, post:null, bg:'#b8e8ff', tint:'#a8d8ff', music:'world_sky' },
     foes:FOES_W8, bosses:BOSSES_SKY },
   { id:'crystal', name:'CRYSTAL CAVES', band:7, waveTarget:20, endless:false, map:{w:1100,h:4400}, enemyTint:'#d070ff',
     theme:{ void:'#d8c0ff', tile1:'#f0e8ff', tile2:'#e0d0ff', tuft:'rgba(180,140,240,0.28)',
+            groundPattern:'diamond', accent:'#e8c0ff',
             wall:'#c8a0f0', post:'#e8d8ff', postDark:'#b090e8', bg:'#e8d8ff', tint:'#c060f0', music:'world_crystal' },
     foes:FOES_W9, bosses:BOSSES_W9 },
   { id:'volcano', name:'VOLCANO', band:8, waveTarget:20, endless:false, map:{w:3400,h:3400}, enemyTint:'#ff6030',
     theme:{ void:'#f0a070', tile1:'#ffb090', tile2:'#ff9878', tuft:'rgba(180,80,40,0.28)',
+            groundPattern:'wave', accent:'#ffe0c0',
             wall:'#e87850', post:'#ffa878', postDark:'#d86840', bg:'#ff9878', tint:'#ff5020', music:'world_volcano',
             debris:0.65 },
     foes:FOES_W10, bosses:BOSSES_W10 },
   { id:'dirt', name:'DIRT DEPTHS', band:9, waveTarget:20, endless:false, map:{w:1000,h:5000}, enemyTint:'#e8a050',
     theme:{ void:'#d8a868', tile1:'#f0c880', tile2:'#e8b868', tuft:'rgba(120,80,30,0.28)',
+            groundPattern:'dots', accent:'#fff0b0',
             wall:'#c89850', post:'#e0b060', postDark:'#b08040', bg:'#e8b868', tint:'#f0a838', music:'world_dirt',
             debris:0.55, edgeDark:0 },
     foes:FOES_W11, bosses:BOSSES_W11 },
@@ -653,11 +806,12 @@ function loadWorld(idx){
   for(const k of Object.keys(TINTED)) delete TINTED[k];
   if(typeof WorldMapLayout!=='undefined') curObstacles = WorldMapLayout.getObstacles(w, worldIdx, WORLD.w, WORLD.h);
   else curObstacles = [];
-  buildGround();   // pre-render this world's ground once (avoids per-frame tile loops)
+  startBuildGround();   // chunked pre-render — avoids multi-second hitch when entering huge maps
 }
 let cut = null;   // cutscene state
 let _clearData = null;
 function worldCleared(boss){
+  if(typeof clearSuspendedRun === 'function') clearSuspendedRun();
   const isPractice = gameMode==='practice';
   let gemsEarned=0, newChars=[];
   if(!isPractice){   // practice grants no persistent progress at all
@@ -688,6 +842,8 @@ function worldCleared(boss){
   ebullets=[]; bullets=[]; petBullets=[]; zones=[]; skibidiBullets.length=0; skibidiTimers.length=0;
   hitstop=0.25; shake=Math.max(shake,16);
   stopMusic(); sfx.win();
+  if(typeof haptic === 'function') haptic('win');
+  if(typeof finishRunEngagement === 'function') finishRunEngagement('clear');
   bigText(isPractice ? 'TRAINING COMPLETE' : 'WORLD CLEARED', '#ffd24a');
 }
 function cutsceneUpdate(dt){
@@ -718,7 +874,7 @@ function toMenuFromClear(){
   if(!_clearData){ quitToMenu(); triggerUnlockReveal(); return; }
   const d=_clearData; _clearData=null;
   $('wc-title').textContent = d.isPractice ? 'TRAINING COMPLETE' : d.isChallenger ? 'WORLD '+d.worldNum+' CHALLENGER!' : 'WORLD '+d.worldNum+' CLEARED!';
-  $('wc-coins').textContent = d.coins;
+  $('wc-coins').textContent = fmtNum(d.coins);
   // Set coin icon from sprite (no emoji)
   const coinIco=$('wc-coinico');
   if(coinIco && typeof SP!=='undefined' && SP['coin']) coinIco.src=SP['coin'].toDataURL();
@@ -916,25 +1072,38 @@ function worldLabel(i){
 // per-world preview emblem shown on the Battle stage: world ground tones + its end-boss silhouette
 function drawWorldEmblemBase(g,w,sz){
   const th=w.theme;
-  g.fillStyle=th.tile2; g.fillRect(0,0,sz,sz);
-  g.fillStyle=th.tile1; const T=28;                                   // checker ground
+  g.fillStyle=th.bg || th.tile1; g.fillRect(0,0,sz,sz);
+  g.fillStyle=th.tile1; const T=28;
   for(let y=0;y<sz;y+=T) for(let x=0;x<sz;x+=T) if(((x/T+y/T)&1)) g.fillRect(x,y,T,T);
-  const bdef = w.bosses[w.bosses.length-1];                           // headliner = the world's end-boss
+  g.fillStyle=th.tile2;
+  for(let y=0;y<sz;y+=T*2) for(let x=0;x<sz;x+=T*2) g.fillRect(x+T*0.25,y+T*0.25,T*0.5,T*0.5);
+  const foes=w.foes || [];
+  for(let fi=0; fi<Math.min(3, foes.length); fi++){
+    const f=foes[fi], spr=f && SP[f.spr];
+    if(!spr) continue;
+    const pad=spr._nom?spr.width/spr._nom:1, s=sz*0.22*pad;
+    const px=sz*(0.18+fi*0.22), py=sz*0.62;
+    g.drawImage(spr, px-s/2, py-s/2, s, s);
+  }
+  const bdef = w.bosses[w.bosses.length-1];
   const spr = bdef && SP[bdef.spr];
-  if(spr){ const pad=spr._nom?spr.width/spr._nom:1, s=sz*0.72*pad;
-    g.drawImage(spr, (sz-s)/2, (sz-s)/2+8, s, s); }
+  if(spr){ const pad=spr._nom?spr.width/spr._nom:1, s=sz*0.55*pad;
+    g.drawImage(spr, (sz-s)/2, (sz-s)/2-6, s, s); }
 }
+const EMBLEM_CACHE_VER = 'v155';
 const _emblemURL = {};
 function worldEmblemURL(i){
-  if(_emblemURL[i]) return _emblemURL[i];
+  const key=i+'|'+EMBLEM_CACHE_VER;
+  if(_emblemURL[key]) return _emblemURL[key];
   const w=WORLDS[i], sz=220, c=document.createElement('canvas'); c.width=c.height=sz;
   drawWorldEmblemBase(c.getContext('2d'), w, sz);
-  const u=c.toDataURL(); _emblemURL[i]=u; return u;
+  const u=c.toDataURL(); _emblemURL[key]=u; return u;
 }
 // Challenger gets the same scene plus a red danger badge, so it reads as a distinct mode at a glance
 const _chalEmblemURL = {};
 function challengerEmblemURL(i){
-  if(_chalEmblemURL[i]) return _chalEmblemURL[i];
+  const key=i+'|'+EMBLEM_CACHE_VER;
+  if(_chalEmblemURL[key]) return _chalEmblemURL[key];
   const w=WORLDS[i], sz=220, c=document.createElement('canvas'); c.width=c.height=sz;
   const g=c.getContext('2d');
   drawWorldEmblemBase(g, w, sz);
@@ -947,7 +1116,7 @@ function challengerEmblemURL(i){
   g.fillStyle='#fff'; g.font='bold 32px sans-serif'; g.textAlign='center'; g.textBaseline='middle';
   g.fillText('⚡',0,2);   // lightning bolt — challenger's danger badge
   g.restore();
-  const u=c.toDataURL(); _chalEmblemURL[i]=u; return u;
+  const u=c.toDataURL(); _chalEmblemURL[key]=u; return u;
 }
 let _trainingEmblemURL=null;
 function trainingEmblemURL(){
@@ -961,16 +1130,24 @@ function trainingEmblemURL(){
 }
 function setStageEmblem(i){
   const img=$('charimg'); if(!img) return;
-  img.src = gameMode==='practice' ? trainingEmblemURL()
+  img.src = gameMode==='bossrush' ? worldEmblemURL(0)
+    : gameMode==='practice' ? trainingEmblemURL()
     : gameMode==='challenger' ? challengerEmblemURL(clamp(i,0,WORLDS.length-1))
     : worldEmblemURL(clamp(i,0,WORLDS.length-1));
 }
 function refreshWorldSel(){
-  $('wname').textContent = worldLabel(selWorld);
-  const ws=$('worldsub'); if(ws) ws.textContent = gameMode==='practice' ? 'sandbox · no rewards' : 'survive the swarm';
-  $('wprev').disabled = selWorld<=0 || gameMode==='practice';
-  $('wnext').disabled = gameMode==='practice' || selWorld>=(gameMode==='challenger' ? chalUnlocked : unlockedMax);
+  $('wname').textContent = gameMode==='bossrush' ? 'BOSS RUSH · GRASSLANDS' : worldLabel(selWorld);
+  const ws=$('worldsub');
+  if(ws){
+    if(gameMode==='practice') ws.textContent = 'sandbox · no rewards';
+    else if(gameMode==='bossrush') ws.textContent = 'grasslands · bosses from worlds 1–'+(unlockedMax+1);
+    else ws.textContent = 'survive the swarm';
+  }
+  $('wprev').disabled = selWorld<=0 || gameMode==='practice' || gameMode==='bossrush';
+  $('wnext').disabled = gameMode==='practice' || gameMode==='bossrush' || selWorld>=(gameMode==='challenger' ? chalUnlocked : unlockedMax);
   setStageEmblem(selWorld);
+  const shopPane=$('tab-shop');
+  if(shopPane && !shopPane.classList.contains('hidden') && typeof renderShop==='function') renderShop();
 }
 function triggerUnlockReveal(){
   refreshWorldSel();
@@ -995,12 +1172,12 @@ const UPGRADES = [
   { id:'rate',   name:'Adrenaline Rush', icon:'gem',      rarity:'common', cap:5, steps:[{desc:'+18% attack speed.',    f:()=>P.fireRate*=0.82}] },
   { id:'static', name:'Static Charge',  icon:'gem',      rarity:'common', cap:5, minWorld:1, steps:[{desc:'+10% attack speed.',    f:()=>P.fireRate*=0.90}] },
   { id:'speed',  name:'Fleet Footed',    icon:'heart',    rarity:'common', cap:5, steps:[{desc:'+12% movement speed.',  f:()=>P.speed*=1.12}] },
-  { id:'hp',     name:'Vitality Essence',icon:'heart',    rarity:'common', cap:5, steps:[{desc:'+25 max HP, full heal.',f:()=>{P.maxHp+=25;P.hp=P.maxHp;}}] },
+  { id:'hp',     name:'Vitality Essence',icon:'heart',    rarity:'common', cap:5, steps:[{desc:'+25 max HP, full heal.',f:()=>{ bumpMaxHp(25,0.06); P.hp=P.maxHp; }}] },
   { id:'magnet', name:'Magnetic Pulse',  icon:'gem',      rarity:'common', cap:5, steps:[{desc:'+40% item pickup radius.',f:()=>P.magnet*=1.4}] },
   { id:'armor',  name:'Iron Skin',       icon:'turtle',   rarity:'common', cap:5, steps:[{desc:'-7% damage taken.',     f:()=>P.armor*=0.93}] },
-  { id:'regen',  name:'Regeneration',    icon:'heart',    rarity:'common', cap:5, steps:[{desc:'recover +1 HP / second.',f:()=>P.regen+=1}] },
+  { id:'regen',  name:'Regeneration',    icon:'heart',    rarity:'common', cap:5, steps:[{desc:'recover +1 HP / second.',f:()=>bumpRegen(1,0.002)}] },
   { id:'heavy',  name:'Heavy Rounds',    icon:'coin',     rarity:'common', cap:5, steps:[{desc:'+15% bullet size & +8% projectile speed.',f:()=>{P.bulletR*=1.15;P.bulletSpd*=1.08;}}] },
-  { id:'thick',  name:'Thick Skin',      icon:'heart',    rarity:'common', cap:5, steps:[{desc:'+15 max HP.',           f:()=>P.maxHp+=15}] },
+  { id:'thick',  name:'Thick Skin',      icon:'heart',    rarity:'common', cap:5, steps:[{desc:'+15 max HP.',           f:()=>bumpMaxHp(15,0.04)}] },
   { id:'luckycharm', name:'Lucky Charm', icon:'coin',     rarity:'common', cap:5, minWorld:0, steps:[{desc:'+5% crit chance (3x dmg).',f:()=>P.crit=Math.min(0.8,P.crit+0.05)}] },
   { id:'crit',   name:'Critical Strike', icon:'coin',     rarity:'uncommon',cap:5,steps:[{desc:'+10% crit chance (3x dmg).',f:()=>P.crit=Math.min(0.8,P.crit+0.10)}] },
   { id:'dashcd', name:'Quick Reflexes',  icon:'tralalero',rarity:'uncommon',cap:5,steps:[{desc:'dash cooldown -20%.',   f:()=>P.dashMax*=0.8}] },
@@ -1008,7 +1185,7 @@ const UPGRADES = [
   { id:'gold',   name:'Treasure Hunter', icon:'coin',     rarity:'uncommon',cap:5,steps:[{desc:'+20% gold & +12% XP.',  f:()=>{P.goldMul*=1.2;P.xpMul*=1.12;}}] },
   { id:'steady', name:'Steady Hands',    icon:'gem',      rarity:'uncommon',cap:5,steps:[{desc:'-15% bullet spread & +6% damage.',f:()=>{P.spread*=0.85;P.dmg*=1.06;}}] },
   { id:'frenzy', name:'Killing Frenzy',  icon:'tiger',    rarity:'rare',   cap:5, steps:[{desc:'each kill: +0.2% damage & fire rate, up to 100 stacks. Fades when you stop killing.',f:()=>{P.frenzyGain+=1;P.frenzyMax=Math.max(P.frenzyMax,100);}}] },
-  { id:'glass',  name:'Glass Cannon',    icon:'cappuccino',rarity:'epic',  cap:3, steps:[{desc:'+35% damage, but -15 max HP.',f:()=>{P.dmg*=1.35;if(!P.glassSafe){P.maxHp=Math.max(20,P.maxHp-15);P.hp=Math.min(P.hp,P.maxHp);}}}] },
+  { id:'glass',  name:'Glass Cannon',    icon:'cappuccino',rarity:'epic',  cap:3, steps:[{desc:'+35% damage, but -15 max HP.',f:()=>{P.dmg*=1.35;if(!P.glassSafe){ P.maxHp=Math.max(20,P.maxHp-15); P.hp=Math.min(P.hp,P.maxHp);}}}] },
 
   // 🔮 abilities — 4 levels, then EVOLVE
   { id:'multi', name:'Splinter Shot', icon:'gembig', rarity:'rare',
@@ -1045,8 +1222,8 @@ const UPGRADES = [
     steps:[{desc:'every 5s, a shockwave hits nearby enemies.',f:()=>{P.nova=true;}},{desc:'shockwave: faster + stronger.',f:()=>{P.novaCdBase=Math.max(3.5,P.novaCdBase-0.6);P.novaPow*=1.35;}},{desc:'shockwave: faster + stronger.',f:()=>{P.novaCdBase=Math.max(3.2,P.novaCdBase-0.6);P.novaPow*=1.35;}},{desc:'shockwave: faster + stronger.',f:()=>{P.novaCdBase=Math.max(3.0,P.novaCdBase-0.6);P.novaPow*=1.35;}}],
     evo:{name:'Nova Cataclysm', icon:'gembig', desc:'EVOLVE — massive fast shockwave that clears nearby bullets.', f:()=>{P.nova=true;P.novaEvo=true;P.novaCdBase=3;P.novaPow*=1.5;}} },
   { id:'vamp', name:'Soul Harvest', icon:'heart', rarity:'epic',
-    steps:[{desc:'heal +2 HP per kill.',f:()=>P.vamp+=2},{desc:'heal +2 HP per kill.',f:()=>P.vamp+=2},{desc:'heal +2 HP per kill.',f:()=>P.vamp+=2},{desc:'heal +2 HP per kill.',f:()=>P.vamp+=2}],
-    evo:{name:'Vampiric Feast', icon:'heart', desc:'EVOLVE — restore a massive chunk of HP per kill.', f:()=>{P.vamp+=6;}} },
+    steps:[{desc:'heal +2 HP per kill.',f:()=>bumpVamp(2,0.012)},{desc:'heal +2 HP per kill.',f:()=>bumpVamp(2,0.012)},{desc:'heal +2 HP per kill.',f:()=>bumpVamp(2,0.012)},{desc:'heal +2 HP per kill.',f:()=>bumpVamp(2,0.012)}],
+    evo:{name:'Vampiric Feast', icon:'heart', desc:'EVOLVE — restore a massive chunk of HP per kill.', f:()=>{bumpVamp(6,0.035);}} },
   { id:'slow', name:'Stasis Field', icon:'gem', rarity:'rare',
     steps:[{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88},{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88},{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88},{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88}],
     evo:{name:'Glacial Freeze', icon:'gem', desc:'EVOLVE — enemies you hit freeze solid.', f:()=>{P.bslow*=0.7;P.freeze=true;}} },
@@ -1186,6 +1363,103 @@ const UPGRADES = [
   { id:'showstopper', name:'Showstopper', icon:'coin', rarity:'epic', cap:1, req:['luckyspin','crit'],
     steps:[{desc:'SYNERGY — JACKPOT hits also critically strike.',f:()=>P.showstopper=true}] },
 
+  // 🍂 World 6 (AUTUMN WOODS)
+  { id:'leafdrift', name:'Falling Leaves', icon:'gem', rarity:'uncommon', cap:5, minWorld:5,
+    steps:[{desc:'your hits slow enemies like leaves in the wind. (+duration per level)',f:()=>P.leafDrift=(P.leafDrift||0)+1}] },
+  { id:'harvestmoon', name:'Harvest Moon', icon:'coin', rarity:'rare', cap:4, minWorld:5,
+    steps:[{desc:'each kill stacks +8% gold (up to 12), fading when you stop killing.',f:()=>{P.harvestGain=(P.harvestGain||0)+1;P.harvestMax=12;}}] },
+  { id:'embertrail', name:'Ember Trail', icon:'gembig', rarity:'epic', minWorld:5,
+    steps:[
+      {desc:'while moving, scatter burning leaves that scorch foes.',f:()=>{P.emberTrail=(P.emberTrail||0)+1;P.emberR=P.emberR||48;}},
+      {desc:'trail burns hotter & wider.',f:()=>{P.emberTrail=(P.emberTrail||0)+1;P.emberR=(P.emberR||48)+14;}},
+      {desc:'trail burns hotter & wider.',f:()=>{P.emberTrail=(P.emberTrail||0)+1;P.emberR=(P.emberR||62)+14;}},
+      {desc:'embers linger longer on the ground.',f:()=>{P.emberLife=(P.emberLife||1.1)+0.45;}},
+    ],
+    evo:{name:'Wildfire Canopy', icon:'gembig', desc:'EVOLVE — embers even when standing still, and burn much harder.',
+         f:()=>{P.emberTrail=(P.emberTrail||0)+2;P.emberAlways=true;P.emberR=(P.emberR||76)+22;P.emberLife=(P.emberLife||1.55)+0.5;}} },
+
+  // 🐸 World 7 (SWAMP)
+  { id:'bogmire', name:'Bog Mire', icon:'gem', rarity:'uncommon', cap:5, minWorld:6,
+    steps:[{desc:'nearby enemies sink in mud, moving slower. (+radius per level)',f:()=>{P.bogAura=(P.bogAura||0)+1;P.bogR=(P.bogR||88)+12;}}] },
+  { id:'toxicmire', name:'Toxic Mire', icon:'crocodilo', rarity:'rare', cap:5, minWorld:6,
+    steps:[{desc:'your hits poison enemies for damage over time. (+poison per level)',f:()=>P.toxicHit=(P.toxicHit||0)+1}] },
+  { id:'swampleech', name:'Swamp Leech', icon:'heart', rarity:'epic', minWorld:6,
+    steps:[
+      {desc:'standing still for a moment lets leeches restore your HP.',f:()=>{P.swampleech=(P.swampleech||0)+1;}},
+      {desc:'leeches heal faster.',f:()=>{P.swampleech=(P.swampleech||0)+1;}},
+      {desc:'leeches heal faster.',f:()=>{P.swampleech=(P.swampleech||0)+1;}},
+      {desc:'you begin healing sooner after moving.',f:()=>{P.swampleech=(P.swampleech||0)+1;P.swampStill=Math.max(0.25,(P.swampStill||0.5)-0.08);}},
+    ],
+    evo:{name:'Bog Heart', icon:'heart', desc:'EVOLVE — constant slow regen, and standing still heals much more.',
+         f:()=>{P.swampleech=(P.swampleech||0)+2;P.swampRegen=2;P.swampStill=0.2;}} },
+
+  // ☁️ World 8 (SKYLAND)
+  { id:'tailwind', name:'Tailwind', icon:'gem', rarity:'uncommon', cap:5, minWorld:7,
+    steps:[{desc:'+10% attack speed riding the sky currents.',f:()=>P.fireRate*=0.90}] },
+  { id:'thunderdrop', name:'Thunder Drop', icon:'gembig', rarity:'rare', minWorld:7,
+    steps:[
+      {desc:'every 5.5s, a bolt strikes your nearest foe.',f:()=>{P.thunder=true;P.thunderCdBase=5.5;P.thunderDmg=1.4;}},
+      {desc:'bolts strike more often & hit harder.',f:()=>{P.thunderCdBase=Math.max(3.8,P.thunderCdBase-0.7);P.thunderDmg=(P.thunderDmg||1.4)+0.25;}},
+      {desc:'bolts strike more often & hit harder.',f:()=>{P.thunderCdBase=Math.max(3.2,P.thunderCdBase-0.6);P.thunderDmg=(P.thunderDmg||1.65)+0.25;}},
+      {desc:'bolts chain to a second nearby enemy.',f:()=>{P.thunderChain=(P.thunderChain||0)+1;}},
+    ],
+    evo:{name:'Storm Caller', icon:'gembig', desc:'EVOLVE — rapid lightning that clears enemy bullets nearby.',
+         f:()=>{P.thunder=true;P.thunderEvo=true;P.thunderCdBase=2.8;P.thunderDmg=(P.thunderDmg||1.9)+0.5;P.thunderChain=(P.thunderChain||0)+2;}} },
+  { id:'updraft', name:'Updraft', icon:'gem', rarity:'uncommon', cap:4, minWorld:7,
+    steps:[{desc:'+15% attack range on the open sky.',f:()=>P.range*=1.15}] },
+
+  // 💎 World 9 (CRYSTAL CAVES)
+  { id:'prismedge', name:'Prism Edge', icon:'coin', rarity:'uncommon', cap:5, minWorld:8,
+    steps:[{desc:'+6% crit chance; critical hits split prism shards.',f:()=>{P.crit=Math.min(0.8,P.crit+0.06);P.prismCrit=(P.prismCrit||0)+1;}}] },
+  { id:'crystalshatter', name:'Crystal Shatter', icon:'gembig', rarity:'rare', minWorld:8,
+    steps:[
+      {desc:'chilled enemies shatter on death, damaging nearby foes.',f:()=>{P.crystalShatter=(P.crystalShatter||0)+1;}},
+      {desc:'shatter hits harder & reaches farther.',f:()=>{P.crystalShatter=(P.crystalShatter||0)+1;}},
+      {desc:'shatter hits harder & reaches farther.',f:()=>{P.crystalShatter=(P.crystalShatter||0)+1;}},
+      {desc:'your hits also chill enemies lightly.',f:()=>{P.leafDrift=(P.leafDrift||0)+1;}},
+    ],
+    evo:{name:'Prismatic Burst', icon:'gembig', desc:'EVOLVE — shatters also freeze foes briefly and drop crystal shards.',
+         f:()=>{P.crystalShatter=(P.crystalShatter||0)+2;P.crystalShatterEvo=true;}} },
+  { id:'shardfield', name:'Shard Field', icon:'gembig', rarity:'epic', minWorld:8,
+    steps:[
+      {desc:'every 6s, erupt a ring of crystal shards around you.',f:()=>{P.fieldPulse=true;P.fpCdBase=6;P.fpR=105;P.fpDps=11;P.fpCol='#c8e8ff';P.fpSlow=true;}},
+      {desc:'field grows & pulses more often.',f:()=>{P.fpR=(P.fpR||105)+22;P.fpCdBase=Math.max(4.2,P.fpCdBase-0.6);}},
+      {desc:'field grows & pulses more often.',f:()=>{P.fpR=(P.fpR||127)+22;P.fpCdBase=Math.max(3.5,P.fpCdBase-0.6);P.fpDps=(P.fpDps||11)+4;}},
+      {desc:'shards cut deeper.',f:()=>{P.fpDps=(P.fpDps||15)+5;}},
+    ],
+    evo:{name:'Crystal Storm', icon:'gembig', desc:'EVOLVE — constant crystal aura that shreds everything nearby.',
+         f:()=>{P.fieldPulse=true;P.fieldPulseEvo=true;P.fpR=(P.fpR||150)+35;P.fpDps=(P.fpDps||20)+8;P.fpCdBase=Math.max(2.8,P.fpCdBase-0.8);}} },
+
+  // 🌋 World 10 (VOLCANO)
+  { id:'scorchaura', name:'Scorch Aura', icon:'flamingo', rarity:'uncommon', cap:5, minWorld:9,
+    steps:[{desc:'a heat aura scorches nearby enemies. (+damage per level)',f:()=>P.burnAura+=5}] },
+  { id:'lavapool', name:'Lava Pool', icon:'rhino', rarity:'rare', cap:5, minWorld:9,
+    steps:[{desc:'kills leave a short-lived lava pool that burns foes.',f:()=>P.lavaKill=(P.lavaKill||0)+1}] },
+  { id:'moltenbloom', name:'Molten Bloom', icon:'gembig', rarity:'epic', minWorld:9,
+    steps:[
+      {desc:'every 5.5s, magma blooms at your feet.',f:()=>{P.fieldPulse=true;P.fpCdBase=5.5;P.fpR=115;P.fpDps=14;P.fpCol='#ff6a20';P.fpSlow=false;}},
+      {desc:'magma spreads wider & blooms faster.',f:()=>{P.fpR=(P.fpR||115)+24;P.fpCdBase=Math.max(4,P.fpCdBase-0.6);}},
+      {desc:'magma burns hotter.',f:()=>{P.fpDps=(P.fpDps||14)+5;}},
+      {desc:'magma lingers longer each bloom.',f:()=>{P.fpLife=(P.fpLife||1.5)+0.4;}},
+    ],
+    evo:{name:'Volcanic Heart', icon:'gembig', desc:'EVOLVE — permanent molten ring and eruptions on kill.',
+         f:()=>{P.fieldPulse=true;P.fieldPulseEvo=true;P.fpR=(P.fpR||139)+30;P.fpDps=(P.fpDps||19)+10;P.lavaKill=(P.lavaKill||0)+2;}} },
+
+  // ⛏️ World 11 (DIRT DEPTHS)
+  { id:'quakedash', name:'Quake Dash', icon:'tralalero', rarity:'uncommon', cap:4, minWorld:10,
+    steps:[{desc:'finishing a dash sends a ground shock through nearby foes. (+power per level)',f:()=>P.quakeDash=(P.quakeDash||0)+1}] },
+  { id:'buriedgold', name:'Buried Gold', icon:'coin', rarity:'rare', cap:4, minWorld:10,
+    steps:[{desc:'kills yank nearby coin drops toward you. (+pull per level)',f:()=>P.buriedGold=(P.buriedGold||0)+1}] },
+  { id:'earthward', name:'Earth Ward', icon:'turtle', rarity:'epic', minWorld:10,
+    steps:[
+      {desc:'rocky armor: -8% damage taken.',f:()=>P.armor*=0.92},
+      {desc:'thorns sprout from your shell.',f:()=>P.thorns+=8},
+      {desc:'thorns sprout harder.',f:()=>P.thorns+=8},
+      {desc:'nearby foes take quake damage when they touch you.',f:()=>{P.earthward=(P.earthward||0)+1;}},
+    ],
+    evo:{name:'Titan Shell', icon:'turtle', desc:'EVOLVE — heavy armor, strong thorns, and quakes when you dash.',
+         f:()=>{P.armor*=0.88;P.thorns+=14;P.quakeDash=(P.quakeDash||0)+2;P.earthward=(P.earthward||0)+2;}} },
+
   { id:'auramonster', name:'Aura Monster', icon:'gembig', rarity:'rare', minWorld:1, cap:3,
     steps:[
       {desc:'gain a green energy aura that damages nearby enemies.',    f:()=>{P.auraR=150; P.auraDmg=16;}},
@@ -1207,7 +1481,7 @@ const UPGRADES = [
   { id:'eventhz', name:'Event Horizon', icon:'octopus', rarity:'legendary', cap:1, req:['blackhole','nova'],
     steps:[{desc:'SYNERGY — black holes detonate in a Nova blast when they collapse.',f:()=>P.holeNova=true}] },
   { id:'bloodcrit', name:'Blood Crit', icon:'heart', rarity:'epic', cap:1, req:['vamp','crit'],
-    steps:[{desc:'SYNERGY — critical hits also heal you for +2 HP.',f:()=>P.critHeal+=2}] },
+    steps:[{desc:'SYNERGY — critical hits also heal you for +2 HP.',f:()=>bumpCritHeal(2,0.005)}] },
   { id:'glassphx', name:'Glass Phoenix', icon:'flamingo', rarity:'legendary', cap:1, req:['glass','phoenix'],
     steps:[{desc:'SYNERGY — Glass Cannon stops costing max HP, and revivals restore full HP.',f:()=>{P.glassSafe=true;P.phoenixHeal=1;}}] },
   { id:'orbstorm', name:'Orbital Storm', icon:'gembig', rarity:'epic', cap:1, req:['orbit','multi'],
@@ -1238,6 +1512,13 @@ const CARD_MINWORLD = {
   permafrost:3, coldblood:3, frostbloom:3, glacierheart:3,
   // World 5
   luckyspin:4, bouncy:4, showstopper:4, daredevil:4, knives:4,
+  // World 6–11
+  leafdrift:5, harvestmoon:5, embertrail:5,
+  bogmire:6, toxicmire:6, swampleech:6,
+  tailwind:7, thunderdrop:7, updraft:7,
+  prismedge:8, crystalshatter:8, shardfield:8,
+  scorchaura:9, lavapool:9, moltenbloom:9,
+  quakedash:10, buriedgold:10, earthward:10,
 };
 for(const u of UPGRADES){ if(CARD_MINWORLD[u.id]!=null) u.minWorld = CARD_MINWORLD[u.id]; }
 // returns the next card "move" for an upgrade, or null if exhausted
@@ -1283,6 +1564,20 @@ function resetPlayer(){
     // World 5: CIRCO BRAINROTTO
     jackpot:0, bounce:0, pinball:false, showstopper:false,
     daredevil:0, knives:false, knifeCd:0, knifeCdBase:3.5, knifeN:0, knifeBig:false, knifeEvo:false,
+    // World 6: AUTUMN WOODS
+    leafDrift:0, harvestGain:0, harvestMax:0, harvestStacks:0,
+    emberTrail:0, emberR:0, emberLife:0, emberCd:0, emberAlways:false,
+    // World 7: SWAMP
+    bogAura:0, bogR:0, toxicHit:0, swampleech:0, swampStill:0.5, swampRegen:0, stillT:0,
+    // World 8: SKYLAND
+    thunder:false, thunderCd:0, thunderCdBase:5.5, thunderDmg:1.4, thunderChain:0, thunderEvo:false,
+    // World 9: CRYSTAL CAVES
+    prismCrit:0, crystalShatter:0, crystalShatterEvo:false,
+    fieldPulse:false, fieldPulseEvo:false, fpCd:0, fpCdBase:6, fpR:0, fpDps:0, fpCol:'#bfe6ff', fpSlow:false, fpLife:1.5,
+    // World 10: VOLCANO (lavaKill)
+    lavaKill:0,
+    // World 11: DIRT DEPTHS
+    quakeDash:0, buriedGold:0, earthward:0,
     // World 1 additions
     seeker:0, laststand:0,
     startDmg:10, turretCount:0, turretDmgBase:0, turretDmgMul:1, turretFireMul:1, turretRangeBase:330, turretRangeBonus:0, turretAdaptive:false,
@@ -1304,7 +1599,8 @@ function resetPlayer(){
     soldierStill:false, soldierBullets:false,
     noCards:false, whiteBullets:false, stealthAggro:false, ghostBullets:false,
     auraR:0, auraDmg:0,
-    skibidiCount:0, skibidiBounces:6, skibidiNeverDie:false, skibidiRespawn:7
+    skibidiCount:0, skibidiBounces:6, skibidiNeverDie:false, skibidiRespawn:7,
+    gamblerGoldStacks:0, mimicPetRate:1
   });
   skibidiBullets.length=0; skibidiTimers.length=0;
   turrets.length=0; miniTurrets.length=0; flameTurrets.length=0; placedTurrets.length=0;
@@ -1316,11 +1612,18 @@ function startGame(idx){
   if(wl){
     if(wlt) wlt.textContent = 'entering ' + (WORLDS[wi]?.name||'world').toLowerCase() + '…';
     wl.classList.remove('hidden');
-    setTimeout(()=>{ _doStartGame(wi); wl.classList.add('hidden'); }, 550);
+    requestAnimationFrame(()=>{
+      _doStartGame(wi);
+      wl.classList.add('hidden');
+    });
   } else { _doStartGame(wi); }
 }
 function _doStartGame(wi){
-  loadWorld(wi);
+  if(typeof clearSuspendedRun === 'function') clearSuspendedRun();
+  if(typeof resetRunEngagement === 'function') resetRunEngagement();
+  resetZoom();
+  const runWi = rushIsActive() ? 0 : wi;
+  loadWorld(runWi);
   if(infiniteMapMode()){ WORLD.w=999999; WORLD.h=999999; }   // effectively infinite; ground drawn per-frame
   initAudio();
   playMusic(curTheme.music);
@@ -1328,21 +1631,52 @@ function _doStartGame(wi){
   // Character base stats first — so gear builds on top of the character's foundation
   if(typeof clearHooks==='function') clearHooks();
   if(typeof applyCharBase==='function') applyCharBase(P.charId);
-  // Gear applies on top; gearDmgMul lets characters reduce gear's dmg contribution
-  if(typeof equippedFlatDmg==='function')   P.dmg   += equippedFlatDmg() * (P.gearDmgMul||1);
-  if(typeof equippedHp==='function'){ const h=equippedHp(); P.maxHp += h; P.hp = P.maxHp; }
-  if(typeof equippedSpeedMult==='function') P.speed *= equippedSpeedMult();
-  if(typeof equippedRangeMult==='function') P.range *= equippedRangeMult();
+  if(gameMode === 'bossrush'){
+    P.noCards = true;
+  } else {
+    // Gear applies on top (always flat +dmg/+HP); gearDmgMul lets characters reduce gear's dmg contribution
+    if(typeof equippedFlatDmg==='function'){
+      const gearMul = (typeof gearWorldDmgMul==='function' ? gearWorldDmgMul(wi) : 1) * (P.gearDmgMul||1);
+      P.dmg += equippedFlatDmg(wi) * gearMul;
+      if(typeof equippedHp==='function'){ const h=equippedHp(wi); P.maxHp += h; P.hp = P.maxHp; }
+    }
+    if(typeof equippedSpeedMult==='function') P.speed *= equippedSpeedMult();
+    if(typeof equippedRangeMult==='function') P.range *= equippedRangeMult();
+    if(typeof equippedCrit==='function') P.crit = Math.min(0.8, P.crit + equippedCrit());
+    if(typeof equippedArmorMult==='function') P.armor *= equippedArmorMult();
+    if(typeof equippedRateMult==='function') P.fireRate /= equippedRateMult();
+    if(typeof equippedMagnetMult==='function') P.magnet *= equippedMagnetMult();
+    if(typeof equippedRegen==='function'){
+      const rv=equippedRegen(wi);
+      if(typeof gearStatUsesPercent==='function' && gearStatUsesPercent('regen', wi)) P.regen += Math.max(0.5, P.maxHp * rv);
+      else P.regen += rv;
+    }
+    if(typeof equippedGoldMult==='function'){ const g=equippedGoldMult(); P.goldMul *= g; P.xpMul *= g; }
+    if(typeof equippedVamp==='function'){
+      const vv=equippedVamp(wi);
+      if(typeof gearStatUsesPercent==='function' && gearStatUsesPercent('vamp', wi)) P.vamp += Math.max(1, Math.round(P.maxHp * vv));
+      else P.vamp += vv;
+    }
+    if(typeof equippedPierce==='function') P.pierce += equippedPierce();
+  }
   if(typeof registerActiveChar==='function') registerActiveChar();
   if(typeof registerActivePet==='function') registerActivePet();
+  if(!infiniteMapMode() && typeof WorldMapLayout!=='undefined' && WorldMapLayout.findSafeSpawn){
+    const sp = WorldMapLayout.findSafeSpawn(WORLD.w, WORLD.h, P.r + 20, curObstacles, WALL);
+    P.x = sp.x; P.y = sp.y;
+    P.petX = sp.x - 38; P.petY = sp.y;
+  }
   P.startDmg = P.dmg;   // damage at run start (char base + gear + passives); non-engineer turrets scale off this
   timeScale=1.0;
   bullets=[]; ebullets=[]; petBullets=[]; enemies=[]; gems=[]; texts=[]; zones=[]; holes=[]; luckies=[]; clearParts();
   wave=1; kills=0; elapsed=0; boss=null; waveGapT=0; arena=null; bossPending=0;
+  runSpawnGrace = 3.0;
+  P.inv = Math.max(P.inv||0, runSpawnGrace);
   scheduleChaos();
   luckyTimer=rand(10,18);
   worldCoins=0;
   chalElapsed=0; chalBossIdx=0; chalBossActive=false; chalLuckyT=5;
+  rushBossIdx=0; rushBossesBeaten=0; rushGemsEarned=0; rushGapT=0;
   { const ci=$('coincount'); if(ci){ const img=ci.querySelector('img'); if(img && !img.getAttribute('src')) img.src=SP['coin'].toDataURL(); } }
   refreshHUD();   // reset level badge / kills / timer / coins so nothing shows last run's value
   state=ST.PLAY;
@@ -1353,7 +1687,18 @@ function _doStartGame(wi){
   $('zoomctl').classList.remove('hidden');
   $('dashbtn').textContent = P.engineerPlace ? 'Place turret.' : 'DASH';
   if(IS_TOUCH) $('dashbtn').classList.remove('hidden');   // mobile-only on-screen dash
-  if(timerMode()) startChallengerSpawn(); else startWave();
+  if(rushIsActive()) startBossRush();
+  else if(timerMode()) startChallengerSpawn(); else startWave();
+}
+
+function startBossRush(){
+  betweenWaves=false;
+  waveEnemiesLeft=0;
+  wave=5;
+  $('wavetag').textContent='BOSS 1';
+  sfx.wave();
+  bigText('BOSS RUSH','#ff7a40');
+  startBossArena();
 }
 
 function startWave(){
@@ -1361,13 +1706,14 @@ function startWave(){
   $('wavetag').textContent = 'WAVE '+wave;
   if(typeof fireHook==='function') fireHook('waveStart');
   if(wave%5===0){ startBossArena(); waveEnemiesLeft=0; }
-  else { waveEnemiesLeft=Math.max(6,Math.round((16+wave*5.5)*(curWorld().enemyMul||1)*(wave<=9?1.3:1))); spawnTimer=0; sfx.wave();
+  else { waveEnemiesLeft=Math.max(6,Math.round((16+wave*5.5)*(curWorld().enemyMul||1)*(wave<=9?1.3:1))); spawnTimer=wave===1?1.35:0; sfx.wave();
     // schedule chaos mid-wave if this wave is a chaos wave
     if(!timerMode()&&chaosWaveIdx<chaosSchedule.length&&wave===chaosSchedule[chaosWaveIdx]){
       chaosMidTimer=rand(8,20); chaosWaveIdx++;
     }
     const luckyCap = Math.max(2, ...(typeof queryHook==='function' ? queryHook('getLuckyCap') : [2]));
-    spawnLuckyBatch(luckyCap);
+    const wv=wave;
+    setTimeout(()=>{ if(state===ST.PLAY && wave===wv) spawnLuckyBatch(luckyCap); }, 900);
   }
   bigText(wave%5===0 ? 'BOSS WAVE' : 'WAVE '+wave, wave%5===0?'#e54d4d':'#ffe08a');
 }
@@ -1384,6 +1730,7 @@ function startChallengerSpawn(){
 }
 
 function chalWorldCleared(e){
+  if(typeof clearSuspendedRun === 'function') clearSuspendedRun();
   const prevChalUnlocked=chalUnlocked;
   chalUnlocked=Math.min(WORLDS.length-1, Math.max(chalUnlocked, worldIdx+1));
   localStorage.setItem('br_ch_unlocked', chalUnlocked); if(window.markDirty) window.markDirty();
@@ -1418,18 +1765,31 @@ function chalWorldCleared(e){
   bigText('CHALLENGER CLEARED','#ff5a70');
 }
 
-// lock the field into a small bounded arena around the player; boss arrives after a delay
+// lock the field into a bounded arena with a clear fight floor; boss arrives after a delay
 function startBossArena(){
   const base = ARENA_SIZE * (gameMode==='challenger' ? CHAL_ARENA_MUL : 1);
   const usableW = WORLD.w - 2*WALL, usableH = WORLD.h - 2*WALL;
-  // shape arena to match world aspect ratio: 45% of each world dimension, min 600px, 80px margin each side
-  const aw = Math.min(Math.max(600, usableW * 0.45), base, usableW - 80);
-  const ah = Math.min(Math.max(600, usableH * 0.45), base, usableH - 80);
-  const cxw = clamp(P.x, WALL+aw/2, WORLD.w-WALL-aw/2);
-  const cyw = clamp(P.y, WALL+ah/2, WORLD.h-WALL-ah/2);
-  arena = { x:cxw-aw/2, y:cyw-ah/2, w:aw, h:ah };
-  luckies=[];                                // clear lucky blocks: they'd be stranded outside the arena
-  bossPending = ARENA_LEAD;                  // no auto zoom-in on boss arrival — keep the player's current zoom
+  const aw = Math.min(Math.max(640, usableW * 0.5), base, usableW - 80);
+  const ah = Math.min(Math.max(640, usableH * 0.5), base, usableH - 80);
+  let ax, ay;
+  if(typeof WorldMapLayout!=='undefined' && WorldMapLayout.findSafeArena){
+    const spot = WorldMapLayout.findSafeArena(WORLD.w, WORLD.h, aw, ah, curObstacles, WALL, P.x, P.y);
+    ax = spot.x; ay = spot.y;
+    if(WorldMapLayout.stripObsInArena) curObstacles = WorldMapLayout.stripObsInArena(curObstacles, ax, ay, aw, ah);
+  } else {
+    const cxw = clamp(P.x, WALL+aw/2, WORLD.w-WALL-aw/2);
+    const cyw = clamp(P.y, WALL+ah/2, WORLD.h-WALL-ah/2);
+    ax = cxw - aw/2; ay = cyw - ah/2;
+  }
+  arena = { x:ax, y:ay, w:aw, h:ah };
+  P.x = arena.x + arena.w/2;
+  P.y = arena.y + arena.h*0.58;
+  if(typeof WorldMapLayout!=='undefined' && WorldMapLayout.resolveCircle){
+    const r = WorldMapLayout.resolveCircle(P.x, P.y, P.r, curObstacles);
+    P.x = r.x; P.y = r.y;
+  }
+  luckies=[];
+  bossPending = ARENA_LEAD;
   const bw=$('bosswarn'); bw.textContent='BOSS INCOMING'; bw.classList.remove('hidden');
   sfx.warn();
 }
@@ -1440,30 +1800,60 @@ function spawnRingDist(){
   if(gameMode==='challenger') return Math.min(W,H)/Math.max(zoom,0.0001)*0.58 + 60;
   return Math.max(W,H)/Math.max(zoom,0.0001)*0.52 + 60;   // world-space ring radius; scales with viewport so it stays off-screen on wide/zoomed-out monitors
 }
-function ringPos(){ // spawn point on a ring around player, clamped to world
-  const a = rand(0,TAU), d = spawnRingDist();
+function ringPos(){ // spawn point on a ring around player, clamped to world + clear of obstacles
+  const d = spawnRingDist();
+  for(let attempt=0; attempt<20; attempt++){
+    const a = rand(0,TAU);
+    const x = clamp(P.x+Math.cos(a)*d, WALL+30, WORLD.w-WALL-30);
+    const y = clamp(P.y+Math.sin(a)*d, WALL+30, WORLD.h-WALL-30);
+    if(!curObstacles.length || typeof WorldMapLayout==='undefined' || WorldMapLayout.isCircleFree(x, y, 16, curObstacles))
+      return { x, y };
+  }
+  const a = rand(0,TAU);
   return { x: clamp(P.x+Math.cos(a)*d, WALL+30, WORLD.w-WALL-30),
            y: clamp(P.y+Math.sin(a)*d, WALL+30, WORLD.h-WALL-30) };
 }
 
 function spawnBoss(){
-  const milestoneIdx = ((Math.floor(wave/5)-1) % curBosses.length + curBosses.length) % curBosses.length;
-  // Challenger World 3: middle boss is cut, so milestone 0/1/2 map to boss species 0/2/3 instead of 0/1/2.
-  const bossIdx = chalIsShort() ? (CHAL_BOSS_MAP_CHAL[milestoneIdx] ?? milestoneIdx) : milestoneIdx;
-  const def = gameMode==='practice'
-    ? curBosses[Math.floor(Math.random()*curBosses.length)]
-    : curBosses[bossIdx];
-  const chalMul = gameMode==='challenger' ? 3.5 : 1;
-  const mult = (1 + (wave-5)*0.12) * (curWorld().hpMul||1) * (1 + worldBand()*0.42) * chalMul;
+  let def, bossIdx, isFinal;
+  if(rushIsActive()){
+    const raw = pickRushBossDef(rushBossIdx);
+    const isMilestone = (rushBossIdx % 5) === 4;
+    def = isMilestone ? raw : Object.assign({}, raw, { final:false });
+    bossIdx = isMilestone ? 99 : rushBossIdx % 4;
+    isFinal = isMilestone;
+    const rushNum = rushBossIdx + 1;
+    $('wavetag').textContent = 'BOSS ' + rushNum + (isMilestone ? ' · FINAL' : '');
+  } else {
+    const milestoneIdx = ((Math.floor(wave/5)-1) % curBosses.length + curBosses.length) % curBosses.length;
+    bossIdx = chalIsShort() ? (CHAL_BOSS_MAP_CHAL[milestoneIdx] ?? milestoneIdx) : milestoneIdx;
+    def = gameMode==='practice'
+      ? curBosses[Math.floor(Math.random()*curBosses.length)]
+      : curBosses[bossIdx];
+    isFinal = bossIdx === curBosses.length-1 || def.final===true;
+  }
   const p = arena ? { x:arena.x+arena.w/2, y:arena.y+arena.h*0.28 } : ringPos();
-  const bar1 = def.hp*HP_MULT*mult, bar2 = (def.hp2||0)*HP_MULT*mult;
-  const baseTotal = bar1+bar2;
-  // each world's last boss = its FINAL boss: a beefed phase 3 whose HP alone tops phases 1+2 combined.
-  // def.final also flags a boss as final even when it isn't the literal last list entry (e.g. Tralalero 2.0,
-  // which sits mid-list but is the wave-20 fight in its worlds).
-  const isFinal = bossIdx === curBosses.length-1 || def.final===true;
-  const p3pool = isFinal ? baseTotal*1.5 : 0;     // phase 3 = 1.5x of phases 1+2 → "more than 1 and 2 combined"
-  const total  = baseTotal + p3pool;
+  let bar1, bar2, baseTotal, p3pool, total;
+  if(rushIsActive()){
+    bar1 = RUSH_BASE_HP * HP_MULT * RUSH_HP_MULT;
+    bar2 = 0;
+    baseTotal = bar1;
+    p3pool = isFinal ? baseTotal * 0.85 : 0;
+    total = baseTotal + p3pool;
+  } else {
+    const chalMul = gameMode==='challenger' ? 3.5 : 1;
+    const bossGearHp = (typeof gearBossHpMul==='function' ? gearBossHpMul(worldIdx) : 1);
+    const bandMul = 1 + (worldHpBand() - 1) * 0.32;
+    const waveMul = 1 + Math.max(0, wave - 5) * 0.07;
+    const storyScale = gameMode==='challenger' ? 1 : 0.62;
+    const mult = waveMul * (curWorld().hpMul||1) * bandMul * chalMul * storyScale * bossGearHp;
+    bar1 = def.hp*HP_MULT*mult;
+    bar2 = (def.hp2||0)*HP_MULT*mult;
+    baseTotal = bar1+bar2;
+    const p3Scale = bossGearHp < 0.22 ? 0.45 : bossGearHp < 0.35 ? 0.62 : 0.85;
+    p3pool = isFinal ? baseTotal * p3Scale : 0;
+    total = baseTotal + p3pool;
+  }
   boss = {
     spr:def.spr, name:def.name, pattern:def.pattern, mk:def.moveKey||def.spr,
     phased:def.phased, bars:isFinal?1:(def.bars||1), bar1, bar2,
@@ -1476,6 +1866,10 @@ function spawnBoss(){
     rollSpray:0, warpT:0, wd:null, gsweep:null, carpet:0, cbT:0, tether:0
   };
   if(boss.gimmick==='flank') boss.front=0.5;   // Pit Armor: front hits softened, so you must flank
+  if(worldIdx===0 && gameMode==='story' && bossIdx<3){
+    const gmap = { tralalero:'w1shoe', crocodilo:'w1bomb', sahur:'w1drum' };
+    if(gmap[def.spr]) boss.gimmick = gmap[def.spr];
+  }
   enemies.push(boss);
   if(def.duo){   // final-boss partner: own body + move cycle, shares the lead's HP pool
     const mate = {
@@ -1488,8 +1882,8 @@ function spawnBoss(){
     };
     enemies.push(mate); boss.mate=mate;
   }
-  bossLuckyT = 20;                              // first periodic lucky batch ~20s into the fight
-  if(isFinal) spawnBossLucky(1);               // final bosses: a lucky block at the start of phase 1
+  bossLuckyT = rushIsActive() ? 16 : 20;
+  if(rushIsActive() || isFinal) spawnBossLucky(1);
   // Challenger: much more aggressive — faster attacks, higher speed, hits harder
   if(gameMode==='challenger'){
     boss.gT  = (boss.gT  || 1.5) * 0.32;
@@ -1502,7 +1896,7 @@ function spawnBoss(){
     }
   }
   sfx.boss();
-  playMusic(isFinal ? 'final_'+boss.spr : 'boss'+(((Math.floor(wave/5)-1)%3+3)%3));
+  playMusic(isFinal ? 'final_'+boss.spr : 'boss'+(((rushIsActive() ? rushBossIdx : Math.floor(wave/5)-1)%3+3)%3));
   $('bossname').textContent = boss.name;
   $('bossfill').style.width = '100%';
   $('bossfill').style.background = '';   // reset to the default red (a prior final boss may have left it magenta)
@@ -1555,7 +1949,8 @@ function _chaosBossCrash(){
   const others=WORLDS.filter(w=>w.bosses&&w.bosses.length>0&&w!==curWorld());
   if(!others.length) return;
   const def=pick(pick(others).bosses.slice(0,-1)||pick(others).bosses);
-  const hp=def.hp*HP_MULT*(1+(wave-1)*0.10)*(curWorld().hpMul||1)*(1+worldBand()*0.42)*0.38;
+  const bossGearHp = (typeof gearBossHpMul==='function' ? gearBossHpMul(worldIdx) : 1);
+  const hp=def.hp*HP_MULT*(1+(wave-1)*0.08)*(curWorld().hpMul||1)*(1+(worldHpBand()-1)*0.28)*0.32*bossGearHp;
   const p=ringPos();
   boss={
     spr:def.spr,name:'INVADER: '+def.name,pattern:def.pattern,mk:def.moveKey||def.spr,
@@ -1605,7 +2000,7 @@ const CHAOS_EVENTS=[
   {name:'GRAVITY',      fn:()=>{chaosGravT=3;}},
   {name:'BERSERK',      fn:()=>{chaosBerserkT=7;for(const e of enemies){if(!e.isBoss&&!e.under)e.hp=Math.min(e.maxHp,e.hp+e.maxHp*0.20);}}},
   {name:'DISARM',       fn:()=>{chaosDisarmT=3.5;}},
-  {name:'SWARM',        fn:()=>{ let n=18;while(n-->0&&enemies.length<MAX_ENEMIES-1){const p=ringPos(),f=curFoes[0];enemies.push({spr:f.spr,name:f.name,x:p.x,y:p.y,r:f.r*0.65,hp:f.hp*HP_MULT*0.28,maxHp:f.hp*HP_MULT*0.28,_shooter:false,_hazard:false,_burst:false,dmgBuff:0.5,sp:f.sp*1.8,xp:f.xp*0.25,score:8,range:0,shoot:null,death:null,aoe:null,aoeCd:3,dash:false,dst:'idle',dcd:2,da:0,dwin:0,ddur:0,shell:false,shellCd:5,iv:0.25,support:null,supCd:3,front:0,kb:0,pullAura:0,trail:null,trailT:0,cast:null,castCd:0,under:false,digT:0,spin:0,t:rand(0,TAU),wob:rand(2,4),shootCd:3,frz:0,isBoss:false,hitT:0,sq:0,face:1,chaosSwarm:true});}}},
+  {name:'SWARM',        fn:()=>{ let n=18;while(n-->0&&enemies.length<MAX_ENEMIES-1){const p=ringPos(),f=curFoes[0];enemies.push({spr:f.spr,name:f.name,x:p.x,y:p.y,r:f.r*0.65,hp:f.hp*HP_MULT*0.28,maxHp:f.hp*HP_MULT*0.28,_shooter:false,_hazard:false,_burst:false,dmgBuff:0.5,sp:f.sp*1.8,xp:normalizeSwarmXp(f.xp),score:8,range:0,shoot:null,death:null,aoe:null,aoeCd:3,dash:false,dst:'idle',dcd:2,da:0,dwin:0,ddur:0,shell:false,shellCd:5,iv:0.25,support:null,supCd:3,front:0,kb:0,pullAura:0,trail:null,trailT:0,cast:null,castCd:0,under:false,digT:0,spin:0,t:rand(0,TAU),wob:rand(2,4),shootCd:3,frz:0,isBoss:false,hitT:0,sq:0,face:1,chaosSwarm:true});}}},
   {name:'BOMB RAIN',    fn:()=>{chaosBombRainT=20;chaosBombRainCd=0;}},
 ];
 
@@ -1699,13 +2094,14 @@ function spawnEnemy(){
   }
   const p = ringPos();
   const special = foeIsSpecial(def);
-  const hpMult = (1 + (wave-1)*0.07) * worldHpBand() * (curWorld().hpMul||1) * (special?SPECIAL_HP_BUFF:1) * 0.65;   // gentle per-wave growth + per-world band; -35% base so faster, lower-hp swarms kill quicker
+  const gearHp = (typeof gearEnemyHpMul==='function' ? gearEnemyHpMul(worldIdx) : 1);
+  const hpMult = (1 + (wave-1)*0.07) * worldHpBand() * (curWorld().hpMul||1) * (special?SPECIAL_HP_BUFF:1) * 0.65 * gearHp;   // gentle per-wave growth + per-world band; gear tier softens fodder when you're geared for this world
   enemies.push({
     spr:def.spr, name:def.name, x:p.x, y:p.y, r:def.r,
     hp:def.hp*HP_MULT*hpMult, maxHp:def.hp*HP_MULT*hpMult,
     _shooter:foeIsShooter(def), _hazard:foeIsHazard(def), _burst:foeIsBurst(def),
     dmgBuff: special?SPECIAL_DMG_BUFF:1,                // buffy specials also hit harder on contact
-    sp:def.sp*(1+wave*0.02), xp:def.xp, score:def.score, range:def.range, shoot:def.shoot, death:def.death,
+    sp:def.sp*(1+wave*0.02), xp:normalizeSwarmXp(def.xp), score:def.score, range:def.range, shoot:def.shoot, death:def.death,
     aoe:def.aoe, aoeCd:rand(1.5,3),
     dash:def.dash, dst:'idle', dcd:rand(2,4), da:0, dwin:0, ddur:0,
     shell:def.shell, shellCd:rand(3,5), iv:0,
@@ -1850,6 +2246,7 @@ function gainXp(n){
 function openLevelUp(){
   state = ST.LEVELUP;
   sfx.level();
+  if(typeof haptic === 'function') haptic('level');
   // candidates = every card with a remaining move whose synergy gate (req) is satisfied
   const cands = [];
   for(const u of UPGRADES){
@@ -1907,6 +2304,9 @@ function openLevelUp(){
                   `<div class="cstars">${stars}</div>`;
     d.onclick = ()=>{
       m.evolve ? sfx.evolve() : sfx.pick();
+      if(typeof haptic === 'function') haptic(m.evolve ? 'evolve' : 'pick');
+      if(m.evolve && typeof engageOnEvolve === 'function') engageOnEvolve();
+      if(u.req && u.req.length && typeof engageSynergyUnlock === 'function') engageSynergyUnlock(m.name);
       m.apply(); P.up[u.id]=(P.up[u.id]||0)+1;
       const allCards = [...$('cards').querySelectorAll('.card')];
       allCards.forEach(c => { c.style.pointerEvents='none'; });
@@ -1917,10 +2317,17 @@ function openLevelUp(){
         if(i===2) c.style.setProperty('--rej-rot',(12+Math.random()*10)+'deg');
         c.classList.add(rejClass[i]);
       });
+      const lv = $('levelup');
+      lv.classList.add('leaving');
       setTimeout(()=>{
-        $('levelup').classList.add('hidden');
+        lv.classList.add('hidden');
+        lv.classList.remove('leaving');
+        allCards.forEach(c => {
+          c.classList.remove('card-selected','card-rejected-left','card-rejected-mid','card-rejected-right');
+          c.style.removeProperty('--rej-rot');
+        });
         state=ST.PLAY;
-      }, 220);
+      }, 860);
     };
     wrap.appendChild(d);
   });
@@ -1929,14 +2336,19 @@ function openLevelUp(){
 
 // ============ DEATH ============
 function gameOver(){
+  if(typeof clearSuspendedRun === 'function') clearSuspendedRun();
   state = ST.OVER;
   arena=null; bossPending=0;
   stopMusic();
   sfx.die();
+  if(typeof haptic === 'function') haptic('heavy');
   shake = 22; hitstop = 0.12;
-  $('fwave').textContent = timerMode() ? 'time '+fmtTime(chalElapsed) : 'wave '+wave;
-  $('fcoins').textContent = worldCoins;
+  $('fwave').textContent = rushIsActive()
+    ? rushBossesBeaten+' bosses · '+rushGemsEarned+' ◆'
+    : (timerMode() ? 'time '+fmtTime(chalElapsed) : 'wave '+wave);
+  $('fcoins').textContent = fmtNum(worldCoins);
   $('fkills').textContent = kills;
+  if(typeof showRunDebrief === 'function') showRunDebrief('over');
   $('hud').classList.add('hidden');
   $('dashbtn').classList.add('hidden');
   $('zoomctl').classList.add('hidden');
@@ -1952,7 +2364,7 @@ function tryDash(){
     placedTurrets.push({x:P.x,y:P.y,hp:25,maxHp:25,cd:0,face:0,inv:0});
     P.dashCd=P.dashMax;
     sfx.dash();
-    if(navigator.vibrate) navigator.vibrate(20);
+    if(typeof haptic === 'function') haptic('dash');
     return;
   }
   if(typeof fireHook==='function') fireHook('onDash');
@@ -1966,7 +2378,7 @@ function tryDash(){
   else { mx/=ml; my/=ml; }
   P.dvx=mx; P.dvy=my; P.dashT=0.18; P.dashCd=P.dashMax; P.inv=Math.max(P.inv,0.25);
   sfx.dash();
-  if(navigator.vibrate) navigator.vibrate(20);
+  if(typeof haptic === 'function') haptic('dash');
 }
 
 // O(1) removal for arrays where order doesn't matter (bullets/projectiles): overwrite slot i with
@@ -2031,9 +2443,40 @@ function separate(e){
   if(sx||sy){ e.x+=clamp(sx,-12,12); e.y+=clamp(sy,-12,12); }   // capped so nothing teleports
 }
 
+function resolveEnemyObstacles(e){
+  if(!e || !curObstacles.length || typeof WorldMapLayout==='undefined') return;
+  const r = WorldMapLayout.resolveCircle(e.x, e.y, e.r, curObstacles);
+  e.x = r.x; e.y = r.y;
+}
+
+function steerEnemyAngle(e, a, step){
+  if(!curObstacles.length || typeof WorldMapLayout==='undefined' || step<=0) return a;
+  const nx0 = e.x + Math.cos(a)*step, ny0 = e.y + Math.sin(a)*step;
+  if(WorldMapLayout.isCircleFree(nx0, ny0, e.r, curObstacles)) return a;
+  const tx=P.x, ty=P.y;
+  let best=a, bestD=Infinity;
+  const offs=[Math.PI/4,-Math.PI/4,Math.PI/2,-Math.PI/2,Math.PI*3/4,-Math.PI*3/4,Math.PI,-Math.PI/6,Math.PI/6];
+  for(const off of offs){
+    const ta=a+off;
+    const nx=e.x+Math.cos(ta)*step, ny=e.y+Math.sin(ta)*step;
+    if(!WorldMapLayout.isCircleFree(nx, ny, e.r, curObstacles)) continue;
+    const d=(tx-nx)*(tx-nx)+(ty-ny)*(ty-ny);
+    if(d<bestD){ bestD=d; best=ta; }
+  }
+  return best;
+}
+
+function clampEnemyWorld(e){
+  e.x = clamp(e.x, WALL, WORLD.w-WALL); e.y = clamp(e.y, WALL, WORLD.h-WALL);
+  if(arena){ e.x=clamp(e.x, arena.x+e.r, arena.x+arena.w-e.r); e.y=clamp(e.y, arena.y+e.r, arena.y+arena.h-e.r); }
+  resolveEnemyObstacles(e);
+}
+
 // ============ UPDATE ============
 
 function update(dt){
+  if(typeof tickRunAutosave === 'function') tickRunAutosave(dt);
+  if(typeof engageTick === 'function') engageTick(dt);
   elapsed += dt;
   // Challenger/practice-timer-based: advance separate timer (paused during boss), trigger milestones
   if(timerMode() && state===ST.PLAY){
@@ -2057,11 +2500,16 @@ function update(dt){
   if(typeof fireHook==='function') fireHook('petTick', dt);
   // Anti-cheat: per-frame sanity clamp — values beyond legitimate upgrade caps indicate console tampering
   if(state===ST.PLAY){
-    if(P.dmg>18000||P.maxHp>4000||P.speed>2800||P.shots>32){ quitToMenu(); return; }
+    const cap = legitStatCeil();
+    if(P.dmg>cap.dmg||P.maxHp>cap.maxHp||P.speed>cap.speed||P.shots>cap.shots){ quitToMenu(); return; }
     if(P.hp>P.maxHp) P.hp=P.maxHp;
     if(boss && boss.hp > boss.maxHp) boss.hp = boss.maxHp;   // reject console-up of boss HP
   }
   if(bossPending>0){ bossPending-=dt; if(bossPending<=0){ bossPending=0; spawnBoss(); } }
+  if(rushGapT>0 && rushIsActive() && !boss && bossPending<=0){
+    rushGapT -= dt;
+    if(rushGapT<=0){ rushGapT=0; startBossArena(); }
+  }
 
   // --- player move ---
   let mx=joy.dx, my=joy.dy;
@@ -2073,10 +2521,32 @@ function update(dt){
   if(ml>0.05){ P.face=Math.atan2(my,mx); P.walk+=dt*10; P.moving=true; P.walkAmt=Math.min(1,(P.walkAmt||0)+dt*8); }
   else { P.walk*=0.9; P.moving=false; P.walkAmt=Math.max(0,(P.walkAmt||0)-dt*6); }
 
+  // Swamp Leech: track standing still
+  if(P.swampleech>0 || P.swampRegen>0){
+    if(P.moving || P.dashT>0) P.stillT=0;
+    else P.stillT=(P.stillT||0)+dt;
+  }
+
+  // Ember Trail: burning leaves while moving (or always after evolve)
+  if(P.emberTrail>0 && (P.moving || P.emberAlways)){
+    P.emberCd=(P.emberCd||0)-dt;
+    if(P.emberCd<=0){
+      P.emberCd=Math.max(0.14,0.32-P.emberTrail*0.03);
+      const er=P.emberR||48, el=P.emberLife||1.1;
+      addZone(P.x,P.y,er,{tele:0.05,life:el,dps:6+P.emberTrail*3,col:'#ff8a3a',friendly:true});
+      if(Math.random()<0.35) spawnPart(P.x+rand(-10,10),P.y+rand(-10,10),0,-rand(20,50),0.35,0.35,'#ff6a20',rand(2,5));
+    }
+  }
+
   if(P.dashT>0){
     P.dashT-=dt;
     P.x += P.dvx*640*dt; P.y += P.dvy*640*dt;
     if(Math.random()<0.6) spawnPart(P.x,P.y,0,0,0.25,0.25,'#bfe3ff',6);
+    if(P.dashT<=0 && P.quakeDash>0){
+      const R=62+P.quakeDash*10, qd=P.dmg*(1.2+P.quakeDash*0.35)*(P.abyssalMul||1);
+      forEnemiesNear(P.x,P.y,R,(o)=>{ if(o.iv>0||o.under||o.lead) return; if(dist2(P.x,P.y,o.x,o.y)<R*R){ o.hp-=qd; o.hitT=Math.max(o.hitT,0.08); } });
+      spawnPart(P.x,P.y,0,0,0.3,0.3,'#8a5d2c',R,1,R*2.2); burst(P.x,P.y,'#caa15a',12,260); shake=Math.max(shake,5);
+    }
   } else {
     const spd = P.speed * (P.slowT>0 ? 0.5 : 1);   // chilled by cold zones
     P.x += mx*spd*dt; P.y += my*spd*dt;
@@ -2292,11 +2762,54 @@ function update(dt){
     }
   }
 
+  // --- Generic field pulse (Shard Field, Molten Bloom, W12+ themed cards) ---
+  if(P.fieldPulse){
+    P.fpCd -= dt;
+    if(P.fpCd<=0){
+      P.fpCd = P.fpCdBase;
+      const fl = P.fieldPulseEvo ? (P.fpLife||1.5)+0.8 : (P.fpLife||1.5);
+      addZone(P.x,P.y,P.fpR,{tele:0.08,life:fl,dps:P.fpDps,slow:!!P.fpSlow,col:P.fpCol||'#bfe6ff',friendly:true});
+      burst(P.x,P.y,P.fpCol||'#bfe6ff',P.fieldPulseEvo?20:12,280);
+      if(P.fpSlow) forEnemiesNear(P.x,P.y,P.fpR,(e)=>{ if(!e.isBoss&&!e.lead&&dist2(P.x,P.y,e.x,e.y)<P.fpR*P.fpR) e.chillT=Math.max(e.chillT||0,1.0); });
+    }
+  }
+
+  // --- Thunder Drop: periodic bolt on nearest foe ---
+  if(P.thunder){
+    P.thunderCd -= dt;
+    if(P.thunderCd<=0){
+      P.thunderCd = P.thunderCdBase;
+      let best=null, bd=Infinity;
+      forEnemiesNear(P.x,P.y,P.range,(e)=>{ if(e.iv>0||e.lead) return; const d=dist2(P.x,P.y,e.x,e.y); if(d<bd){bd=d;best=e;} });
+      if(best){
+        const td=P.dmg*(P.thunderDmg||1.4)*(P.abyssalMul||1);
+        damageEnemy(best,td,P.x,P.y,false);
+        burst(best.x,best.y,'#ffd24a',P.thunderEvo?18:10,320); sfx.boss();
+        if(P.thunderEvo){ for(let bi=ebullets.length-1;bi>=0;bi--){ if(dist2(best.x,best.y,ebullets[bi].x,ebullets[bi].y)<90*90) swapRemove(ebullets,bi); } }
+        const chains=P.thunderChain||0;
+        if(chains>0){
+          let second=null, sd=Infinity;
+          forEnemiesNear(best.x,best.y,160,(e)=>{ if(e===best||e.iv>0||e.lead) return; const d=dist2(best.x,best.y,e.x,e.y); if(d<sd){sd=d;second=e;} });
+          if(second){ damageEnemy(second,td*0.7,P.x,P.y,false); burst(second.x,second.y,'#fff6bf',8,220); }
+        }
+      }
+    }
+  }
+
   // --- Killing Frenzy stacks decay when you stop killing ---
   if(P.frenzy>0) P.frenzy = Math.max(0, P.frenzy - dt*2);
 
+  // --- Harvest Moon gold stacks decay when you stop killing ---
+  if(P.harvestStacks>0) P.harvestStacks = Math.max(0, P.harvestStacks - dt*1.5);
+
   // --- Regeneration ---
   if(P.regen>0 && P.hp<P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.regen*dt);
+
+  // --- Swamp Leech: heal while standing still ---
+  if((P.swampleech>0||P.swampRegen>0) && P.stillT>=(P.swampStill||0.5)){
+    const rate = (P.swampRegen||0) + P.swampleech*1.4;
+    if(rate>0 && P.hp<P.maxHp) P.hp = Math.min(P.maxHp, P.hp + rate*dt);
+  }
 
   // --- Aegis Bubble recharge ---
   if(P.shieldMax>0 && P.shield<P.shieldMax){
@@ -2310,12 +2823,21 @@ function update(dt){
     if(P.phoenixCd<=0){ P.phoenix++; P.phoenixCd=P.phoenixCdBase; floatText(P.x,P.y-P.r-10,'phoenix ready','#ff7a3a',12); }
   }
 
-  // --- Phoenix burn aura: enemies near you smoulder ---
+  // --- Phoenix burn aura / Scorch Aura: enemies near you smoulder ---
   if(P.burnAura>0){
     forEnemiesNear(P.x,P.y,80,(e)=>{
       if(e.iv>0 || e.lead) return;
       if(dist2(P.x,P.y,e.x,e.y) < 80*80){ e.hp -= P.burnAura*dt; e.hitT=Math.max(e.hitT,0.05);
         if(Math.random()<0.18) spawnPart(e.x+rand(-8,8),e.y+rand(-8,8),0,-rand(20,50),0.4,0.4,'#ff8a3a',rand(2,4)); }
+    });
+  }
+
+  // --- Bog Mire: mud aura slows nearby foes ---
+  if(P.bogAura>0){
+    const br=P.bogR||88;
+    forEnemiesNear(P.x,P.y,br,(e)=>{
+      if(e.iv>0 || e.lead || e.isBoss) return;
+      if(dist2(P.x,P.y,e.x,e.y) < br*br) e.chillT = Math.max(e.chillT||0, 0.25 + 0.12*P.bogAura);
     });
   }
 
@@ -2489,6 +3011,11 @@ function update(dt){
           hitSpark(b.x,b.y,isCrit?'#ffe14d':'#ff9f3a',isCrit);
           damageEnemy(e,dmg,b.x,b.y,isCrit);
           if(isCrit && P.critHeal>0) P.hp=Math.min(P.maxHp,P.hp+P.critHeal);   // Blood Crit
+          if(isCrit && P.prismCrit>0){   // Prism Edge: crits split shards
+            for(let s=0;s<2+P.prismCrit;s++){ const a=rand(0,TAU);
+              bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*380,vy:Math.sin(a)*380,r:5,pierce:1,hit:new Set([e]),dist:220,dmgMul:0.35*(b.dmgMul||1),col:'#c8e8ff'}); }
+            burst(e.x,e.y,'#c8e8ff',6,140);
+          }
           if(P.ricochet>0 && !b.ric){   // Ricochet: fling weaker bolts at nearby foes (don't ricochet a ricochet)
             const R=P.ricochetEvo?220:140, mul=P.ricochetEvo?0.7:0.5; let n=0;
             forEnemiesNear(b.x,b.y,R,(o)=>{ if(n>=P.ricochet||o===e||o.iv>0||o.under||o.lead||b.hit.has(o)) return;
@@ -2575,11 +3102,17 @@ function update(dt){
   updateChaos(dt);
 
   // --- spawn during wave ---
+  if(runSpawnGrace>0){
+    runSpawnGrace -= dt;
+    P.inv = Math.max(P.inv||0, runSpawnGrace);
+  }
   spawnTimer -= dt;
-  if(!betweenWaves && waveEnemiesLeft>0 && spawnTimer<=0){
+  if(!betweenWaves && waveEnemiesLeft>0 && spawnTimer<=0 && !rushIsActive()){
     // Challenger's first stretch (before its 1st boss) spawns 30% faster, same early-game buff as story waves 1-9
     const chalEarlyMul = (gameMode==='challenger' && chalBossIdx===0) ? 1.3 : 1;
-    spawnTimer = Math.max(0.05, (0.40 - wave*0.03) / chalEarlyMul);
+    const graceMul = runSpawnGrace>0 ? 1.65 : 1;
+    spawnTimer = Math.max(0.05, (0.40 - wave*0.03) / chalEarlyMul * graceMul);
+    if(runSpawnGrace>0 && enemies.length>=4) spawnTimer = Math.max(spawnTimer, 0.55);
     if(spawnEnemy() !== false) waveEnemiesLeft--;   // at the cap? keep the budget and retry next tick
   }
 
@@ -2616,6 +3149,16 @@ function update(dt){
       if(Math.random()<dt*10) spawnPart(e.x+rand(-e.r*.5,e.r*.5),e.y-e.r*.2,rand(-18,18),rand(-90,-35),.38,.38,Math.random()<.5?'#ff6a00':'#ffcc00',rand(2,5));
       if(e.fire.dur<=0){ e.fire=null; e.fireImmune=1; }
     }
+    if(e.poison){
+      e.poison.dur-=dt; e.poison.tickCd-=dt;
+      if(e.poison.tickCd<=0){
+        e.poison.tickCd=0.5;
+        e.hp-=e.poison.dmg; e.hitT=Math.max(e.hitT,0.06);
+        floatText(e.x,e.y-e.r-4,Math.round(e.poison.dmg),'#5fe66a',11);
+      }
+      if(Math.random()<dt*8) spawnPart(e.x+rand(-e.r*.5,e.r*.5),e.y-e.r*.2,rand(-18,18),rand(-90,-35),.35,.35,'#40c820',rand(2,4));
+      if(e.poison.dur<=0) e.poison=null;
+    }
 
     if(e.isBoss){
       updateBoss(e,dt);
@@ -2624,6 +3167,7 @@ function update(dt){
       e.digT-=dt;
       const a=Math.atan2(P.y-e.y,P.x-e.x);
       e.x=clamp(e.x+Math.cos(a)*e.sp*1.35*dt,WALL,WORLD.w-WALL); e.y=clamp(e.y+Math.sin(a)*e.sp*1.35*dt,WALL,WORLD.h-WALL);
+      clampEnemyWorld(e);
       if(e.digT<=0){ e.under=false; e.iv=0.2; burst(e.x,e.y,'#7a5a30',16,220); }
     } else {
       if(e.iv>0) e.iv-=dt;
@@ -2639,7 +3183,7 @@ function update(dt){
       let dashing=false;
       if(e.dash){
         if(e.dst==='wind'){ e.dwin-=dt; dashing=true; if(e.dwin<=0){ e.dst='dash'; e.ddur=0.32; } }
-        else if(e.dst==='dash'){ e.ddur-=dt; dashing=true; e.x+=Math.cos(e.da)*460*dt; e.y+=Math.sin(e.da)*460*dt; if(e.ddur<=0){ e.dst='idle'; e.dcd=rand(2.6,4.6); } }
+        else if(e.dst==='dash'){ e.ddur-=dt; dashing=true; e.x+=Math.cos(e.da)*460*dt; e.y+=Math.sin(e.da)*460*dt; resolveEnemyObstacles(e); if(e.ddur<=0){ e.dst='idle'; e.dcd=rand(2.6,4.6); } }
         else { e.dcd-=dt; if(e.dcd<=0 && e.iv<=0 && dist2(e.x,e.y,P.x,P.y)<380*380){ e.dst='wind'; e.dwin=0.5; e.da=Math.atan2(P.y-e.y,P.x-e.x); dashing=true; } }
       }
       // Fantasma's stealth: enemies stay put (and hold fire) unless he's close or they've been shot recently
@@ -2662,13 +3206,19 @@ function update(dt){
             else if(e.shoot && e.shoot.move){ a = toP + Math.PI/2; } // in range + mobile: strafe
             else { move=false; }                                  // in range + stationary: hold
           }
-          if(move){ e.x += Math.cos(a)*e.sp*fs*_cSpd*dt; e.y += Math.sin(a)*e.sp*fs*_cSpd*dt; }
+          if(move){
+            const step = e.sp*fs*_cSpd*dt;
+            a = steerEnemyAngle(e, a, step);
+            e.x += Math.cos(a)*step; e.y += Math.sin(a)*step;
+          }
           e.face = Math.cos(toP)>=0 ? 1 : -1;
           e.moving = move;
         } else {
           // asleep to Fantasma: slow drifting wander instead of chasing
           const wa = e.t*0.6 + e.wob*7;
-          e.x += Math.cos(wa)*e.sp*0.3*fs*dt; e.y += Math.sin(wa)*e.sp*0.3*fs*dt;
+          const wStep = e.sp*0.3*fs*dt;
+          const sa = steerEnemyAngle(e, wa, wStep);
+          e.x += Math.cos(sa)*wStep; e.y += Math.sin(sa)*wStep;
           e.face = Math.cos(wa)>=0 ? 1 : -1;
           e.moving = true;
         }
@@ -2676,14 +3226,14 @@ function update(dt){
       // ease walk-pose blend toward moving/idle target instead of snapping legs straight when motion starts/stops
       e.walkAmt = (e.walkAmt||0) + ((e.moving?1:0)-(e.walkAmt||0)) * Math.min(1, dt*8);
       separate(e);   // resolve overlaps with nearby foes so the pack spreads + flows around
-      e.x = clamp(e.x, WALL, WORLD.w-WALL); e.y = clamp(e.y, WALL, WORLD.h-WALL);
-      if(arena){ e.x=clamp(e.x, arena.x+e.r, arena.x+arena.w-e.r); e.y=clamp(e.y, arena.y+e.r, arena.y+arena.h-e.r); }
+      clampEnemyWorld(e);
       // chaos gravity: scatter away (>0) or rush in (<0)
       if(_gravOn&&e.iv<=0){
         const ga=chaosGravT>0?Math.atan2(e.y-P.y,e.x-P.x):Math.atan2(P.y-e.y,P.x-e.x);
         const gs=chaosGravT>0?270:420;
         e.x=clamp(e.x+Math.cos(ga)*gs*dt,WALL,WORLD.w-WALL);
         e.y=clamp(e.y+Math.sin(ga)*gs*dt,WALL,WORLD.h-WALL);
+        resolveEnemyObstacles(e);
       }
       // skip shooting / casting / aoe / support for enemies well outside player's screen
       const _eDist2 = dist2(e.x,e.y,P.x,P.y);
@@ -2739,6 +3289,11 @@ function update(dt){
       const hitLands = P.inv<=0 && P.dashT<=0 && P.shield<=0;   // the contact actually deals damage this frame
       hurtPlayer((e.isBoss?20:10)*(e.dmgBuff||1)*chalDmgMul(), e);
       if(P.thorns>0 && hitLands && !e.isBoss) damageEnemy(e, P.thorns, P.x, P.y, false);   // Spiky Peel
+      if(P.earthward>0 && hitLands && !e.isBoss){   // Earth Ward: quake when foes touch you
+        const R=48+P.earthward*8, qd=P.dmg*0.45*P.earthward*(P.abyssalMul||1);
+        forEnemiesNear(P.x,P.y,R,(o)=>{ if(o===e||o.iv>0||o.lead) return; if(dist2(P.x,P.y,o.x,o.y)<R*R){ o.hp-=qd; o.hitT=Math.max(o.hitT,0.08); } });
+        spawnPart(P.x,P.y,0,0,0.25,0.25,'#8a5d2c',R*0.6,1);
+      }
       if(e.kb && e.dst==='dash'){   // charging boulder bowls the player back
         const a=Math.atan2(P.y-e.y,P.x-e.x);
         P.x=clamp(P.x+Math.cos(a)*120, WALL+P.r, WORLD.w-WALL-P.r); P.y=clamp(P.y+Math.sin(a)*120, WALL+P.r, WORLD.h-WALL-P.r);
@@ -2761,9 +3316,12 @@ function update(dt){
     if(e.hp<=0 && !e.lead){   // duo partner (e.lead) is never killed on its own -> damage routes to the lead
       enemies.splice(i,1);
       kills++; setKillHUD();
+      if(typeof engageOnKill === 'function') engageOnKill();
       if(typeof fireHook==='function') fireHook('onKill', e);
       sfx.hit();
       if(deathShakeOn) shake=Math.max(shake,e.isBoss?16:8);
+      if(e.isBoss && typeof haptic === 'function') haptic('boss');
+      if(e.isBoss && typeof engageOnBossKill === 'function') engageOnBossKill();
       // Hit-stop only on boss kills. Normal kills are constant in a survivor game, so freezing the
       // sim 50ms each one stacked into near-continuous choppiness — feedback comes from burst+sfx instead.
       hitstop=Math.max(hitstop,e.isBoss?0.06:0);
@@ -2776,12 +3334,52 @@ function update(dt){
       }
       if(P.vamp>0){ P.hp=Math.min(P.maxHp,P.hp+P.vamp); }
       if(P.frenzyGain>0) P.frenzy=Math.min(P.frenzyMax, P.frenzy+P.frenzyGain);
+      if(P.harvestGain>0) P.harvestStacks=Math.min(P.harvestMax||12, (P.harvestStacks||0)+1);
+      if(P.lavaKill>0){
+        const lr=52+P.lavaKill*8;
+        addZone(e.x,e.y,lr,{tele:0.08,life:1.1+P.lavaKill*0.12,dps:9+P.lavaKill*3,col:'#ff5020',friendly:true});
+        burst(e.x,e.y,'#ff6a20',8,200);
+      }
+      if(P.buriedGold>0){
+        const pull=180+P.buriedGold*45;
+        for(const g of gems){
+          const d=dist2(e.x,e.y,g.x,g.y);
+          if(d<pull*pull && d>1){ const dd=Math.sqrt(d); g.vx=(g.vx||0)+(P.x-g.x)/dd*220; g.vy=(g.vy||0)+(P.y-g.y)/dd*220; }
+        }
+      }
+      if(P.crystalShatter>0 && (e.chillT>0||e.frz>0)){
+        const R=68+P.crystalShatter*12, sd=P.dmg*(1.4+P.crystalShatter*0.45)*(P.abyssalMul||1);
+        forEnemiesNear(e.x,e.y,R,(o)=>{ if(o.iv>0||o.lead) return; if(dist2(e.x,e.y,o.x,o.y)<R*R){ o.hp-=sd; o.hitT=Math.max(o.hitT,0.1);
+          if(P.crystalShatterEvo && !o.isBoss) o.frz=Math.max(o.frz||0,0.6); } });
+        burst(e.x,e.y,'#c8e8ff',P.crystalShatterEvo?16:10,260);
+        if(P.crystalShatterEvo){ for(let s=0;s<4;s++){ const a=s*(TAU/4)+rand(0,0.5);
+          bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*360,vy:Math.sin(a)*360,r:5,pierce:1,hit:new Set(),dist:260,dmgMul:0.45,col:'#c8e8ff'}); } }
+      }
       if(P.frostfire && e.frz>0){          // Frostfire Core: frozen foes shatter into shards
         for(let s=0;s<4;s++){ const a=s*(TAU/4)+rand(0,0.6);
           bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*420,vy:Math.sin(a)*420,r:6,pierce:1,hit:new Set(),dist:300,dmgMul:0.5}); }
         burst(e.x,e.y,'#bfe6ff',8,180);
       }
-      if(e.isBoss && timerMode()){
+      if(e.isBoss && rushIsActive()){
+        boss=null; arena=null;
+        $('bossbar').classList.add('hidden');
+        ebullets=[]; zones=[];
+        enemies=enemies.filter(o=>o.isBoss);
+        playMusic(curTheme.music); sfx.win();
+        rushBossesBeaten++;
+        const gemReward = (rushBossesBeaten % 5 === 0) ? 3 : 1;
+        if(typeof addGems==='function'){
+          addGems(gemReward);
+          rushGemsEarned += gemReward;
+          floatText(e.x, e.y - 40, '+'+gemReward+' ◆', '#b06ff0', 20);
+        }
+        bigText('BOSS '+rushBossesBeaten+' DOWN','#4aa3df');
+        for(let g=0; g<6; g++) dropOrb(e.x, e.y, 3, 120, 300);
+        rushBossIdx++;
+        rushGapT = 1.35;
+        waveEnemiesLeft = 0;
+        betweenWaves = false;
+      } else if(e.isBoss && timerMode()){
         // Challenger/practice-timer-based boss kill
         boss=null; arena=null;
         $('bossbar').classList.add('hidden');
@@ -2832,8 +3430,13 @@ function update(dt){
       } else {
         if(e.death && e.death.type==='ring'){ const n=e.death.n||4; for(let k=0;k<n;k++) fireEB(e.x,e.y,k*TAU/n,150,'#e58a3a'); }
         if(e.death && e.death.type==='split') spawnSplit(e);
-        dropOrb(e.x, e.y, orbTier(e.xp));
-        if(Math.random()<0.03){ const a=rand(0,TAU), s=rand(90,210); gems.push({x:e.x,y:e.y,coin:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s}); }
+        dropOrb(e.x, e.y, swarmOrbTier(e.xp));
+        const coinChance = Math.min(0.22, 0.04 + worldIdx * 0.0035);
+        if(Math.random()<coinChance){ const a=rand(0,TAU), s=rand(90,210); gems.push({x:e.x,y:e.y,coin:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s}); }
+        if(gameMode!=='practice'){
+          const kg = killGoldDrop(e);
+          if(kg>0){ gold+=kg; saveGold(); if(window.markDirty) window.markDirty(); floatText(e.x,e.y-18,'+'+fmtNum(kg),'#f5c542',11); }
+        }
         if(Math.random()<0.025){ const a=rand(0,TAU), s=rand(90,210); gems.push({x:e.x,y:e.y,heart:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s}); }
       }
     }
@@ -2841,10 +3444,10 @@ function update(dt){
 
   // advance after the cleared-gap. In-update countdown (NOT a wall-clock setTimeout) so it
   // pauses with the game and can never be dropped by a pause/blur firing during the gap.
-  if(betweenWaves && waveGapT>0 && !timerMode()){ waveGapT-=dt; if(waveGapT<=0){ waveGapT=0; wave++; startWave(); } }
+  if(betweenWaves && waveGapT>0 && !timerMode() && !rushIsActive()){ waveGapT-=dt; if(waveGapT<=0){ waveGapT=0; wave++; startWave(); } }
 
-  // wave cleared? (not while the boss is still incoming; skip in timer-mode — enemies spawn endlessly)
-  if(!betweenWaves && bossPending<=0 && waveEnemiesLeft===0 && enemies.length===0 && !timerMode()){
+  // wave cleared? (not while the boss is still incoming; skip in timer-mode / boss-rush)
+  if(!betweenWaves && bossPending<=0 && waveEnemiesLeft===0 && enemies.length===0 && !timerMode() && !rushIsActive()){
     betweenWaves=true; waveGapT=1.3;
     bigText('WAVE CLEARED','#5fbf52');
     if(typeof fireHook==='function') fireHook('waveEnd');
@@ -2898,6 +3501,9 @@ function update(dt){
   } else if(boss && boss.finalPhase && state===ST.PLAY){
     bossLuckyT -= dt;
     if(bossLuckyT<=0){ bossLuckyT = 20; spawnBossLucky(2); }
+  } else if(boss && rushIsActive() && state===ST.PLAY){
+    bossLuckyT -= dt;
+    if(bossLuckyT<=0){ bossLuckyT = 18; spawnBossLucky(1); }
   } else if(boss && state===ST.PLAY){
     if(P.hp/P.maxHp < 0.25 && luckies.length===0) spawnBossLucky(2, 15);
   }
@@ -2924,7 +3530,7 @@ function update(dt){
     if(d < (P.r+12)*(P.r+12)){
       gems.splice(i,1);
       if(g.heart){ const h=g.heal||(g.big?50:25); P.hp=Math.min(P.maxHp,P.hp+h); floatText(P.x,P.y-24,'+'+h,'#e8556a',g.big?20:16); burst(P.x,P.y,'#ff97a6',g.big?14:8,140); sfx.coin(); }
-      else if(g.coin){ const v=Math.round(5*(P.goldMul||1)*coinMult()*worldCoinMul()*(gameMode==='challenger'?Math.min(3.5,1.3+worldIdx*0.3):1)); worldCoins+=v; if(gameMode!=='practice'){ gold+=v; saveGold(); if(window.markDirty) window.markDirty(); } setCoinHUD(); floatText(g.x,g.y,'+'+v,'#f5c542',13); sfx.coin(); }
+      else if(g.coin){ const harvestMul=P.harvestGain>0?(1+0.08*(P.harvestStacks||0)):1; const v=Math.round(15*(P.goldMul||1)*harvestMul*coinMult()*worldCoinMul()*(gameMode==='challenger'?Math.min(3.5,1.3+worldIdx*0.3):1)); worldCoins+=v; if(gameMode!=='practice'){ gold+=v; saveGold(); if(window.markDirty) window.markDirty(); } setCoinHUD(); floatText(g.x,g.y,'+'+fmtNum(v),'#f5c542',13); sfx.coin(); }
       else if(g.magnet){ for(const o of gems) o.vac=true; floatText(P.x,P.y-24,'MAGNET','#9fe0ff',16); burst(P.x,P.y,'#9fe0ff',12,160); sfx.level(); }   // pull in every pickup on the map
       else { gainXp(g.v); sfx.gem(2); }
     }
@@ -2975,6 +3581,8 @@ function update(dt){
         const wt=$('wavetag'); if(wt) wt.textContent='BOSS IN '+(rm>0?rm+':'+(rs<10?'0':'')+rs:rs+'s');
       } else if(timerMode() && chalBossActive){
         const wt=$('wavetag'); if(wt) wt.textContent='BOSS FIGHT';
+      } else if(rushIsActive() && boss){
+        const wt=$('wavetag'); if(wt) wt.textContent='BOSS '+(rushBossIdx+1)+((rushBossIdx%5)===4?' · FINAL':'');
       }
     }
   }
@@ -3013,6 +3621,8 @@ function damageEnemy(e,dmg,fx,fy,crit){
     dmg *= 2;
     if(P.showstopper && !crit){ dmg *= P.critMul; crit=true; }                // Showstopper: jackpots also crit
     floatText(e.x,e.y-e.r-20,'JACKPOT!','#ffd24a',16);
+    if(typeof haptic === 'function') haptic('jackpot');
+    if(typeof engageOnJackpot === 'function') engageOnJackpot();
   }
   e.hp -= dmg; e.hitT=0.12; e.sq=1;
   if(!e.isBoss && !e.under && fx!=null && fy!=null && !(fx===e.x && fy===e.y)){   // small knockback away from the hit source
@@ -3023,6 +3633,8 @@ function damageEnemy(e,dmg,fx,fy,crit){
   if(P.stealthAggro && !e.isBoss) e.aggroT=Math.max(e.aggroT||0,3);   // getting shot wakes the enemy up
   if(P.freeze && !e.isBoss) e.frz=1.2;
   if(P.chillHit && !e.isBoss && e.frz<=0) e.chillT = Math.max(e.chillT||0, 0.8 + 0.25*P.chillHit);   // Permafrost: chill-on-hit
+  if(P.leafDrift && !e.isBoss && e.frz<=0) e.chillT = Math.max(e.chillT||0, 0.7 + 0.22*P.leafDrift);   // Falling Leaves
+  if(P.toxicHit && !e.isBoss && !e.poison) e.poison={dur:2.2+P.toxicHit*0.35,dmg:2+P.toxicHit*1.1,tickCd:0.5};   // Toxic Mire
   if(P.burnHit && !e.isBoss && !e.fire) e.fire={dur:2,dmg:3,tickCd:0.5};   // Ember Sage: burn-on-hit
   sfx.hit();
   const _dvx=(Math.random()-0.5)*120;
@@ -3042,13 +3654,48 @@ function fireEB(x,y,a,sp,color,opts){
 function mRing(e,n,spd,col){ const off=rand(0,TAU); for(let i=0;i<n;i++) fireEB(e.x,e.y,off+i*TAU/n,spd,col); muzzleFlash(e.x,e.y,col); }
 function mAimed(e,n,spread,spd,col){ const aim=Math.atan2(P.y-e.y,P.x-e.x); for(let i=0;i<n;i++) fireEB(e.x,e.y,aim+(i-(n-1)/2)*spread,spd,col); muzzleFlash(e.x,e.y,col); }
 // a ring with a wide MISSING arc (a "safe hole") — looks dense but you just walk through the gap. gapFrac = fraction of the circle left open.
-function mRingGap(e,n,spd,col,gapFrac,gapAt){
+function mRingGap(e,n,spd,col,gapFrac,gapAt,dmgMul){
   const off=rand(0,TAU), gs=(gapAt==null?rand(0,TAU):gapAt), gw=TAU*(gapFrac||0.28);
+  const ebOpts = dmgMul!=null ? { dmgMul } : null;
   for(let i=0;i<n;i++){ const a=off+i*TAU/n;
     const d=Math.abs(((a-gs+Math.PI)%TAU+TAU)%TAU-Math.PI);   // angular distance to gap center
     if(d<gw/2) continue;
-    fireEB(e.x,e.y,a,spd,col); }
+    fireEB(e.x,e.y,a,spd,col, ebOpts); }
   muzzleFlash(e.x,e.y,col);
+}
+
+function w1EarlyBossHell(e){
+  return worldIdx===0 && gameMode==='story' && (e.spr==='tralalero' || e.spr==='crocodilo' || e.spr==='sahur');
+}
+// fake bullet-hell tuning: flashy patterns, wide gaps, low chip damage
+function bossHellDmg(e){
+  if(gameMode==='challenger') return 0.45;
+  if(w1EarlyBossHell(e)) return 0.32;
+  return (e && e.finalPhase) ? 0.34 : 0.38;
+}
+function bossHellStorm(e, opts){
+  const dm=bossHellDmg(e), o=opts||{};
+  e.storm=o.dur!=null?o.dur:2.4; e.stormN=o.n!=null?o.n:6; e.stormSpd=o.spd!=null?o.spd:102;
+  e.stormStep=o.step!=null?o.step:0.32; e.stormDir=o.dir!=null?o.dir:(Math.random()<0.5?1:-1);
+  e.stormCol=o.col||'#ff5acd'; e.stormCd=o.cd!=null?o.cd:0.16;
+  e.stormTwin=!!o.twin; e.stormRainbow=!!o.rainbow; e.stormDmgMul=o.dmg!=null?o.dmg:dm;
+  if(o.shake) shake=Math.max(shake,o.shake);
+  if(o.warn!==false) sfx.warn();
+  return e.storm;
+}
+function bossHellEcho(e, opts){
+  const o=opts||{};
+  e.echo={ t:o.dur!=null?o.dur:2.0, ivT:0, n:o.n!=null?o.n:16, spd:o.spd!=null?o.spd:94,
+    col:o.col||'#bff0ff', gap:o.gap!=null?o.gap:0.42, at:rand(0,TAU), dmgMul:o.dmg!=null?o.dmg:bossHellDmg(e) };
+  if(o.warn!==false) sfx.warn();
+}
+function bossHellOrbit(e, n, col, angV, radV){
+  const dm=bossHellDmg(e), off=rand(0,TAU);
+  for(let k=0;k<n;k++) fireEB(e.x,e.y,0,0,col||'#ff5acd',{dmgMul:dm,orbit:{cx:e.x,cy:e.y,ang:off+k*TAU/n,rad:54,angV:angV||0.8,radV:radV||32}});
+  muzzleFlash(e.x,e.y,col||'#ff5acd');
+}
+function finalBossTint(){
+  const w=curWorld(); return (w&&w.enemyTint)||(w&&w.theme&&w.theme.tint)||'#b06ff0';
 }
 
 // ---- World 2 shared hazard helpers (used by dirt enemies AND bosses) ----
@@ -3058,16 +3705,17 @@ function geyserLine(x,y,a,col,n=5,step=46){
 }
 // a full WALL of bullets sweeping across the arena from one edge, with a single moving gap to slip through.
 // the gap is the telegraph: you see the hole coming and walk into it. (scripted-finale bullet-hell pattern)
-function mWall(side, spd, col, gapAt, gapW, n){
+function mWall(side, spd, col, gapAt, gapW, n, dmgMul){
   if(!arena) return; const a=arena;
+  const dm = dmgMul!=null ? dmgMul : 1;
   if(side==='left'||side==='right'){
     const x=side==='left'?a.x+12:a.x+a.w-12, vx=side==='left'?spd:-spd;
     const sn=Math.max(6,Math.round(n*a.h/ARENA_SIZE));
-    for(let i=0;i<sn;i++){ const y=a.y+(i+0.5)*a.h/sn; if(Math.abs(y-gapAt)<gapW) continue; ebullets.push({x,y,vx,vy:0,r:7,color:col}); }
+    for(let i=0;i<sn;i++){ const y=a.y+(i+0.5)*a.h/sn; if(Math.abs(y-gapAt)<gapW) continue; ebullets.push({x,y,vx,vy:0,r:7,color:col,dmgMul:dm}); }
   } else {
     const y=side==='top'?a.y+12:a.y+a.h-12, vy=side==='top'?spd:-spd;
     const sn=Math.max(6,Math.round(n*a.w/ARENA_SIZE));
-    for(let i=0;i<sn;i++){ const x=a.x+(i+0.5)*a.w/sn; if(Math.abs(x-gapAt)<gapW) continue; ebullets.push({x,y,vx:0,vy,r:7,color:col}); }
+    for(let i=0;i<sn;i++){ const x=a.x+(i+0.5)*a.w/sn; if(Math.abs(x-gapAt)<gapW) continue; ebullets.push({x,y,vx:0,vy,r:7,color:col,dmgMul:dm}); }
   }
   sfx.warn();
 }
@@ -3095,8 +3743,9 @@ function debrisDrop(n=3,col){
 function spawnMini(spr,x,y,summoner){
   const def = curFoes.find(f=>f.spr===spr) || {spr, hp:3, sp:84, r:15, xp:1, score:8};
   enemies.push({ spr:def.spr, name:def.name||'', x:clamp(x,WALL,WORLD.w-WALL), y:clamp(y,WALL,WORLD.h-WALL),
-    r:def.r||15, hp:(def.hp||3)*HP_MULT, maxHp:(def.hp||3)*HP_MULT, sp:def.sp||84, xp:def.xp||1, score:def.score||8,
+    r:def.r||15, hp:(def.hp||3)*HP_MULT, maxHp:(def.hp||3)*HP_MULT, sp:def.sp||84, xp:normalizeSwarmXp(def.xp), score:def.score||8,
     t:rand(0,TAU), wob:rand(2,4), shootCd:99, frz:0, iv:0, isBoss:false, hitT:0, sq:0, face:1, summoner });
+  resolveEnemyObstacles(enemies[enemies.length-1]);
 }
 function summonAdds(e,spr,n,cap){
   const live = enemies.filter(o=>o.summoner===e).length;
@@ -3128,10 +3777,16 @@ function spawnSplit(e){
 // move pool for the current boss / Vaca phase
 function bossMoves(e){
   switch(e.mk||e.spr){
-    // ---- World 1 ----
-    case 'tralalero': return ['dash','spiral','aimed3'];
-    case 'crocodilo': return ['carpet','ring16'];
-    case 'sahur':     return ['slam','aimed5','dblslam'];
+    // ---- World 1 (Grasslands waves 5/10/15) — fake bullet-hell: huge patterns, wide gaps, low dmg ----
+    case 'tralalero':
+      if(worldIdx===0 && gameMode==='story') return ['W1_SHARK_SPIRAL','W1_SHARK_GAPS','W1_SHARK_WALL','W1_SHARK_DASH'];
+      return ['dash','spiral','aimed3'];
+    case 'crocodilo':
+      if(worldIdx===0 && gameMode==='story') return ['W1_BOMB_ORBIT','W1_BOMB_CROSS','W1_BOMB_RING','W1_BOMB_WALL'];
+      return ['carpet','ring16'];
+    case 'sahur':
+      if(worldIdx===0 && gameMode==='story') return ['W1_DRUM_ECHO','W1_DRUM_STORM','W1_DRUM_SLAM','W1_DRUM_WALL'];
+      return ['slam','aimed5','dblslam'];
     case 'gorillo':
       if(e.vph>=3) return ['roll','SPIRAL_STORM','seedsmash','RING_VOLLEY','ring12'];
       if(e.vph>=2) return ['roll','seedsmash','ring12','RING_VOLLEY'];
@@ -3141,9 +3796,9 @@ function bossMoves(e){
       if(e.vph>=2) return ['warp','spiral','ring16','SPIRAL_STORM'];
       return ['warp','spiral','ring16'];
     case 'vaca':
-      if(e.vph>=3) return ['ring2x','pullspiral','aimed5','SPIRAL_STORM'];
-      if(e.vph>=2) return ['ring2','spiral','aimed5','pull','RING_VOLLEY'];
-      return ['ring16','pull'];
+      if(e.vph>=3) return ['VACA_MOON','pullspiral','VACA_STORM','aimed5'];
+      if(e.vph>=2) return ['VACA_ECHO','spiral','aimed5','pull','VACA_GAPS'];
+      return ['VACA_GAPS','ring16','pull'];
     // ---- World 2 (CITRUS COAST) — original movesets, unique per phase. Flashy but forgiving. ----
     case 'eccocavallo':                    // B1: echo / music bruiser
       if(e.vph>=3) return ['NOTE_SPIRAL','ECHO_RINGS','GALLOP','HOOF_STOMP','NOTE_VOLLEY'];
@@ -3157,10 +3812,10 @@ function bossMoves(e){
       if(e.vph>=3) return ['PIT_PINWHEEL','BOULDER_ROLL','CHEST_POUND','AVO_SMASH','GUAC_RAIN'];
       if(e.vph>=2) return ['AVO_SMASH','BOULDER_ROLL','CHEST_POUND','GUAC_RAIN'];
       return ['CHEST_POUND','AVO_SMASH','GUAC_RAIN'];
-    case 'tracotucotulu':                  // B4: aerial toucan finale — spectacle bullet-hell, forgiving
-      if(e.vph>=3) return ['RAINBOW_SPIRAL','DIVE_BOMB','BEAK_BARRAGE','FRUIT_RAIN','FEATHER_FAN'];
-      if(e.vph>=2) return ['DIVE_BOMB','FEATHER_FAN','BEAK_BARRAGE','FRUIT_RAIN'];
-      return ['BEAK_BARRAGE','DIVE_BOMB','FRUIT_RAIN'];
+    case 'tracotucotulu':                  // B4: aerial toucan finale — unique fake bullet-hell per phase
+      if(e.vph>=3) return ['TOUCAN_RAINBOW','DIVE_BOMB','TOUCAN_WALL','TOUCAN_FEATHER'];
+      if(e.vph>=2) return ['TOUCAN_ECHO','FEATHER_FAN','BEAK_BARRAGE','FRUIT_RAIN'];
+      return ['TOUCAN_FEATHER','DIVE_BOMB','FRUIT_RAIN'];
     // ---- World 3 (FORESTA FRUTOSA) — telegraphed melee/zone fights ----
     case 'subrosa':                        // B1: thorn garden
       if(e.vph>=3) return ['ROSE_LUNGE','THORN_RING','PETAL_FAN','BLOOM_STORM','THORN_RING'];
@@ -3174,10 +3829,10 @@ function bossMoves(e){
       if(e.vph>=3) return ['BLENDER_CHARGE','GRIND_ZONE','VORTEX_PULL','BLENDER_CHARGE'];
       if(e.vph>=2) return ['BLENDER_CHARGE','GRIND_ZONE','BLENDER_CHARGE'];
       return ['BLENDER_CHARGE','GRIND_ZONE','BLENDER_CHARGE'];       // removed meaningless ring spray
-    case 'cocofantoboss':                  // B4 FINAL: armoured colossus w/ arena quake gimmick + coconut bullet-hell
-      if(e.vph>=3) return ['COCONUT_STORM','QUAKE_RING','STAMPEDE','TREMOR_STOMP','COCONUT_BARRAGE'];
-      if(e.vph>=2) return ['STOMP_QUAKE','QUAKE_RING','COCONUT_BARRAGE','TUSK_SWEEP'];
-      return ['STOMP_QUAKE','COCONUT_BARRAGE','TUSK_SWEEP'];
+    case 'cocofantoboss':                  // B4 FINAL: armoured colossus w/ unique coconut bullet-hell per phase
+      if(e.vph>=3) return ['COCO_STORM','QUAKE_RING','COCO_MONSOON','STAMPEDE'];
+      if(e.vph>=2) return ['COCO_WALL','QUAKE_RING','COCONUT_BARRAGE','TUSK_SWEEP'];
+      return ['COCO_GAPS','COCONUT_BARRAGE','TUSK_SWEEP'];
     // ---- World 4 (GELATO GLACIER) — original frozen-dessert movesets, telegraphed & forgiving ----
     case 'tiramisubmarini':                // B1: submerging coffee sub-train (gimmick: dives & surfaces)
       if(e.vph>=3) return ['STEAM_RING','DEPTH_CHARGE','BUBBLE_VOLLEY','TORPEDO_DASH','DEPTH_CHARGE'];
@@ -3191,10 +3846,10 @@ function bossMoves(e){
       if(e.vph>=3) return ['ARCANE_SPIRAL','FROST_BOLTS','HEX_FIELD','CONJURE','ARCANE_RING'];
       if(e.vph>=2) return ['FROST_BOLTS','HEX_FIELD','ARCANE_RING','CONJURE'];
       return ['FROST_BOLTS','ARCANE_RING','HEX_FIELD'];
-    case 'icebearlini':                    // B4: polar-bear colossus (W4 finale)
-      if(e.vph>=3) return ['FROST_SPIRAL','AVALANCHE_CHARGE','ORANGE_BURST','GLACIER_SLAM','PERMA_RING'];
-      if(e.vph>=2) return ['AVALANCHE_CHARGE','ORANGE_BURST','GLACIER_SLAM','PERMA_RING'];
-      return ['GLACIER_SLAM','ORANGE_BURST','AVALANCHE_CHARGE'];
+    case 'icebearlini':                    // B4: polar-bear colossus (W4 finale) — frost bullet-hell per phase
+      if(e.vph>=3) return ['ICE_STORM','AVALANCHE_CHARGE','ICE_NOVA','GLACIER_SLAM'];
+      if(e.vph>=2) return ['ICE_WALL','ORANGE_BURST','GLACIER_SLAM','ICE_ECHO'];
+      return ['ICE_ECHO','ORANGE_BURST','AVALANCHE_CHARGE'];
     // ---- World 5 (CIRCO BRAINROTTO) — carnival movesets w/ bounce/teleport flourishes (band 3) ----
     case 'trapezino':                      // B1: acrobat (gimmick: swings across the arena)
       if(e.vph>=3) return ['RING_TOSS','HOOP_RING','CONFETTI_TOSS','TRAPEZE_SWING'];
@@ -3208,10 +3863,10 @@ function bossMoves(e){
       if(e.vph>=3) return ['EMBER_JUGGLE','FIRE_JUGGLE','FIRE_BREATH','EMBER_RING'];
       if(e.vph>=2) return ['FIRE_BREATH','EMBER_RING','EMBER_JUGGLE','FIRE_JUGGLE'];
       return ['FIRE_BREATH','EMBER_RING','EMBER_JUGGLE'];             // p1 now has 3 moves
-    case 'granpagliaccio':                 // B4 FINAL: the Great Ringmaster (gimmick: blinks + summons acts)
-      if(e.vph>=3) return ['CONFETTI_SPIRAL','BALLOON_RING','SUMMON_ACT','CONFETTI_SPIRAL'];
-      if(e.vph>=2) return ['BALLOON_RING','CONFETTI_SPIRAL','SUMMON_ACT'];
-      return ['BALLOON_RING','SUMMON_ACT'];
+    case 'granpagliaccio':                 // B4 FINAL: ringmaster — carnival bullet-hell per phase
+      if(e.vph>=3) return ['CLOWN_CYCLONE','BALLOON_RING','CLOWN_FINALE','SUMMON_ACT'];
+      if(e.vph>=2) return ['CLOWN_WALL','CONFETTI_SPIRAL','SUMMON_ACT'];
+      return ['CLOWN_CONFETTI','BALLOON_RING','SUMMON_ACT'];
     // ---- Worlds 6-10 (shared BOSSES_DIRT roster, world-aware attacks) ----
     case 'tatasahur': {                    // burrow-slam drummer — adapts to world terrain
       const wid=curWorld().id;
@@ -3286,27 +3941,25 @@ function bossMoves(e){
     case 'tralala2': {                     // bounce boss — ricochet thrives in every arena shape
       const wid=curWorld().id;
       if(wid==='swamp'){
-        // wide flat — ricochet bounces horizontally; add flood for lane control
-        if(e.vph>=3) return ['RICOCHET','SWAMP_FLOOD','SWEEP_DUAL','ring2','TWIN_STORM'];
-        if(e.vph>=2) return ['RICOCHET','SWAMP_FLOOD','ring2','RING_VOLLEY'];
-        return ['RICOCHET','SWAMP_FLOOD','ring16'];
+        if(e.vph>=3) return ['TRALA_RICO','TRALA_STORM','SWEEP_DUAL','TRALA_WALL','ring2'];
+        if(e.vph>=2) return ['TRALA_RICO','TRALA_ECHO','ring2','TRALA_GAPS'];
+        return ['TRALA_RICO','TRALA_GAPS','ring16'];
       } if(wid==='sky'){
-        if(e.vph>=3) return ['RICOCHET','SKY_PLUNGE','SWEEP_DUAL','ring2','TWIN_STORM'];
-        if(e.vph>=2) return ['RICOCHET','SKY_PLUNGE','PRISM_SPLIT','RING_VOLLEY'];
-        return ['RICOCHET','SKY_PLUNGE','ring16'];
+        if(e.vph>=3) return ['TRALA_RICO','TRALA_STORM','SKY_PLUNGE','TRALA_WALL','ring2'];
+        if(e.vph>=2) return ['TRALA_RICO','TRALA_ECHO','SKY_PLUNGE','TRALA_GAPS'];
+        return ['TRALA_RICO','SKY_PLUNGE','ring16'];
       } if(wid==='crystal'){
-        // narrow tall — ricochet is brutal; vertical crystal spikes add squeeze
-        if(e.vph>=3) return ['RICOCHET','CRYSTAL_SPIKE','SWEEP_DUAL','ring2','TWIN_STORM'];
-        if(e.vph>=2) return ['RICOCHET','CRYSTAL_SPIKE','PRISM_SPLIT','RING_VOLLEY'];
-        return ['RICOCHET','CRYSTAL_SPIKE','aimed3'];
+        if(e.vph>=3) return ['TRALA_RICO','TRALA_STORM','CRYSTAL_SPIKE','TRALA_WALL','ring2'];
+        if(e.vph>=2) return ['TRALA_RICO','TRALA_ECHO','CRYSTAL_SPIKE','TRALA_GAPS'];
+        return ['TRALA_RICO','CRYSTAL_SPIKE','aimed3'];
       } if(wid==='volcano'){
-        if(e.vph>=3) return ['RICOCHET','ERUPTION','SWEEP_DUAL','ring2','TWIN_STORM'];
-        if(e.vph>=2) return ['RICOCHET','ERUPTION','PRISM_SPLIT','RING_VOLLEY'];
-        return ['RICOCHET','ERUPTION','ring16'];
+        if(e.vph>=3) return ['TRALA_RICO','TRALA_STORM','ERUPTION','TRALA_WALL','ring2'];
+        if(e.vph>=2) return ['TRALA_RICO','TRALA_ECHO','ERUPTION','TRALA_GAPS'];
+        return ['TRALA_RICO','ERUPTION','ring16'];
       }
-      if(e.vph>=3) return ['RICOCHET','SWEEP_DUAL','ring2','TWIN_STORM'];
-      if(e.vph>=2) return ['RICOCHET','PRISM_SPLIT','ring2','RING_VOLLEY'];
-      return ['SWEEP','ring16','aimed3'];
+      if(e.vph>=3) return ['TRALA_RICO','TRALA_STORM','SWEEP_DUAL','TRALA_WALL','ring2'];
+      if(e.vph>=2) return ['TRALA_RICO','TRALA_ECHO','ring2','TRALA_GAPS'];
+      return ['TRALA_RICO','TRALA_GAPS','ring16'];
     }
     case 'croco2': {                       // brood + carpet — world-themed adds and bombing
       const wid=curWorld().id;
@@ -3334,25 +3987,25 @@ function bossMoves(e){
     case 'madudung': {                     // final boss lead — world-themed chaos
       const wid=curWorld().id;
       if(wid==='swamp'){
-        if(e.vph>=3) return ['TETHER','DEVOUR','SWAMP_FLOOD','SUMMON','TWIN_STORM'];
-        if(e.vph>=2) return ['TETHER','SWAMP_FLOOD','SWEEP_DUAL','BURROW_DOUBLE','RING_VOLLEY'];
-        return ['BURROW_SLAM','SWAMP_FLOOD','aimed5','ring16'];
+        if(e.vph>=3) return ['MUD_TEMPEST','TETHER','DEVOUR','MUD_WALL','MUD_ECHO'];
+        if(e.vph>=2) return ['MUD_STORM','TETHER','SWAMP_FLOOD','MUD_GAPS','BURROW_DOUBLE'];
+        return ['MUD_GAPS','BURROW_SLAM','SWAMP_FLOOD','aimed5'];
       } if(wid==='sky'){
-        if(e.vph>=3) return ['TETHER','DEVOUR','SKY_PLUNGE','EXPAND_IMPLODE','SPIRAL_STORM'];
-        if(e.vph>=2) return ['TETHER','SKY_PLUNGE','SWEEP_DUAL','ring2','RING_VOLLEY'];
-        return ['SKY_PLUNGE','BURROW_SLAM','aimed5','ring16'];
+        if(e.vph>=3) return ['MUD_TEMPEST','TETHER','DEVOUR','MUD_WALL','SKY_PLUNGE'];
+        if(e.vph>=2) return ['MUD_STORM','TETHER','SKY_PLUNGE','MUD_ECHO','MUD_GAPS'];
+        return ['MUD_GAPS','SKY_PLUNGE','BURROW_SLAM','aimed5'];
       } if(wid==='crystal'){
-        if(e.vph>=3) return ['TETHER','DEVOUR','CRYSTAL_SPIKE','PRISM_SPLIT','TWIN_STORM'];
-        if(e.vph>=2) return ['TETHER','CRYSTAL_SPIKE','SWEEP_DUAL','BURROW_DOUBLE','RING_VOLLEY'];
-        return ['BURROW_SLAM','CRYSTAL_SPIKE','aimed5','ring12'];
+        if(e.vph>=3) return ['MUD_TEMPEST','TETHER','DEVOUR','MUD_WALL','CRYSTAL_SPIKE'];
+        if(e.vph>=2) return ['MUD_STORM','TETHER','CRYSTAL_SPIKE','MUD_ECHO','BURROW_DOUBLE'];
+        return ['MUD_GAPS','BURROW_SLAM','CRYSTAL_SPIKE','aimed5'];
       } if(wid==='volcano'){
-        if(e.vph>=3) return ['TETHER','DEVOUR','ERUPTION','SATURN_RING','SPIRAL_STORM'];
-        if(e.vph>=2) return ['TETHER','ERUPTION','QUAKE_RADIAL','MELTDOWN','RING_VOLLEY'];
-        return ['BURROW_SLAM','ERUPTION','QUAKE_LINE','ring16'];
+        if(e.vph>=3) return ['MUD_TEMPEST','TETHER','DEVOUR','MUD_WALL','ERUPTION'];
+        if(e.vph>=2) return ['MUD_STORM','TETHER','ERUPTION','MUD_ECHO','QUAKE_RADIAL'];
+        return ['MUD_GAPS','BURROW_SLAM','ERUPTION','QUAKE_LINE'];
       }
-      if(e.vph>=3) return ['TETHER','DEVOUR','MELTDOWN','SUMMON','SPIRAL_STORM'];
-      if(e.vph>=2) return ['TETHER','LAVA_POOL','SWEEP_DUAL','BURROW_DOUBLE','RING_VOLLEY'];
-      return ['BURROW_SLAM','QUAKE_LINE','aimed5','ring16'];
+      if(e.vph>=3) return ['MUD_TEMPEST','TETHER','DEVOUR','MUD_STORM','SUMMON'];
+      if(e.vph>=2) return ['MUD_STORM','TETHER','LAVA_POOL','MUD_ECHO','BURROW_DOUBLE'];
+      return ['MUD_GAPS','BURROW_SLAM','QUAKE_LINE','aimed5'];
     }
     case 'garamaraman': {                  // final boss duo partner — complements lead
       const wid=curWorld().id;
@@ -3390,10 +4043,10 @@ function bossMoves(e){
       if(e.vph>=3) return ['CANOPY_PLUNGE','DOUBLE_DASH','RICOCHET','aimed5','SPIRAL_STORM'];
       if(e.vph>=2) return ['CANOPY_PLUNGE','DOUBLE_DASH','GEYSER_SWEEP','aimed5','RING_VOLLEY'];
       return ['CANOPY_PLUNGE','POUNCE','aimed5','ring16'];
-    case 'bobritto':                       // B4 FINAL: woodland warlord — flood + tether + eruption
-      if(e.vph>=3) return ['FOREST_FLOOD','TETHER','DEVOUR','ERUPTION','SPIRAL_STORM'];
-      if(e.vph>=2) return ['FOREST_FLOOD','TETHER','GEYSER_SWEEP','BURROW_DOUBLE','RING_VOLLEY'];
-      return ['FOREST_FLOOD','BURROW_SLAM','GEYSER_SWEEP','ring16'];
+    case 'bobritto':                       // B4 FINAL: woodland warlord — leaf bullet-hell per phase
+      if(e.vph>=3) return ['BOB_TEMPEST','TETHER','BOB_LEAVES','ERUPTION'];
+      if(e.vph>=2) return ['BOB_WALL','FOREST_FLOOD','GEYSER_SWEEP','BURROW_DOUBLE'];
+      return ['BOB_LEAVES','FOREST_FLOOD','GEYSER_SWEEP'];
   }
   if(typeof extBossMoves==='function'){ const ext=extBossMoves(e); if(ext) return ext; }
   return ['ring16'];
@@ -3444,12 +4097,24 @@ const MOVE_COL = { dash:'#e54d4d', spiral:'#e54d4d', aimed3:'#e23b3b', aimed5:'#
   EXT_LANCE:'#b06ff0', EXT_SPORE_FAN:'#7ab955', EXT_ORBIT_BURST:'#9fd0ff', EXT_BEAM_SWEEP:'#e0503f',
   EXT_PHASE_SLAM:'#a9763e', EXT_VORTEX_PULL:'#d2a0ff', EXT_COLLAPSE:'#c77dff', EXT_HIVE_SPAWN:'#6a4a9a',
   EXT_SWARM_BURST:'#9a7ad8', EXT_FROST_FAN:'#9fd0ff', EXT_VOID_RAIN:'#6c5ce7', EXT_SHOCK_GRID:'#ff7675',
-  EXT_FINAL_CATACLYSM:'#ff5acd' };
+  EXT_FINAL_CATACLYSM:'#ff5acd',
+  // World 1 tutorial bosses (fake bullet-hell)
+  W1_SHARK_SPIRAL:'#5fe0ff', W1_SHARK_GAPS:'#bff0ff', W1_SHARK_WALL:'#5fe0ff', W1_SHARK_DASH:'#5fe0ff',
+  W1_BOMB_ORBIT:'#ff7a2a', W1_BOMB_CROSS:'#ff7a2a', W1_BOMB_RING:'#ffd24a', W1_BOMB_WALL:'#ff7a2a',
+  W1_DRUM_ECHO:'#ffe08a', W1_DRUM_STORM:'#ffe08a', W1_DRUM_SLAM:'#c9923f', W1_DRUM_WALL:'#ffd24a',
+  // final-boss fake bullet-hell (unique per boss + phase)
+  VACA_GAPS:'#d2a0ff', VACA_ECHO:'#b06ff0', VACA_MOON:'#d2a0ff', VACA_STORM:'#ff5acd',
+  TOUCAN_FEATHER:'#9fe0ff', TOUCAN_ECHO:'#ff7a2a', TOUCAN_WALL:'#ff5acd', TOUCAN_RAINBOW:'#ff5acd',
+  COCO_GAPS:'#8d6e63', COCO_WALL:'#a06a4a', COCO_STORM:'#8d6e63', COCO_MONSOON:'#6d4c41',
+  ICE_ECHO:'#9fd0ff', ICE_WALL:'#bfe6ff', ICE_STORM:'#7ec8ff', ICE_NOVA:'#ff8f2e',
+  CLOWN_CONFETTI:'#ff5ea8', CLOWN_WALL:'#ffd24a', CLOWN_CYCLONE:'#ff5ea8', CLOWN_FINALE:'#ffd24a',
+  BOB_LEAVES:'#5a7a3a', BOB_WALL:'#c87a30', BOB_TEMPEST:'#3a5a2a',
+  TRALA_GAPS:'#5fe0ff', TRALA_ECHO:'#bff0ff', TRALA_STORM:'#5fe0ff', TRALA_WALL:'#2f8fa0',
+  MUD_GAPS:'#e8a050', MUD_ECHO:'#d2a0ff', MUD_STORM:'#ff5acd', MUD_TEMPEST:'#ff5acd', MUD_WALL:'#a9763e' };
 function pickMove(e){
   let pool=bossMoves(e);
-  // bullet-hell injection: a LOT more for final-boss phase 3, a moderate bit for mid-bosses past phase 1
-  if(e.finalPhase && e.vph>=3)        pool = pool.concat('MEGA_STORM','RING_VOLLEY');
-  else if(!e.finalPhase && !e.partner && e.vph>=2) pool = pool.concat('SPIRAL_LITE','RING_VOLLEY');
+  // mid-boss phase 2+: occasional sparse spiral (no extra ring spam)
+  if(!e.finalPhase && !e.partner && e.vph>=2) pool = pool.concat('SPIRAL_LITE');
   let m; do{ m=pick(pool); }while(pool.length>1 && m===e.lastMv); e.lastMv=m; return m;
 }
 // run one move; returns how long the boss stays in the "fire" state before recovering
@@ -3476,6 +4141,51 @@ function execMove(e){
     case 'warp':   // Trippi: blink near player, then disorienting double-spiral
       e.warpT=0.45; burst(e.x,e.y,'#c77dff',18,240);   // departure tell at old position
       return 0.9;
+    // ---- World 1 fake bullet-hell (waves 5 / 10 / 15) — looks scary, plays easy ----
+    case 'W1_SHARK_SPIRAL':
+      e.storm=2.8; e.stormN=7; e.stormSpd=98; e.stormStep=0.34; e.stormDir=Math.random()<0.5?1:-1;
+      e.stormCol='#5fe0ff'; e.stormCd=0.18; e.stormTwin=true; e.stormRainbow=true; e.stormDmgMul=0.32;
+      sfx.warn(); shake=Math.max(shake,5); return 2.8;
+    case 'W1_SHARK_GAPS':
+      e.echo={ t:2.2, ivT:0, n:20, spd:92, col:'#bff0ff', gap:0.44, at:rand(0,TAU), dmgMul:0.32 };
+      sfx.warn(); return 2.2;
+    case 'W1_SHARK_WALL':
+      if(arena){ const side=pick(['left','right','top','bottom']);
+        const gapAt=(side==='left'||side==='right')?P.y:P.x;
+        mWall(side, 82, '#5fe0ff', gapAt, 125, 10, 0.32); }
+      shake=Math.max(shake,5); return 1.0;
+    case 'W1_SHARK_DASH':
+      e.dst='wind'; e.dwin=0.55; e.da=Math.atan2(P.y-e.y,P.x-e.x);
+      e.landFx={type:'pounce'}; sfx.warn(); return 0.9;
+    case 'W1_BOMB_ORBIT':
+      { const N=24, off=rand(0,TAU);
+        for(let k=0;k<N;k++) fireEB(e.x,e.y,0,0,'#ff7a2a',{dmgMul:0.32,orbit:{cx:e.x,cy:e.y,ang:off+k*TAU/N,rad:52,angV:0.85,radV:38}});
+        muzzleFlash(e.x,e.y,'#ff7a2a'); shake=Math.max(shake,6); sfx.warn(); return 0.55; }
+    case 'W1_BOMB_CROSS':
+      { const a=Math.atan2(P.y-e.y,P.x-e.x);
+        for(let q=0;q<4;q++) mRingGap(e,14,88,'#ff7a2a',0.42,a+q*Math.PI/2,0.32);
+        shake=Math.max(shake,6); return 0.65; }
+    case 'W1_BOMB_RING':
+      mRingGap(e,26,92,'#ffd24a',0.40); mRingGap(e,18,68,'#ff7a2a',0.44); shake=Math.max(shake,6); sfx.warn(); return 0.55;
+    case 'W1_BOMB_WALL':
+      if(arena){ mWall(pick(['left','right']), 78, '#ff7a2a', P.y+rand(-50,50), 135, 12, 0.32);
+        mWall(pick(['top','bottom']), 78, '#ffd24a', P.x+rand(-50,50), 135, 12, 0.32); }
+      return 1.1;
+    case 'W1_DRUM_ECHO':
+      e.echo={ t:2.4, ivT:0, n:22, spd:88, col:'#ffe08a', gap:0.46, at:rand(0,TAU), dmgMul:0.32 };
+      sfx.warn(); return 2.4;
+    case 'W1_DRUM_STORM':
+      e.storm=2.4; e.stormN=6; e.stormSpd=94; e.stormStep=0.37; e.stormDir=Math.random()<0.5?1:-1;
+      e.stormCol='#ffe08a'; e.stormCd=0.18; e.stormTwin=false; e.stormRainbow=false; e.stormDmgMul=0.32;
+      e.pull=0.55; e.pullStr=40; sfx.warn(); return 2.4;
+    case 'W1_DRUM_SLAM':
+      addZone(P.x,P.y,90,{tele:0.8,life:0.55,dps:10,col:'#c9923f'});
+      mRingGap(e,20,85,'#ffe08a',0.42); shake=Math.max(shake,8); sfx.hit(); return 0.75;
+    case 'W1_DRUM_WALL':
+      if(arena){ const gapAt=P.x;
+        mWall('top', 72, '#ffe08a', gapAt, 145, 11, 0.32);
+        mWall('bottom', 72, '#ffd24a', gapAt, 145, 11, 0.32); }
+      return 1.0;
     // ---- World 2 moves ----
     case 'BURROW_SLAM':   addZone(P.x,P.y,84,{tele:0.7,life:0.6,dps:22,col:'#7a5a30'}); shake=Math.max(shake,6); return 0.4;
     case 'BURROW_DOUBLE': addZone(P.x,P.y,76,{tele:0.6,life:0.6,dps:22,col:'#7a5a30'}); addZone(P.x+rand(-120,120),P.y+rand(-120,120),70,{tele:0.95,life:0.6,dps:20,col:'#7a5a30'}); shake=Math.max(shake,7); return 0.6;
@@ -3495,7 +4205,9 @@ function execMove(e){
     case 'BROOD_BURST':   summonAdds(e,'golubiro',4,8); mRing(e,20,160,'#d2a0ff'); mRing(e,16,110,'#b06ff0'); return 0.4;
     case 'DEVOUR':        e.pull=1.4; e.pullStr=150; mRing(e,20,160,'#d2a0ff'); mRing(e,20,110,'#b06ff0'); return 1.2;
     // ---- original signature attacks ----
-    case 'RICOCHET':      e.wd={ n:3, ang:Math.atan2(P.y-e.y,P.x-e.x), spd:e.enraged?500:430, tT:0, life:2.4 }; sfx.warn(); burst(e.x,e.y,'#7ec8ff',20,320); return 2.4;
+    case 'RICOCHET':
+    case 'TRALA_RICO':
+      e.wd={ n:3, ang:Math.atan2(P.y-e.y,P.x-e.x), spd:e.enraged?500:430, tT:0, life:2.4 }; sfx.warn(); burst(e.x,e.y,'#7ec8ff',20,320); return 2.4;
     case 'DRUM_MARCH':    { const a=Math.atan2(P.y-e.y,P.x-e.x); for(let k=1;k<=5;k++) addZone(e.x+Math.cos(a)*92*k, e.y+Math.sin(a)*92*k, 70, {tele:0.3+k*0.22, life:0.45, dps:20, col:'#a9763e', fromX:e.x, fromY:e.y}); sfx.hit(); return 0.7; }
     case 'GEYSER_SWEEP':  e.gsweep={ t:1.8, ang:Math.atan2(P.y-e.y,P.x-e.x), dir:Math.random()<0.5?1:-1, dropT:0 }; return 1.8;
     case 'SATURN_RING':   { const N=18, off=rand(0,TAU), dir=Math.random()<0.5?1:-1; for(let k=0;k<N;k++) fireEB(e.x,e.y,0,0,'#ffd24a',{orbit:{cx:e.x,cy:e.y,ang:off+k*TAU/N,rad:42,angV:dir*1.8,radV:58}}); muzzleFlash(e.x,e.y,'#ffd24a'); return 0.4; }
@@ -3524,20 +4236,95 @@ function execMove(e){
     case 'DIVE_BOMB':    e.dst='wind'; e.dwin=e.enraged?0.3:0.45; e.da=Math.atan2(P.y-e.y,P.x-e.x); e.landFx={type:'dive'}; e.dashTrail={kind:'feather',col:'#9fe0ff'}; sfx.warn(); return 0.9;
     case 'FRUIT_RAIN':   { const fc=['#ff5acd','#ffd24a','#7ab955','#ff7a2a']; for(let k=0;k<6;k++) addZone(P.x+rand(-200,200),P.y+rand(-200,200),46,{tele:0.75,life:0.5,dps:14,col:fc[k%fc.length]}); return 0.4; }
     case 'FEATHER_FAN':  mAimed(e,11,0.14,135,'#9fe0ff'); return 0.3;
-    case 'RAINBOW_SPIRAL': e.storm=2.4; e.stormN=6; e.stormSpd=120; e.stormStep=0.28; e.stormDir=Math.random()<0.5?1:-1; e.stormCol='#ff5acd'; e.stormCd=0.12; e.stormTwin=true; e.stormRainbow=true; sfx.warn(); return 2.4;
-    // ---- bullet-hell phase moves ----
-    case 'SPIRAL_STORM':  e.storm=2.4; e.stormN=9;  e.stormSpd=150; e.stormStep=0.30; e.stormDir=Math.random()<0.5?1:-1; e.stormCol='#ff5acd'; e.stormCd=0.10; e.stormTwin=false; sfx.warn(); return 2.4;
-    case 'TWIN_STORM':    e.storm=2.6; e.stormN=8;  e.stormSpd=145; e.stormStep=0.26; e.stormDir=1; e.stormCol='#c77dff'; e.stormCd=0.11; e.stormTwin=true; sfx.warn(); return 2.6;
-    case 'RING_VOLLEY':   mRing(e,22,180,'#4aa3df'); mRing(e,18,130,'#7ec8ff'); mRing(e,14,85,'#d2a0ff'); shake=Math.max(shake,5); return 0.4;
+    case 'RAINBOW_SPIRAL': bossHellStorm(e,{dur:2.4,n:6,spd:108,step:0.30,col:'#ff5acd',cd:0.14,twin:true,rainbow:true}); return 2.4;
+    // ---- final-boss fake bullet-hell (unique per boss + phase) ----
+    case 'VACA_GAPS':
+      mRingGap(e,22,90,'#d2a0ff',0.44,null,bossHellDmg(e)); bossHellOrbit(e,16,'#d2a0ff',0.65,28); shake=Math.max(shake,5); sfx.warn(); return 0.65;
+    case 'VACA_ECHO':
+      bossHellEcho(e,{dur:2.2,n:18,spd:90,col:'#b06ff0',gap:0.44}); return 2.2;
+    case 'VACA_MOON':
+      bossHellOrbit(e,20,'#d2a0ff',0.55,24); mRingGap(e,14,82,'#ff5acd',0.46,null,bossHellDmg(e)); shake=Math.max(shake,6); return 0.7;
+    case 'VACA_STORM':
+      bossHellStorm(e,{dur:2.6,n:6,spd:96,step:0.33,col:'#ff5acd',cd:0.17,twin:true,shake:5}); return 2.6;
+    case 'TOUCAN_FEATHER':
+      mAimed(e,9,0.16,118,'#9fe0ff'); mRingGap(e,12,88,'#ff7a2a',0.40,null,bossHellDmg(e)); return 0.28;
+    case 'TOUCAN_ECHO':
+      bossHellEcho(e,{dur:2.0,n:16,spd:100,col:'#ff7a2a',gap:0.43}); return 2.0;
+    case 'TOUCAN_WALL':
+      if(arena){ const side=pick(['left','right']); mWall(side,118,'#ff5acd',P.y+rand(-40,40),118,10,bossHellDmg(e)); }
+      shake=Math.max(shake,5); return 1.0;
+    case 'TOUCAN_RAINBOW':
+      bossHellStorm(e,{dur:2.4,n:6,spd:108,step:0.30,col:'#ff5acd',cd:0.14,twin:true,rainbow:true,shake:5}); return 2.4;
+    case 'COCO_GAPS':
+      mRingGap(e,20,95,'#8d6e63',0.42,null,bossHellDmg(e)); debrisDrop(3,'#a06a4a'); return 0.45;
+    case 'COCO_WALL':
+      if(arena){ mWall(pick(['top','bottom']),108,'#a06a4a',P.x,115,10,bossHellDmg(e));
+        mWall(pick(['left','right']),108,'#8d6e63',P.y,115,10,bossHellDmg(e)); }
+      return 1.1;
+    case 'COCO_STORM':
+      bossHellStorm(e,{dur:2.2,n:5,spd:100,step:0.32,col:'#8d6e63',cd:0.16,twin:(e.vph>=3),shake:5}); return 2.2;
+    case 'COCO_MONSOON':
+      bossHellEcho(e,{dur:2.3,n:14,spd:92,col:'#6d4c41',gap:0.45});
+      for(let k=0;k<3;k++) addZone(P.x+rand(-140,140),P.y+rand(-140,140),48,{tele:0.8,life:0.45,dps:10,col:'#8d6e63'}); return 2.3;
+    case 'ICE_ECHO':
+      bossHellEcho(e,{dur:2.1,n:16,spd:94,col:'#9fd0ff',gap:0.44}); return 2.1;
+    case 'ICE_WALL':
+      if(arena){ const side=pick(['left','right','top','bottom']);
+        const gapAt=(side==='left'||side==='right')?P.y:P.x;
+        mWall(side,108,'#bfe6ff',gapAt,112,10,bossHellDmg(e)); } return 1.0;
+    case 'ICE_STORM':
+      bossHellStorm(e,{dur:2.3,n:5,spd:98,step:0.33,col:'#7ec8ff',cd:0.16,twin:true,shake:5}); return 2.3;
+    case 'ICE_NOVA':
+      mRingGap(e,18,105,'#ff8f2e',0.38,null,bossHellDmg(e)); mRingGap(e,12,72,'#ffb15a',0.44,null,bossHellDmg(e)); shake=Math.max(shake,7); sfx.hit(); return 0.5;
+    case 'CLOWN_CONFETTI':
+      mAimed(e,5,0.22,128,'#ff5ea8'); mRingGap(e,14,90,'#ffd24a',0.42,null,bossHellDmg(e)); return 0.25;
+    case 'CLOWN_WALL':
+      if(arena){ mWall(pick(['left','right']),112,'#ff5ea8',P.y,108,10,bossHellDmg(e)); } return 1.0;
+    case 'CLOWN_CYCLONE':
+      bossHellStorm(e,{dur:2.2,n:5,spd:104,step:0.31,col:'#ff5ea8',cd:0.15,twin:true,rainbow:true,shake:5}); return 2.2;
+    case 'CLOWN_FINALE':
+      mRingGap(e,16,100,'#ff5ea8',0.40,null,bossHellDmg(e)); mRingGap(e,12,72,'#ffd24a',0.44,null,bossHellDmg(e)); shake=Math.max(shake,6); return 0.45;
+    case 'BOB_LEAVES':
+      bossHellEcho(e,{dur:2.2,n:16,spd:92,col:'#5a7a3a',gap:0.44}); return 2.2;
+    case 'BOB_WALL':
+      if(arena){ const side=pick(['top','bottom']); mWall(side,110,'#c87a30',P.x,110,10,bossHellDmg(e)); } return 1.0;
+    case 'BOB_TEMPEST':
+      bossHellStorm(e,{dur:2.4,n:5,spd:100,step:0.32,col:'#3a5a2a',cd:0.16,twin:true,shake:5}); return 2.4;
+    case 'TRALA_GAPS': {
+      const col='#5fe0ff', dm=bossHellDmg(e);
+      mRingGap(e,16,108,col,0.40,null,dm); mRingGap(e,12,78,'#bff0ff',0.44,null,dm); return 0.4; }
+    case 'TRALA_ECHO':
+      bossHellEcho(e,{dur:2.2,n:16,spd:96,col:'#bff0ff',gap:0.43}); return 2.2;
+    case 'TRALA_STORM':
+      bossHellStorm(e,{dur:2.5,n:6,spd:102,step:0.31,col:'#5fe0ff',cd:0.15,twin:true,shake:5}); return 2.5;
+    case 'TRALA_WALL':
+      if(arena){ mWall(pick(['left','right']),115,'#2f8fa0',P.y,105,10,bossHellDmg(e)); } return 1.0;
+    case 'MUD_GAPS': {
+      const col=finalBossTint(), dm=bossHellDmg(e);
+      mRingGap(e,18,100,col,0.42,null,dm); return 0.4; }
+    case 'MUD_ECHO':
+      bossHellEcho(e,{dur:2.2,n:16,spd:94,col:finalBossTint(),gap:0.43}); return 2.2;
+    case 'MUD_STORM':
+      bossHellStorm(e,{dur:2.4,n:5,spd:100,step:0.32,col:finalBossTint(),cd:0.16,twin:true,shake:5}); return 2.4;
+    case 'MUD_TEMPEST':
+      bossHellStorm(e,{dur:2.6,n:6,spd:98,step:0.30,col:finalBossTint(),cd:0.15,twin:true,shake:6}); return 2.6;
+    case 'MUD_WALL':
+      if(arena){ const side=pick(['left','right','top','bottom']);
+        const gapAt=(side==='left'||side==='right')?P.y:P.x;
+        mWall(side,112,finalBossTint(),gapAt,108,10,bossHellDmg(e)); } return 1.0;
+    // ---- bullet-hell phase moves (global — softened, gapped) ----
+    case 'SPIRAL_STORM':  bossHellStorm(e,{dur:2.2,n:6,spd:118,step:0.32,col:'#ff5acd',cd:0.14,shake:4}); return 2.2;
+    case 'TWIN_STORM':    bossHellStorm(e,{dur:2.4,n:5,spd:112,step:0.30,col:'#c77dff',cd:0.15,twin:true,shake:4}); return 2.4;
+    case 'RING_VOLLEY':   mRingGap(e,16,118,'#4aa3df',0.36,null,bossHellDmg(e)); mRingGap(e,12,82,'#7ec8ff',0.40,null,bossHellDmg(e)); shake=Math.max(shake,4); return 0.35;
     case 'AIMED_WALL':    mAimed(e,9,0.12,200,'#e23b3b'); mRing(e,14,120,'#e23b3b'); return 0.3;
     // ---- moderate bullet-hell (mid-bosses, phase 2+): a short sparse rotating spiral ----
-    case 'SPIRAL_LITE':   e.storm=1.4; e.stormN=5; e.stormSpd=130; e.stormStep=0.33; e.stormDir=Math.random()<0.5?1:-1; e.stormCol=e.tellCol||'#ffd24a'; e.stormCd=0.16; e.stormTwin=false; e.stormRainbow=false; sfx.warn(); return 1.4;
-    // ---- heavy bullet-hell (final boss, phase 3 only) ----
-    case 'MEGA_STORM':    e.storm=3.0; e.stormN=12; e.stormSpd=160; e.stormStep=0.22; e.stormDir=Math.random()<0.5?1:-1; e.stormCol='#ff5acd'; e.stormCd=0.09; e.stormTwin=true; e.stormRainbow=true; sfx.warn(); return 3.0;
-    case 'CROSS_STORM':   mRing(e,30,210,'#ff5acd'); mRing(e,24,155,'#c77dff'); mRingGap(e,22,100,'#ff9be0',0.16); shake=Math.max(shake,7); sfx.hit(); return 0.5;
+    case 'SPIRAL_LITE':   bossHellStorm(e,{dur:1.4,n:4,spd:118,step:0.34,col:e.tellCol||'#ffd24a',cd:0.18,shake:3}); return 1.4;
+    // ---- heavy bullet-hell (legacy — now sparse + gapped) ----
+    case 'MEGA_STORM':    bossHellStorm(e,{dur:2.6,n:6,spd:108,step:0.30,col:'#ff5acd',cd:0.14,twin:true,rainbow:true,shake:5}); return 2.6;
+    case 'CROSS_STORM':   mRingGap(e,18,125,'#ff5acd',0.34,null,bossHellDmg(e)); mRingGap(e,14,88,'#c77dff',0.38,null,bossHellDmg(e)); shake=Math.max(shake,5); return 0.4;
     // ---- per-boss signature ranged moves (added with the W2-5 gimmick pass) ----
     case 'BLADE_FAN':     mAimed(e,5,0.18,150,'#e0e0e0'); return 0.2;                                   // bobrito: a non-dash blade fan
-    case 'COCONUT_STORM': e.storm=2.2; e.stormN=7; e.stormSpd=140; e.stormStep=0.27; e.stormDir=Math.random()<0.5?1:-1; e.stormCol='#8d6e63'; e.stormCd=0.12; e.stormTwin=(e.vph>=3); e.stormRainbow=false; sfx.warn(); return 2.2;
+    case 'COCONUT_STORM': bossHellStorm(e,{dur:2.0,n:5,spd:108,step:0.30,col:'#8d6e63',cd:0.14,twin:(e.vph>=3),shake:4}); return 2.0;
     case 'QUAKE_RING':    addZone(e.x,e.y,90,{tele:0.4,life:0.7,dps:18,col:'#8d6e63'}); mRingGap(e,18,120,'#8d6e63',0.30); shake=Math.max(shake,8); sfx.hit(); return 0.4;
     case 'CONFETTI_TOSS': mAimed(e,5,0.20,140,'#ff5ea8'); return 0.2;                                   // trapezino: ranged confetti
     case 'CALLIOPE_RING': mRingGap(e,16,130,'#ffd24a',0.28); mRingGap(e,12,90,'#e8463c',0.32); return 0.3;  // giostra: organ-pipe rings (both gapped — readable)
@@ -3714,7 +4501,8 @@ const GIMMICK = {
   // W4 GELATO GLACIER
   tiramisubmarini:'submerge', frigocamello:'coldaura', magotiramisu:'blinkconjure', icebearlini:'avalanche',
   // W5 CIRCO BRAINROTTO
-  trapezino:'swing', giostra:'carousel', mangiafuoco:'juggle', granpagliaccio:'showtime',
+  trapezino:'swing', giostra:'carousel', mangiafuoco:'juggle',   granpagliaccio:'showtime',
+  w1shoe:'w1shoe', w1bomb:'w1bomb', w1drum:'w1drum',
 };
 // a persistent, telegraphed mechanic that gives each boss an identity beyond its move list.
 // runs every frame alongside the move cycle; escalates with e.vph. kept forgiving (slow, wide gaps).
@@ -3806,6 +4594,18 @@ function updateGimmick(e,dt){
       e.gT-=dt; if(e.gT<=0 && e.mst==='recover' && !(e.warpT>0) && !(e.stun>0)){ e.gT = ph>=3?3.0:4.0; e.warpT=0.45; burst(e.x,e.y,'#ff5ea8',16,240); }
       e.gT2-=dt; if(e.gT2<=0){ e.gT2 = ph>=3?4.5:6.5; summonAdds(e,'clownino',2,ph>=3?6:4); }
       break;
+    // World 1 early bosses — light ongoing fake bullet-hell (wide gaps, low dmg)
+    case 'w1shoe':
+      e.gT-=dt; if(e.gT<=0){ e.gT=2.0; mRingGap(e,16,100,'#5fe0ff',0.40, null, 0.30); }
+      break;
+    case 'w1bomb':
+      e.gT-=dt; if(e.gT<=0){ e.gT=2.6;
+        const off=rand(0,TAU);
+        fireEB(e.x,e.y,0,0,'#ff7a2a',{dmgMul:0.28,orbit:{cx:e.x,cy:e.y,ang:off,rad:78,angV:1.0,radV:22}}); }
+      break;
+    case 'w1drum':
+      e.gT-=dt; if(e.gT<=0){ e.gT=1.9; mRingGap(e,14,86,'#ffe08a',0.42, null, 0.30); }
+      break;
   }
 }
 
@@ -3832,7 +4632,12 @@ function expandFinalArena(e){
   const grow = gameMode==='challenger' ? CHAL_FINAL_ARENA_GROW : FINAL_ARENA_GROW;
   const naw=Math.min(arena.w*grow, WORLD.w-2*WALL), nah=Math.min(arena.h*grow, WORLD.h-2*WALL);
   const ncx=clamp(cx0,WALL+naw/2,WORLD.w-WALL-naw/2), ncy=clamp(cy0,WALL+nah/2,WORLD.h-WALL-nah/2);
-  arena={x:ncx-naw/2,y:ncy-nah/2,w:naw,h:nah};
+  const ax = ncx - naw/2, ay = ncy - nah/2;
+  arena={x:ax,y:ay,w:naw,h:nah};
+  if(typeof WorldMapLayout!=='undefined' && WorldMapLayout.stripObsInArena)
+    curObstacles = WorldMapLayout.stripObsInArena(curObstacles, ax, ay, naw, nah);
+  P.x = clamp(P.x, arena.x + P.r + 20, arena.x + arena.w - P.r - 20);
+  P.y = clamp(P.y, arena.y + P.r + 20, arena.y + arena.h - P.r - 20);
 }
 
 // ============================================================
@@ -3851,7 +4656,7 @@ function madudungFinalScript(){
       enter(e){ e.sCd=0.7; e.tether=7.5; },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=Math.max(0.55,0.9-e.loop*0.1);
         const a=arena; for(let k=0;k<4;k++) addZone(a?a.x+(k+0.5)*(a.w/4):P.x+rand(-200,200), P.y+rand(-90,90), 54, {tele:0.6,life:2.6,dps:12,slow:true,col:'#5a7a3a'});
-        mRingGap(e,14+e.loop*2,120,'#5a7a3a',0.32); } } },
+        mRingGap(e,14+e.loop*2,118,'#5a7a3a',0.32,null,bossHellDmg(e)); } } },
     DPS,
     { name:'SWAMP WALLS', col:'#5a7a3a', dur:8.0, iv:true, vulnMul:0.35,
       enter(e){ e.sCd=0.4; e.sk=0; },
@@ -3862,26 +4667,25 @@ function madudungFinalScript(){
         mWall(side,155+e.loop*15,'#5a7a3a',gapAt,70,13); } } },
     DPS,
     { name:'DEVOUR THE SWAMP', col:'#3a5a2a', dur:5.5, iv:true, hold:'center',
-      enter(e){ e.pull=5.5; e.pullStr=160; burst(e.x,e.y,'#5a7a3a',28,320); shake=Math.max(shake,12);
-        e.storm=5.5; e.stormN=8+e.loop; e.stormSpd=140; e.stormStep=0.28; e.stormDir=1; e.stormCol='#5a7a3a'; e.stormCd=0.12; e.stormTwin=true; e.stormRainbow=false; sfx.warn(); },
+      enter(e){ e.pull=5.5; e.pullStr=130; burst(e.x,e.y,'#5a7a3a',28,320); shake=Math.max(shake,12);
+        bossHellStorm(e,{dur:5.5,n:5+e.loop,spd:100,step:0.30,col:'#5a7a3a',cd:0.15,twin:true,shake:4}); },
       tick(){} },
     DPS,
   ];
   if(wid==='sky') return [
     { name:'STORM FRONT', col:'#9fd0ff', dur:7.5, iv:true, hold:'center',
-      enter(e){ e.storm=7.5; e.stormN=7+e.loop; e.stormSpd=130; e.stormStep=0.27; e.stormDir=Math.random()<0.5?1:-1;
-        e.stormCol='#9fd0ff'; e.stormCd=0.12; e.stormTwin=true; e.stormRainbow=false; e.sCd=1.0; sfx.warn(); },
-      tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.2; mRingGap(e,14+e.loop*2,115,'#bfe6ff',0.30); } } },
+      enter(e){ bossHellStorm(e,{dur:7.5,n:5+e.loop,spd:100,step:0.28,col:'#9fd0ff',cd:0.14,twin:true,shake:4}); e.sCd=1.0; },
+      tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.2; mRingGap(e,14+e.loop*2,112,'#bfe6ff',0.32,null,bossHellDmg(e)); } } },
     DPS,
     { name:'SKY DIVE BARRAGE', col:'#bfe6ff', dur:8.0, iv:true, vulnMul:0.4,
       enter(e){ e.sCd=0.5; e.sk=0; },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=Math.max(1.2,1.7-e.loop*0.15); e.sk++;
         e.dst='wind'; e.dwin=0.32; e.da=Math.atan2(P.y-e.y,P.x-e.x); e.landFx={type:'dive'};
-        mRingGap(e,14+e.loop*2,130,'#9fd0ff',0.30); sfx.warn(); } } },
+        mRingGap(e,14+e.loop*2,118,'#9fd0ff',0.32,null,bossHellDmg(e)); sfx.warn(); } } },
     DPS,
     { name:'MAELSTROM', col:'#7ec8ff', dur:6.0, iv:true, hold:'center',
-      enter(e){ e.pull=6.0; e.pullStr=170; burst(e.x,e.y,'#9fd0ff',28,340); shake=Math.max(shake,12);
-        e.storm=6.0; e.stormN=9+e.loop; e.stormSpd=145; e.stormStep=0.25; e.stormDir=1; e.stormCol='#bfe6ff'; e.stormCd=0.11; e.stormTwin=true; e.stormRainbow=false; sfx.warn(); },
+      enter(e){ e.pull=6.0; e.pullStr=140; burst(e.x,e.y,'#9fd0ff',28,340); shake=Math.max(shake,12);
+        bossHellStorm(e,{dur:6.0,n:5+e.loop,spd:102,step:0.29,col:'#bfe6ff',cd:0.15,twin:true,shake:4}); },
       tick(){} },
     DPS,
   ];
@@ -3891,7 +4695,7 @@ function madudungFinalScript(){
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=Math.max(0.5,0.85-e.loop*0.08);
         const a=arena; const aY=a?a.y:WALL, aH=a?a.h:600;
         for(let k=1;k<=5;k++) addZone(P.x+rand(-40,40), aY+k*(aH/5.5), 48, {tele:0.35+k*0.1,life:0.7,dps:18,col:'#b08fe0'});
-        mRingGap(e,12+e.loop*2,115,'#b08fe0',0.34); } } },
+        mRingGap(e,12+e.loop*2,112,'#b08fe0',0.36,null,bossHellDmg(e)); } } },
     DPS,
     { name:'PRISM WALLS', col:'#9070c0', dur:8.0, iv:true, vulnMul:0.35,
       enter(e){ e.sCd=0.4; e.sk=0; },
@@ -3903,9 +4707,8 @@ function madudungFinalScript(){
         const aim=Math.atan2(P.y-e.y,P.x-e.x); for(let k=-2;k<=2;k++) fireEB(e.x,e.y,aim+k*0.22,145,'#7ec8ff',{split:true,splitT:0.5}); } } },
     DPS,
     { name:'SHARD STORM', col:'#d2a0ff', dur:5.5, iv:true, hold:'center',
-      enter(e){ e.storm=5.5; e.stormN=8+e.loop; e.stormSpd=135; e.stormStep=0.27; e.stormDir=Math.random()<0.5?1:-1;
-        e.stormCol='#b08fe0'; e.stormCd=0.11; e.stormTwin=true; e.stormRainbow=false;
-        burst(e.x,e.y,'#b08fe0',28,300); shake=Math.max(shake,12); sfx.warn(); },
+      enter(e){ bossHellStorm(e,{dur:5.5,n:5+e.loop,spd:100,step:0.29,col:'#b08fe0',cd:0.15,twin:true,shake:4});
+        burst(e.x,e.y,'#b08fe0',28,300); shake=Math.max(shake,12); },
       tick(){} },
     DPS,
   ];
@@ -3918,20 +4721,20 @@ function madudungFinalScript(){
         if(e.gsweep?.dir2!=null){ e.gsweep.ang2+=e.gsweep.dir2*1.5*dt;
           e.gsweep.d2T=(e.gsweep.d2T||0)-dt; if(e.gsweep.d2T<=0){ e.gsweep.d2T=0.16; geyserLine(e.x,e.y,e.gsweep.ang2,'#e0502c',6,52); } }
         e.sCd-=dt; if(e.sCd<=0){ e.sCd=Math.max(0.55,0.9-e.loop*0.1);
-          addZone(P.x,P.y,64,{tele:0.6,life:2.2,dps:16,col:'#e0502c'}); mRingGap(e,14+e.loop*2,120,'#ff7a2a',0.30); } } },
+          addZone(P.x,P.y,64,{tele:0.6,life:2.2,dps:16,col:'#e0502c'}); mRingGap(e,14+e.loop*2,115,'#ff7a2a',0.32,null,bossHellDmg(e)); } } },
     DPS,
     { name:'ERUPTION SEQUENCE', col:'#ff7a2a', dur:8.0, iv:true, vulnMul:0.38,
       enter(e){ e.sCd=0.45; e.sk=0; },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=Math.max(1.1,1.6-e.loop*0.12); e.sk++;
         const a=arena; const n=5;
         for(let k=0;k<n;k++) addZone(a?rand(a.x+40,a.x+a.w-40):P.x+rand(-200,200), a?rand(a.y+40,a.y+a.h-40):P.y+rand(-200,200), 64,{tele:0.65,life:2.4,dps:16,col:'#e0502c'});
-        mRing(e,20,155,'#ff7a2a'); shake=Math.max(shake,7); } } },
+        mRingGap(e,14,108,'#ff7a2a',0.36,null,bossHellDmg(e)); shake=Math.max(shake,7); } } },
     DPS,
     { name:'CATACLYSM', col:'#ff3b10', dur:6.0, iv:true, hold:'center',
       enter(e){ burst(e.x,e.y,'#e0502c',32,380); shake=Math.max(shake,14);
-        e.storm=6.0; e.stormN=10+e.loop; e.stormSpd=155; e.stormStep=0.24; e.stormDir=1; e.stormCol='#ff7a2a'; e.stormCd=0.10; e.stormTwin=true; e.stormRainbow=false; sfx.warn();
+        bossHellStorm(e,{dur:6.0,n:5+e.loop,spd:102,step:0.30,col:'#ff7a2a',cd:0.15,twin:true,shake:4});
         e.sCd=1.2; },
-      tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.4; mRingGap(e,18+e.loop*2,140,'#e0502c',0.22); shake=Math.max(shake,6); } } },
+      tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.4; mRingGap(e,14+e.loop*2,118,'#e0502c',0.34,null,bossHellDmg(e)); shake=Math.max(shake,6); } } },
     DPS,
   ];
   // dirt (default) — original random-pool fight; no script
@@ -3947,19 +4750,16 @@ const FINAL_SCRIPT = {
       enter(e){ e.sCd=0.2; e.sk=0; summonTank(e,'golubiro',3+e.loop,12,5+e.loop); },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=Math.max(1.5,2.3-e.loop*0.2); e.sk++;
         if(e.sk%2===1) summonTank(e,'golubiro',2+e.loop,12,5+e.loop);
-        mRingGap(e,14+e.loop*2,120,'#5fe0ff',0.30); } } },
+        mRingGap(e,14+e.loop*2,120,'#5fe0ff',0.30,null,bossHellDmg(e)); } } },
     { name:'STRIKE NOW!', col:'#7ed957', dur:7.0, iv:false },
-    // 2) INVINCIBLE — bouncing sneaker spiral storm with gap rings to weave through.
     { name:'SNEAKER SPIRAL', col:'#5fe0ff', dur:7.5, iv:true, hold:'center',
-      enter(e){ e.storm=7.5; e.stormN=9+e.loop; e.stormSpd=140; e.stormStep=0.26; e.stormDir=Math.random()<0.5?1:-1;
-        e.stormCol='#5fe0ff'; e.stormCd=0.11; e.stormTwin=true; e.stormRainbow=false; e.sCd=1.0; sfx.warn(); },
-      tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.3; mRingGap(e,16+e.loop*2,125,'#bff0ff',0.28); } } },
+      enter(e){ bossHellStorm(e,{dur:7.5,n:6+e.loop,spd:108,step:0.28,col:'#5fe0ff',cd:0.14,twin:true,shake:4}); e.sCd=1.0; },
+      tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.3; mRingGap(e,14+e.loop*2,118,'#bff0ff',0.32,null,bossHellDmg(e)); } } },
     { name:'STRIKE NOW!', col:'#7ed957', dur:7.0, iv:false },
-    // 3) INVINCIBLE — feeding frenzy: drag the player in, churn a storm, and keep topping up the tank wave.
     { name:'FEEDING FRENZY', col:'#1f6f80', dur:7.0, iv:true, hold:'center',
-      enter(e){ e.pull=7.0; e.pullStr=165; burst(e.x,e.y,'#2f8fa0',30,340); shake=Math.max(shake,13);
-        e.storm=7.0; e.stormN=10+e.loop; e.stormSpd=150; e.stormStep=0.24; e.stormDir=1; e.stormCol='#5fe0ff'; e.stormCd=0.10; e.stormTwin=true; e.stormRainbow=false; e.sCd=1.6; sfx.warn();
-        summonTank(e,'golubiro',2+e.loop,12,6+e.loop); },
+      enter(e){ e.pull=7.0; e.pullStr=120; burst(e.x,e.y,'#2f8fa0',30,340); shake=Math.max(shake,13);
+        bossHellStorm(e,{dur:7.0,n:5+e.loop,spd:102,step:0.30,col:'#5fe0ff',cd:0.15,twin:true,shake:4});
+        e.sCd=1.6; summonTank(e,'golubiro',2+e.loop,12,6+e.loop); },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=2.0; summonTank(e,'golubiro',2,12,6+e.loop); } } },
     { name:'STRIKE NOW!', col:'#7ed957', dur:7.0, iv:false },
   ],
@@ -3969,7 +4769,7 @@ const FINAL_SCRIPT = {
       enter(e){ e.tether=7.5; e.sCd=0.7; e.pull=0; },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=Math.max(0.5,0.85-e.loop*0.08);
         const a=arena; for(let k=0;k<4;k++) addZone(a?a.x+(k+0.5)*(a.w/4):P.x+rand(-180,180), P.y+rand(-80,80), 56, {tele:0.6,life:2.6,dps:12,slow:true,col:'#5a7a3a'});
-        mRingGap(e,14+e.loop*2,118,'#5a7a3a',0.32); } } },
+        mRingGap(e,14+e.loop*2,118,'#5a7a3a',0.32,null,bossHellDmg(e)); } } },
     { name:'SURFACE — STRIKE NOW!', col:'#7ed957', dur:8.0, iv:false },
     { name:'VENTO DEL BOSCO', col:'#3a5a2a', dur:8.0, iv:true, vulnMul:0.38,
       enter(e){ e.sCd=0.45; e.sk=0; },
@@ -3981,8 +4781,8 @@ const FINAL_SCRIPT = {
         summonAdds(e,'golubiro',1,4); } } },
     { name:'SURFACE — STRIKE NOW!', col:'#7ed957', dur:8.0, iv:false },
     { name:'TURBINE FINALE', col:'#3a5a2a', dur:6.0, iv:true, hold:'center',
-      enter(e){ e.pull=6.0; e.pullStr=155; burst(e.x,e.y,'#5a7a3a',28,320); shake=Math.max(shake,12);
-        e.storm=6.0; e.stormN=9+e.loop; e.stormSpd=140; e.stormStep=0.26; e.stormDir=1; e.stormCol='#5a7a3a'; e.stormCd=0.11; e.stormTwin=true; e.stormRainbow=false; sfx.warn(); },
+      enter(e){ e.pull=6.0; e.pullStr=140; burst(e.x,e.y,'#5a7a3a',28,320); shake=Math.max(shake,12);
+        bossHellStorm(e,{dur:6.0,n:5+e.loop,spd:100,step:0.30,col:'#5a7a3a',cd:0.15,twin:true,shake:4}); },
       tick(e,dt){ void dt; } },
     { name:'SURFACE — STRIKE NOW!', col:'#7ed957', dur:8.0, iv:false },
   ],
@@ -3997,7 +4797,7 @@ const FINAL_SCRIPT = {
           e.gsweep.d2T=(e.gsweep.d2T||0)-dt; if(e.gsweep.d2T<=0){ e.gsweep.d2T=0.16; geyserLine(e.x,e.y,e.gsweep.ang2,'#6d4c41',6,52); } }
         e.sCd-=dt; if(e.sCd<=0){ e.sCd=Math.max(0.55,0.9-e.loop*0.1);
           addZone(P.x,P.y,60,{tele:0.7,life:0.5,dps:16,col:'#8d6e63'});      // a coconut lobbed at your feet
-          mRingGap(e,12+e.loop*2,120,'#8d6e63',0.34); } },
+          mRingGap(e,12+e.loop*2,115,'#8d6e63',0.34,null,bossHellDmg(e)); } },
     },
     { name:'AFTERSHOCK — STRIKE NOW!', col:'#7ed957', dur:8.0, iv:false },
     { name:'COCONUT MONSOON', col:'#8d6e63', dur:7.5, iv:true, vulnMul:0.35, hold:'center',
@@ -4006,7 +4806,7 @@ const FINAL_SCRIPT = {
         const band=(arena?arena.y:0)+((e.sk*0.21)%1)*(arena?arena.h:600);   // a drifting row of falling coconuts
         const gx=arena?rand(arena.x+90,arena.x+arena.w-90):P.x;
         zoneLine(true, band, gx, 70, '#8d6e63', 9, 0.8);
-        mRingGap(e,16+e.loop*2,130,'#a06a4a',0.30); } },
+        mRingGap(e,14+e.loop*2,118,'#a06a4a',0.30,null,bossHellDmg(e)); } },
     },
     { name:'AFTERSHOCK — STRIKE NOW!', col:'#7ed957', dur:8.0, iv:false },
     { name:'STAMPEDE GAUNTLET', col:'#6d4c41', dur:7.0, iv:true, vulnMul:0.45,
@@ -4021,8 +4821,7 @@ const FINAL_SCRIPT = {
   // ===== WORLD 4 · ICE ICE BEARLINI — "ZERO ASSOLUTO" : a frost-storm colossus =====
   icebearlini: [
     { name:'BLIZZARD', col:'#9fd0ff', dur:7.5, iv:true, hold:'center',
-      enter(e){ e.storm=7.5; e.stormN=7+e.loop; e.stormSpd=120; e.stormStep=0.26; e.stormDir=Math.random()<0.5?1:-1;
-        e.stormCol='#9fd0ff'; e.stormCd=0.12; e.stormTwin=true; e.stormRainbow=false; e.sCd=1.0; sfx.warn(); },
+      enter(e){ bossHellStorm(e,{dur:7.5,n:5+e.loop,spd:98,step:0.28,col:'#9fd0ff',cd:0.14,twin:true,shake:4}); e.sCd=1.0; },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.2;   // frost drifts settle as slowing patches
         if(arena) for(let k=0;k<2;k++) addZone(rand(arena.x+50,arena.x+arena.w-50),rand(arena.y+50,arena.y+arena.h-50),56,{tele:0.7,life:2.4,dps:8,slow:true,col:'#bfe6ff'}); } },
     },
@@ -4039,8 +4838,8 @@ const FINAL_SCRIPT = {
     { name:'THAW — STRIKE NOW!', col:'#7ed957', dur:8.0, iv:false },
     { name:'ORANGE SUPERNOVA', col:'#ff8f2e', dur:5.5, iv:true, hold:'center',
       enter(e){ e.sk=0; e.sCd=1.0; burst(e.x,e.y,'#ff8f2e',30,360); shake=Math.max(shake,10); },
-      tick(e,dt){ e.sCd-=dt; if(e.sCd<=0 && e.sk<3){ e.sCd=1.4; e.sk++;   // three huge nested orange shockwaves, each with a gap
-        mRing(e,26,200,'#ff8f2e'); mRingGap(e,22,150,'#ffb15a',0.20); mRingGap(e,18,100,'#ff8f2e',0.24);
+      tick(e,dt){ e.sCd-=dt; if(e.sCd<=0 && e.sk<3){ e.sCd=1.4; e.sk++;
+        mRingGap(e,16,115,'#ff8f2e',0.36,null,bossHellDmg(e)); mRingGap(e,12,82,'#ffb15a',0.40,null,bossHellDmg(e));
         shake=Math.max(shake,8); sfx.hit(); } },
     },
     { name:'THAW — STRIKE NOW!', col:'#7ed957', dur:8.0, iv:false },
@@ -4048,9 +4847,8 @@ const FINAL_SCRIPT = {
   // ===== WORLD 5 · IL GRAN PAGLIACCIO — "GRAN FINALE" : the ringmaster's three-act spectacle =====
   granpagliaccio: [
     { name:'CONFETTI CYCLONE', col:'#ff5ea8', dur:7.0, iv:true, hold:'center',
-      enter(e){ e.storm=7.0; e.stormN=6+e.loop; e.stormSpd=120; e.stormStep=0.27; e.stormDir=Math.random()<0.5?1:-1;
-        e.stormCol='#ff5ea8'; e.stormCd=0.13; e.stormTwin=true; e.stormRainbow=false; e.sCd=1.1; sfx.warn(); },
-      tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.1; mRingGap(e,14,110,'#ffd24a',0.32); } },
+      enter(e){ bossHellStorm(e,{dur:7.0,n:5+e.loop,spd:100,step:0.29,col:'#ff5ea8',cd:0.14,twin:true,shake:4}); e.sCd=1.1; },
+      tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.1; mRingGap(e,14,100,'#ffd24a',0.34,null,bossHellDmg(e)); } },
     },
     { name:'INTERMISSION — STRIKE NOW!', col:'#7ed957', dur:8.0, iv:false },
     { name:'BALLOON BARRAGE', col:'#ff5ea8', dur:7.5, iv:true, vulnMul:0.35,
@@ -4067,7 +4865,7 @@ const FINAL_SCRIPT = {
     { name:'THE GRAND FINALE', col:'#ffd24a', dur:6.0, iv:true, hold:'center',
       enter(e){ e.sk=0; e.sCd=0.8; burst(e.x,e.y,'#ffd24a',30,360); shake=Math.max(shake,10); summonAdds(e,'clownino',3,6); },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.0; e.sk++;
-        mRingGap(e,18,160,'#ff5ea8',0.24); mRingGap(e,14,105,'#ffd24a',0.28);
+        mRingGap(e,14,105,'#ff5ea8',0.38,null,bossHellDmg(e)); mRingGap(e,12,78,'#ffd24a',0.42,null,bossHellDmg(e));
         shake=Math.max(shake,6); sfx.hit(); } },
     },
     { name:'INTERMISSION — STRIKE NOW!', col:'#7ed957', dur:8.0, iv:false },
@@ -4128,7 +4926,7 @@ function updateBoss(e,dt){
     shake=Math.max(shake, 3 + (1-e.charging/FINAL_CHARGE)*7);
     if(e.charging<=0){                                     // UNLEASH: big opening salvo, attacks resume
       e.charging=0; burst(e.x,e.y,'#ff5acd',44,440); shake=Math.max(shake,18); sfx.boss();
-      mRing(e,30,210,'#ff5acd'); mRing(e,24,140,'#ff9be0');
+      mRingGap(e,18,125,'#ff5acd',0.32,null,bossHellDmg(e)); mRingGap(e,14,90,'#ff9be0',0.36,null,bossHellDmg(e));
       e.mst='recover'; e.mt=0.5;
     }
     return;   // no movement, no move cycle while charging
@@ -4164,18 +4962,21 @@ function updateBoss(e,dt){
   // sustained bullet-hell storm: a rotating multi-arm spiral (optionally a counter-rotating twin)
   if(e.storm>0){ e.storm-=dt; e.stormT=(e.stormT||0)-dt;
     if(e.stormT<=0){ e.stormT=e.stormCd||0.12; e.stormA=(e.stormA||0)+(e.stormStep||0.28)*(e.stormDir||1);
-      const rainbow = e.stormRainbow && worldIdx===0;          // rainbow spiral is a World 1 thing only
-      let n=e.stormN||10; if(rainbow) n=Math.max(4,Math.round(n*0.5));   // and it fires far fewer bullets
+      const rainbow = e.stormRainbow && worldIdx===0;
+      let n=e.stormN||10;
+      if(rainbow) n=Math.max(4,Math.round(n*0.5));
+      else if(gameMode==='story') n=Math.max(4,Math.round(n*0.85));
       const sp=e.stormSpd||150;
       let col=e.stormCol||'#ff5acd';
-      if(rainbow){ const h=((e.stormA*90)%360+360)%360; col='hsl('+h.toFixed(0)+',88%,62%)'; }   // cycles hue
-      for(let k=0;k<n;k++) fireEB(e.x,e.y, e.stormA + k*TAU/n, sp, col);
-      if(e.stormTwin && !rainbow) for(let k=0;k<n;k++) fireEB(e.x,e.y, -e.stormA + k*TAU/n + 0.3, sp, col);
+      if(rainbow){ const h=((e.stormA*90)%360+360)%360; col='hsl('+h.toFixed(0)+',88%,62%)'; }
+      const sOpts = { dmgMul: e.stormDmgMul!=null ? e.stormDmgMul : bossHellDmg(e) };
+      for(let k=0;k<n;k++) fireEB(e.x,e.y, e.stormA + k*TAU/n, sp, col, sOpts);
+      if(e.stormTwin && !rainbow) for(let k=0;k<n;k++) fireEB(e.x,e.y, -e.stormA + k*TAU/n + 0.3, sp, col, sOpts);
     }
   }
   // ECHO_RINGS (Ecco Cavallo): slow expanding rings, each with a wide gap that drifts — busy-looking, easy to step through
   if(e.echo){ e.echo.t-=dt; e.echo.ivT-=dt;
-    if(e.echo.ivT<=0){ e.echo.ivT=0.42; mRingGap(e,e.echo.n,e.echo.spd,e.echo.col,e.echo.gap,e.echo.at); e.echo.at+=0.6; }
+    if(e.echo.ivT<=0){ e.echo.ivT=0.42; mRingGap(e,e.echo.n,e.echo.spd,e.echo.col,e.echo.gap,e.echo.at,e.echo.dmgMul); e.echo.at+=0.55; }
     if(e.echo.t<=0) e.echo=null;
   }
   // Gorillo rolling-melon: while dashing from a 'roll', spray seeds sideways + drop trail
@@ -4245,7 +5046,8 @@ function updateBoss(e,dt){
     if(e.mst==='recover'){ e.mst='wind'; e.mt=BOSS_WIND; e.mv=pickMove(e); e.tellCol=MOVE_COL[e.mv]||'#fff'; sfx.warn(); }
     else if(e.mst==='wind'){ e.mst='fire'; e.mt=execMove(e); }
     else { let rec=(e.spr==='vaca'&&e.vph>=3?0.7:1.1);
-      if(!e.finalPhase && !e.partner) rec*=1.6;   // non-final bosses still pause between attacks, but stay lively (not sluggish)
+      if(w1EarlyBossHell(e)) rec=0.6;
+      else if(!e.finalPhase && !e.partner) rec*=1.6;   // non-final bosses still pause between attacks, but stay lively (not sluggish)
       e.mst='recover'; e.mt=rec*enr; }
   }
   }
@@ -4262,6 +5064,8 @@ function updateBoss(e,dt){
   }
   e.x = clamp(e.x, WALL+e.r, WORLD.w-WALL-e.r); e.y = clamp(e.y, WALL+e.r, WORLD.h-WALL-e.r);
   if(arena){ e.x=clamp(e.x, arena.x+e.r, arena.x+arena.w-e.r); e.y=clamp(e.y, arena.y+e.r, arena.y+arena.h-e.r); }
+  resolveEnemyObstacles(e);
+  if(e.mate){ resolveEnemyObstacles(e.mate); }
 }
 
 function hurtPlayer(dmg, src){
@@ -4282,7 +5086,7 @@ function hurtPlayer(dmg, src){
   P.hp -= dmg*(P.shieldDR||1)*(P.armor||1)*worldDmgMul(); P.inv = 0.8; P.hitT = 0.25;
   shake = Math.max(shake,10); hitFlash = 1; hitstop=Math.max(hitstop,0.04);
   sfx.hurt(); burst(P.x,P.y,'#e54d4d',12,200);
-  if(navigator.vibrate) navigator.vibrate(60);
+  if(typeof haptic === 'function') haptic('hurt');
   if(P.hp<=0){
     if(typeof fireHook==='function') fireHook('onHpZero');
     if(P.phoenix>0){   // Phoenix: rise from the ashes instead of dying
@@ -4307,6 +5111,45 @@ function hurtPlayer(dmg, src){
 
 // ============ RENDER ============
 const TILE = 80;
+function groundPatternForTheme(th, wi) {
+  const patterns = typeof GROUND_PATTERNS !== 'undefined'
+    ? GROUND_PATTERNS
+    : ['checker', 'stripe', 'diamond', 'dots', 'wave'];
+  return th && th.groundPattern ? th.groundPattern : patterns[(wi || 0) % patterns.length];
+}
+function groundPatternSeed(wi) { return ((wi || 0) * 17 + 31) | 0; }
+function fillGroundCell(g, gx, gy, tile, th, wi) {
+  const pat = groundPatternForTheme(th, wi);
+  const phase = groundPatternSeed(wi);
+  const tx = (gx / tile) | 0, ty = (gy / tile) | 0;
+  let alt = false;
+  if (pat === 'stripe') alt = ((tx + phase) % 3) !== 1;
+  else if (pat === 'diamond') alt = ((tx + ty) % 3 + (tx * ty) % 2) % 2 === 0;
+  else if (pat === 'dots') alt = ((tx * 7 + ty * 13 + phase) % 5) < 2;
+  else if (pat === 'wave') alt = Math.sin(tx * 0.45 + ty * 0.3 + phase * 0.1) > 0;
+  else alt = ((tx + ty) & 1) === 0;
+  g.fillStyle = alt ? th.tile1 : th.tile2;
+  g.fillRect(gx, gy, tile, tile);
+  if (th.accent && ((gx * 31 + gy * 17 + phase) % 89) / 89 < 0.07) {
+    g.fillStyle = th.accent;
+    g.globalAlpha = 0.35;
+    g.beginPath();
+    g.arc(gx + tile * 0.5, gy + tile * 0.5, tile * 0.12, 0, TAU);
+    g.fill();
+    g.globalAlpha = 1;
+  }
+}
+function drawGroundTufts(g, tile, th, spanW, spanH, gxOff, gyOff) {
+  if (!th.tuft) return;
+  g.fillStyle = th.tuft;
+  const x0 = gxOff || 0, y0 = gyOff || 0;
+  for (let gy = y0; gy < spanH; gy += tile) {
+    for (let gx = x0; gx < spanW; gx += tile) {
+      const h = ((gx * 31 + gy * 17) % 97) / 97;
+      if (h < 0.3) g.fillRect((gx + (gx >> 3) % 60) + 10, (gy + (gy >> 2) % 60) + 12, 3, 7);
+    }
+  }
+}
 const _sortByY = (a,b) => a.y - b.y;
 function drawSprite(name, x, y, size, rot, sq, hitT, flip, tint, pulse){
   const img = SP[name]; if(!img) return;
@@ -4393,30 +5236,58 @@ function drawDebris(g,gx0,gy0,gx1,gy1){
 
 // Pre-render the whole-world ground (tiles + tufts + debris) to one offscreen canvas, ONCE per theme.
 // Per frame the renderer just blits this instead of re-looping every tile — a big win in DIRT DEPTHS.
-let groundCanvas=null, groundFor=null;
+let groundCanvas=null, groundForWorld=-1;
 let infiniteGroundCanvas=null, infiniteGroundFor=null;
 const INFINITE_GROUND_SPAN = TILE * 12;   // 960px: repeats checker + tuft offset cleanly
+const GROUND_CHUNK_ROWS = 10;             // tile rows per budget slice — keeps round-start hitch-free
+let _groundBuild = null;
 function buildGround(){
-  if(!groundCanvas){ groundCanvas=document.createElement('canvas'); }
+  if(groundForWorld===worldIdx && groundCanvas) return;
+  startBuildGround();
+  while(_groundBuild) tickBuildGround(9999);
+}
+function startBuildGround(){
+  if(groundForWorld===worldIdx && groundCanvas) return;
+  if(_groundBuild && _groundBuild.worldIdx===worldIdx) return;
+  if(!groundCanvas) groundCanvas=document.createElement('canvas');
   groundCanvas.width=WORLD.w; groundCanvas.height=WORLD.h;
   const g=groundCanvas.getContext('2d');
-  for(let gy=0; gy<WORLD.h; gy+=TILE){
-    for(let gx=0; gx<WORLD.w; gx+=TILE){
-      const odd=((gx/TILE)+(gy/TILE))&1;
-      g.fillStyle = odd ? curTheme.tile1 : curTheme.tile2;
-      g.fillRect(gx, gy, TILE, TILE);
-    }
-  }
-  g.fillStyle=curTheme.tuft;
-  for(let gy=0; gy<WORLD.h; gy+=TILE){
-    for(let gx=0; gx<WORLD.w; gx+=TILE){
-      const h=((gx*31+gy*17)%97)/97;
-      if(h<0.3){ g.fillRect((gx+ (gx>>3)%60)+10, (gy+(gy>>2)%60)+12, 3, 7); }
-    }
-  }
+  g.clearRect(0,0,WORLD.w,WORLD.h);
+  _groundBuild = { worldIdx, g, gy:0, phase:'tiles' };
+}
+function finishBuildGround(job){
+  const g=job.g;
+  drawGroundTufts(g, TILE, curTheme, WORLD.w, WORLD.h);
   if(curTheme.debris) drawDebris(g, 0,0, WORLD.w, WORLD.h);
   if(curObstacles.length && typeof WorldMapLayout!=='undefined') WorldMapLayout.drawObstacles(g, curObstacles, curTheme);
-  groundFor=curTheme;
+  groundForWorld=worldIdx;
+  _groundBuild=null;
+}
+function tickBuildGround(budgetMs){
+  const job=_groundBuild;
+  if(!job) return true;
+  const t0=performance.now();
+  const g=job.g;
+  while(job.phase==='tiles' && job.gy<WORLD.h && performance.now()-t0<budgetMs){
+    const gyEnd=Math.min(job.gy+GROUND_CHUNK_ROWS*TILE, WORLD.h);
+    for(let gy=job.gy; gy<gyEnd; gy+=TILE){
+      for(let gx=0; gx<WORLD.w; gx+=TILE) fillGroundCell(g, gx, gy, TILE, curTheme, worldIdx);
+    }
+    job.gy=gyEnd;
+  }
+  if(job.phase==='tiles' && job.gy>=WORLD.h){ job.phase='finish'; finishBuildGround(job); }
+  return !_groundBuild;
+}
+function groundReady(){ return groundForWorld===worldIdx && !!groundCanvas; }
+function drawGroundFallback(vx0,vy0,vx1,vy1){
+  const tile=TILE, c1=curTheme.tile1||curTheme.bg, c2=curTheme.tile2||c1;
+  const gx0=Math.floor(vx0/tile)*tile, gy0=Math.floor(vy0/tile)*tile;
+  for(let gy=gy0; gy<=vy1; gy+=tile){
+    for(let gx=gx0; gx<=vx1; gx+=tile){
+      cx.fillStyle=((Math.floor(gx/tile)+Math.floor(gy/tile))&1) ? c2 : c1;
+      cx.fillRect(gx, gy, tile, tile);
+    }
+  }
 }
 function buildInfiniteGround(){
   if(!infiniteGroundCanvas){ infiniteGroundCanvas=document.createElement('canvas'); }
@@ -4425,17 +5296,10 @@ function buildInfiniteGround(){
   const g=infiniteGroundCanvas.getContext('2d');
   for(let gy=0; gy<span; gy+=TILE){
     for(let gx=0; gx<span; gx+=TILE){
-      g.fillStyle=((((gx/TILE)|0)+((gy/TILE)|0))&1)?curTheme.tile1:curTheme.tile2;
-      g.fillRect(gx,gy,TILE,TILE);
+      fillGroundCell(g, gx, gy, TILE, curTheme, worldIdx);
     }
   }
-  g.fillStyle=curTheme.tuft;
-  for(let gy=0; gy<span; gy+=TILE){
-    for(let gx=0; gx<span; gx+=TILE){
-      const h=((gx*31+gy*17)%97)/97;
-      if(h<0.3){ g.fillRect((gx+((gx>>>3)%60))+10,(gy+((gy>>>2)%60))+12,3,7); }
-    }
-  }
+  drawGroundTufts(g, TILE, curTheme, span, span);
   infiniteGroundFor=curTheme;
 }
 function renderInfiniteGround(vx0,vy0,vx1,vy1){
@@ -4486,22 +5350,6 @@ function drawTurretUnit(tu, ts, bodyCol, visorCol, hpFrac){
   }
 }
 
-function drawReadabilityRim(x, y, r) {
-  if (typeof state === 'undefined' || state === ST.MENU) return;
-  cx.save();
-  cx.strokeStyle = '#ffffff';
-  cx.lineWidth = Math.max(2, r * 0.11);
-  cx.globalAlpha = 0.9;
-  cx.beginPath();
-  cx.ellipse(x, y, r * 0.95, r * 1.02, 0, 0, TAU);
-  cx.stroke();
-  cx.strokeStyle = '#2a1c10';
-  cx.lineWidth = Math.max(1.2, r * 0.065);
-  cx.globalAlpha = 0.4;
-  cx.stroke();
-  cx.restore();
-}
-
 function render(){
   cx.save();
   let sx=0, sy=0;
@@ -4513,15 +5361,19 @@ function render(){
   const vx0=camera.x, vy0=camera.y, vx1=vx0+vw, vy1=vy0+vh;
 
   // --- ground ---
-  cx.fillStyle=curTheme.void;
+  cx.fillStyle=curTheme.bg || curTheme.tile1;
   cx.fillRect(vx0-40, vy0-40, vw+80, vh+80);
   if(infiniteMapMode()){
     renderInfiniteGround(vx0-40, vy0-40, vx1+40, vy1+40);
   } else {
-    if(!groundCanvas || groundFor!==curTheme) buildGround();
-    const sx0=clamp(vx0-2,0,WORLD.w), sy0=clamp(vy0-2,0,WORLD.h);
-    const sx1=clamp(vx1+2,0,WORLD.w), sy1=clamp(vy1+2,0,WORLD.h);
-    if(sx1>sx0 && sy1>sy0) cx.drawImage(groundCanvas, sx0,sy0,sx1-sx0,sy1-sy0, sx0,sy0,sx1-sx0,sy1-sy0);
+    if(!groundReady()){
+      if(!_groundBuild) startBuildGround();
+      drawGroundFallback(vx0-40, vy0-40, vx1+40, vy1+40);
+    } else {
+      const sx0=clamp(vx0-2,0,WORLD.w), sy0=clamp(vy0-2,0,WORLD.h);
+      const sx1=clamp(vx1+2,0,WORLD.w), sy1=clamp(vy1+2,0,WORLD.h);
+      if(sx1>sx0 && sy1>sy0) cx.drawImage(groundCanvas, sx0,sy0,sx1-sx0,sy1-sy0, sx0,sy0,sx1-sx0,sy1-sy0);
+    }
     drawBorder(vx0,vy0,vx1,vy1);
   }
 
@@ -4697,20 +5549,6 @@ function render(){
     }
   }
 
-  if (state !== ST.MENU && _vis.length) {
-    cx.strokeStyle = '#ffffff';
-    cx.lineWidth = 2.4;
-    cx.globalAlpha = 0.78;
-    cx.beginPath();
-    for (const e of _vis) {
-      if (e.under) continue;
-      cx.moveTo(e.x + e.r * 1.02, e.y);
-      cx.ellipse(e.x, e.y, e.r * 1.02, e.r * 1.06, 0, 0, TAU);
-    }
-    cx.stroke();
-    cx.globalAlpha = 1;
-  }
-
   // batched status overlays: one state-set per effect type instead of per enemy
   cx.fillStyle='#bfe6ff';
   cx.globalAlpha=0.4; cx.beginPath();
@@ -4828,12 +5666,8 @@ function render(){
       else drawSprite('player', P.x, P.y, P.r*2.6, bob, 0, 0, flip);
       cx.globalAlpha=1;
       if(typeof drawPlayerGear==='function' && gearShouldShow(P.charId)){
-        // match drawCharacter's full rotation: bob + screenLean (lean toward movement direction)
-        const _a = typeof _playerAnim==='function' ? _playerAnim() : {};
-        const _lean = (_a.faceX||0)*0.16*(_a.walkAmt||0);
-        drawPlayerGear(P.x, P.y, P.r*2.6, bob+(flip?-_lean:_lean), flip);
+        drawPlayerGear(P.x, P.y, P.r*2.6, bob, flip);
       }
-      drawReadabilityRim(P.x, P.y, P.r * 1.02);
     }
     // Phoenix burn aura
     if(P.burnAura>0){
@@ -4873,10 +5707,30 @@ function render(){
   // --- floating text ---
   cx.textAlign='center';
   for(const t of texts){
-    cx.globalAlpha = Math.min(1, t.life/t.max*2);
-    cx.font = '900 '+t.size+'px sans-serif';
-    cx.lineWidth = t.big?4:3; cx.strokeStyle=OUT; cx.strokeText(t.str,t.x,t.y);
-    cx.fillStyle = t.color; cx.fillText(t.str, t.x, t.y);
+    const alpha = Math.min(1, t.life/t.max*2);
+    const age = 1 - t.life/t.max;
+    const pop = t.big ? 0.82 + 0.18 * (1 - Math.pow(1 - Math.min(1, age * 3), 3)) : 1;
+    const sz = t.size * pop;
+    cx.globalAlpha = alpha;
+    cx.font = '900 '+sz+'px "Baloo 2",sans-serif';
+    if(t.big){
+      cx.save();
+      cx.shadowColor = t.color;
+      cx.shadowBlur = 18 * alpha;
+      cx.fillStyle = t.color;
+      cx.fillText(t.str, t.x, t.y);
+      cx.shadowBlur = 0;
+      cx.lineWidth = 2.5;
+      cx.strokeStyle = 'rgba(10,14,24,.55)';
+      cx.strokeText(t.str, t.x, t.y);
+      cx.restore();
+    } else {
+      cx.lineWidth = 3;
+      cx.strokeStyle = OUT;
+      cx.strokeText(t.str, t.x, t.y);
+      cx.fillStyle = t.color;
+      cx.fillText(t.str, t.x, t.y);
+    }
   }
   cx.globalAlpha=1;
 
@@ -5218,6 +6072,7 @@ function loop(t){
   if(GFX.frameMin>0 && t - tPrev < GFX.frameMin) return;   // fps cap (user setting) — skip frames to cut render cost
   let dt = Math.min(0.033, (t-tPrev)/1000 || 0.016);
   tPrev = t;
+  if(_groundBuild) tickBuildGround(7);
   if(hitstop>0){ hitstop-=dt; dt=0; }
   if(state===ST.PLAY){
     update(dt*timeScale);
@@ -5249,12 +6104,12 @@ document.body.style.background = curTheme.bg;
 // populate the main menu (world emblem on the Battle stage + saved gold)
 setStageEmblem(selWorld);
 $('goldicon').src = SP['coin'].toDataURL();
-$('goldtxt').textContent = gold;
+$('goldtxt').textContent = fmtNum(gold);
 // top resource bar: a "player level" badge from worlds unlocked + a progress fill + gold
 function refreshTopbar(){
   const lv=$('topLvl'); if(lv) lv.textContent = unlockedMax+1;
   const xf=$('topxpfill'); if(xf) xf.style.width = Math.round(((unlockedMax+1)/WORLDS.length)*100)+'%';
-  const gt=$('goldtxt'); if(gt) gt.textContent = gold;
+  const gt=$('goldtxt'); if(gt) gt.textContent = fmtNum(typeof gold!=='undefined'?gold:0);
 }
 refreshTopbar();
 // wire house-drawn icons into static markup (tab bar, kill counter, ...)
@@ -5344,34 +6199,60 @@ wireGfxUI();
 const _dm=$('sdrop-music'); if(_dm) _dm.addEventListener('click',()=>setMusicMuted(!muted));
 const _ds=$('sdrop-sfx'); if(_ds) _ds.addEventListener('click',()=>setSfxMuted(!sfxMuted));
 const _dds=$('sdrop-deathshake'); if(_dds) _dds.addEventListener('click',()=>setDeathShake(!deathShakeOn));
+const _dh=$('sdrop-haptic'); if(_dh) _dh.addEventListener('click',()=>setHapticOn(!hapticOn));
 $('pausemute').addEventListener('click', ()=>setMusicMuted(!muted));
 $('pausesfx').addEventListener('click', ()=>setSfxMuted(!sfxMuted));
 refreshMute();
 setDeathShake(deathShakeOn);
+if(typeof setHapticOn === 'function') setHapticOn(hapticOn);
 
 // ---- pause / resume / quit ----
-function pauseGame(){ if(state!==ST.PLAY) return; state=ST.PAUSE; $('pause').classList.remove('hidden'); }
+function refreshRunResumeUI(){
+  const panel=$('run-resume'), start=$('startbtn'), meta=$('run-resume-meta');
+  const hint=document.querySelector('#menubot .hint');
+  const has = typeof hasSuspendedRun === 'function' && hasSuspendedRun();
+  if(panel) panel.classList.toggle('hidden', !has);
+  if(start) start.classList.toggle('hidden', has);
+  if(hint) hint.classList.toggle('hidden', has);
+  if(has && meta && typeof getSuspendedRunMeta === 'function'){
+    const m=getSuspendedRunMeta();
+    if(m) meta.textContent = m.world+' · '+m.progress+' · Lv '+m.lv;
+  }
+}
+function pauseGame(){
+  if(state!==ST.PLAY) return;
+  state=ST.PAUSE;
+  $('pause').classList.remove('hidden');
+  if(typeof saveSuspendedRun === 'function') saveSuspendedRun();
+}
 function resumeGame(){ if(state!==ST.PAUSE) return; state=ST.PLAY; $('pause').classList.add('hidden'); }
 function togglePause(){ if(state===ST.PLAY) pauseGame(); else if(state===ST.PAUSE) resumeGame(); }
+function suspendToMenu(){
+  if(typeof saveSuspendedRun === 'function' && canSuspendRun && canSuspendRun()) saveSuspendedRun();
+  quitToMenu();
+}
 function quitToMenu(){
   state=ST.MENU; arena=null; bossPending=0; boss=null;
   bullets=[]; ebullets=[]; petBullets=[]; enemies=[]; gems=[]; texts=[]; zones=[]; holes=[]; luckies=[]; clearParts();
   resetPlayer(); computeCamera();
   $('pause').classList.add('hidden');
+  $('levelup').classList.add('hidden');
   $('hud').classList.add('hidden');
   $('dashbtn').classList.add('hidden');
   $('zoomctl').classList.add('hidden');
   $('bossbar').classList.add('hidden');
   $('menu').classList.remove('hidden');
   refreshTopbar();
+  refreshRunResumeUI();
   playMusic(muted ? null : 'menu');
 }
 $('pausebtn').addEventListener('click', pauseGame);
 $('resumebtn').addEventListener('click', resumeGame);
-$('quitbtn').addEventListener('click', quitToMenu);
+$('quitbtn').addEventListener('click', suspendToMenu);
 // when the page is tabbed away / minimized: stop music + pause; resume on return
 document.addEventListener('visibilitychange', ()=>{
   if(document.hidden){
+    if(typeof saveSuspendedRun === 'function' && canSuspendRun && canSuspendRun()) saveSuspendedRun();
     stopMusic(); if(AC){ try{ AC.suspend(); }catch(e){} }
     if(state===ST.PLAY) pauseGame();
   } else {
@@ -5411,6 +6292,21 @@ $('startbtn').addEventListener('click', ()=>{
     }
   }, 190);
 });
+const _runCont=$('run-continue-btn');
+if(_runCont) _runCont.addEventListener('click', ()=>{
+  sfx.pick();
+  const m=$('menu'); m.classList.add('leaving');
+  setTimeout(()=>{
+    m.classList.remove('leaving');
+    if(typeof continueSuspendedRun === 'function' && continueSuspendedRun()) return;
+    refreshRunResumeUI();
+  }, 190);
+});
+const _runAbandon=$('run-abandon-btn');
+if(_runAbandon) _runAbandon.addEventListener('click', ()=>{
+  sfx.pick();
+  if(typeof clearSuspendedRun === 'function') clearSuspendedRun();
+});
 $('introskip').addEventListener('click', ()=>{
   if(typeof WorldCine!=='undefined' && WorldCine.isActive()) WorldCine.skip();
   else if(state===ST.OUTRO) finishW1Outro();
@@ -5427,6 +6323,13 @@ $('introskip').addEventListener('click', ()=>{
       chalBtn.classList.toggle('gmpop-locked', locked);
       const lb=$('gmpop-lockbadge');
       if(lb) lb.textContent=locked?'LOCKED — clear Story World 3 first':'';
+    }
+    const rushBtn=$('gm-bossrush');
+    if(rushBtn){
+      const locked=!rushUnlocked();
+      rushBtn.classList.toggle('gmpop-locked', locked);
+      const lb=$('gmpop-rushlock');
+      if(lb) lb.textContent=locked?'LOCKED — reach Story World 5':'';
     }
     if(pop) pop.classList.remove('hidden');
   }
@@ -5452,6 +6355,13 @@ $('introskip').addEventListener('click', ()=>{
   if(practiceBtn) practiceBtn.addEventListener('click', ()=>{
     closePop(); sfx.pick();
     const cp=$('practice-confirm-popup'); if(cp) cp.classList.remove('hidden');
+  });
+  const rushBtn=$('gm-bossrush');
+  if(rushBtn) rushBtn.addEventListener('click', ()=>{
+    if(!rushUnlocked()){ sfx.pick(); return; }
+    gameMode='bossrush';
+    refreshWorldSel();
+    closePop(); sfx.pick();
   });
 })();
 
@@ -5585,6 +6495,8 @@ $('wnext').addEventListener('click', ()=>{
   if(selWorld<maxW){ selWorld++; refreshWorldSel(); sfx.pick(); }
 });
 refreshWorldSel();
+refreshRunResumeUI();
+if(typeof refreshDailyBountiesUI === 'function') refreshDailyBountiesUI();
 $('retrybtn').addEventListener('click', startGame);
 $('wc-continue').addEventListener('click', ()=>{
   $('world-cleared').classList.add('hidden');

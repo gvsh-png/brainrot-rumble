@@ -2,9 +2,13 @@
 // ============ CHARACTERS: selection, drawing, hooks ============
 // Loads before game.js. All draw functions render at (0,0) with ctx already translated.
 
-// ---- gear visibility: hidden by default on any non-default character, can be forced back on ----
-let gearForceVisible = localStorage.getItem('br_gear_force_visible')==='1';
-function gearShouldShow(charId){ return (charId||'gianni')==='gianni' || gearForceVisible; }
+// ---- gear visibility: toggle in Equipment tab (Show Armor On/Off) ----
+let gearForceVisible = (()=>{
+  const v = localStorage.getItem('br_gear_force_visible');
+  if(v===null) return true;
+  return v==='1';
+})();
+function gearShouldShow(charId){ return gearForceVisible; }
 function setGearForceVisible(v){ gearForceVisible=!!v; localStorage.setItem('br_gear_force_visible', gearForceVisible?'1':'0'); }
 
 // ---- shared drawing helpers ----
