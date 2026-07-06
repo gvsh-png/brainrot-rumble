@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '2.01';
+const CURRENT_VERSION = '2.02';
 const CHANGELOG = [
+  { v: '2.02', notes: 'Skill VFX overhaul: player zones and auras no longer use flat dashed circles — each biome gets unique vector art (frost crystals, ember petals, spore caps, neon brackets, gravity vortices, oil-slick bogs, sunbeams, toxic drips, etc.). Registry auras, trails, burns, and frost fields all use the new renderer.' },
   { v: '2.01', notes: 'Pet recruit now includes milestone pets (once their world is reached) plus uncommon tier in the gacha pool. Debug Unlock All grants every pet and clears stale world-emblem locks. Shop unlock guide shows a bright mirrored Shop tab above the spotlight so the icon and label are visible. Case/crate drops now scale to your selected world tier — no more pulling Omega gear from a World 2 gold crate.' },
   { v: '2.00', notes: 'BOSS CRASH invader HP fix: chaos invaders now use HP scaled to your current world + wave (same milestone tier as the scheduled boss), not the foreign boss\'s native world stats — no more World 50 raid bosses tanking through World 1.' },
   { v: '1.99', notes: 'Final boss phase 3 armor rework: oversized hits are capped per shot — no single attack can chew more than ~7–11% of max HP (tighter on bullet-hell gimmicks). Milestone bosses (waves 5/10/15) still use flat % damage reduction.' },

@@ -2412,7 +2412,7 @@ function drawSkibidiToilet(b){
 }
 
 function addZone(x,y,r,o){
-  zones.push({ x,y,r, t:0, tele:o.tele||0.6, life:o.life||1.4, dps:o.dps||10, slow:!!o.slow, col:o.col||'#e8a93a', friendly:!!o.friendly, fromX:o.fromX, fromY:o.fromY });
+  zones.push({ x,y,r, t:0, tele:o.tele||0.6, life:o.life||1.4, dps:o.dps||10, slow:!!o.slow, col:o.col||'#e8a93a', friendly:!!o.friendly, fromX:o.fromX, fromY:o.fromY, vfx:o.vfx, seed:((x*73856093)^(y*19349663))>>>0 });
 }
 
 // ============ LEVEL UP ============
@@ -2961,7 +2961,7 @@ function update(dt){
     P.fbCd -= dt;
     if(P.fbCd<=0){
       P.fbCd = P.fbCdBase;
-      addZone(P.x,P.y,P.fbR,{tele:0.1, life:P.frostBloomEvo?2.6:1.8, dps:P.fbDps, slow:true, col:'#bfe6ff', friendly:true});
+      addZone(P.x,P.y,P.fbR,{tele:0.1, life:P.frostBloomEvo?2.6:1.8, dps:P.fbDps, slow:true, col:'#bfe6ff', friendly:true, vfx:'frost'});
       forEnemiesNear(P.x,P.y,P.fbR,(e)=>{
         if(e.isBoss || e.lead) return;
         if(dist2(P.x,P.y,e.x,e.y) < P.fbR*P.fbR){
@@ -2980,7 +2980,8 @@ function update(dt){
     if(P.fpCd<=0){
       P.fpCd = P.fpCdBase;
       const fl = P.fieldPulseEvo ? (P.fpLife||1.5)+0.8 : (P.fpLife||1.5);
-      addZone(P.x,P.y,P.fpR,{tele:0.08,life:fl,dps:P.fpDps,slow:!!P.fpSlow,col:P.fpCol||'#bfe6ff',friendly:true});
+      const zvfx = P.fpVfx || (P.fpSlow ? 'frost' : 'ember');
+      addZone(P.x,P.y,P.fpR,{tele:0.08,life:fl,dps:P.fpDps,slow:!!P.fpSlow,col:P.fpCol||'#bfe6ff',friendly:true,vfx:zvfx});
       burst(P.x,P.y,P.fpCol||'#bfe6ff',P.fieldPulseEvo?20:12,280);
       if(P.fpVfx==='spore') for(let k=0;k<4;k++) spawnPart(P.x+rand(-20,20),P.y+rand(-20,20),rand(-30,30),rand(-50,-10),0.4,0.4,'#60d030',rand(3,5));
       if(P.fpSlow) forEnemiesNear(P.x,P.y,P.fpR,(e)=>{ if(!e.isBoss&&!e.lead&&dist2(P.x,P.y,e.x,e.y)<P.fpR*P.fpR) e.chillT=Math.max(e.chillT||0,1.0); });
@@ -5897,8 +5898,9 @@ function render(){
     }
     // Phoenix burn aura
     if(P.burnAura>0){
-      cx.globalAlpha=0.12+0.05*Math.sin(elapsed*8); cx.fillStyle='#ff7a3a';
-      cx.beginPath(); cx.arc(P.x,P.y,80,0,TAU); cx.fill(); cx.globalAlpha=1;
+      if(typeof drawPlayerAura==='function') drawPlayerAura(cx,P.x,P.y,80,'#ff7a3a','ember',elapsed,0.85);
+      else { cx.globalAlpha=0.12+0.05*Math.sin(elapsed*8); cx.fillStyle='#ff7a3a'; cx.beginPath(); cx.arc(P.x,P.y,80,0,TAU); cx.fill(); }
+      cx.globalAlpha=1;
     }
     if(typeof renderWorldSkillAuras==='function') renderWorldSkillAuras(cx,elapsed);
     // Soldier stand-still boost indicator — pulsing red ring
@@ -6043,18 +6045,21 @@ function renderArena(vx0,vy0,vx1,vy1){
 }
 
 function renderZones(){
-  const zDashOff = -elapsed*140;
   for(const z of zones){
     const danger = z.col||'#e8a93a';
-    if(z.friendly){                       // player-owned field: soft, no danger telegraph — clearly yours & safe
-      const k=Math.max(0,1-(z.t-z.tele)/z.life);
-      const fill=z.col||'#bfe6ff';
-      cx.globalAlpha=0.16*k+0.06; cx.fillStyle=fill; cx.beginPath(); cx.arc(z.x,z.y,z.r,0,TAU); cx.fill();
-      cx.globalAlpha=0.7*k; cx.lineWidth=3; cx.strokeStyle=fill;
-      cx.setLineDash([4,8]); cx.lineDashOffset=-zDashOff*0.43;
-      cx.beginPath(); cx.arc(z.x,z.y,z.r,0,TAU); cx.stroke(); cx.setLineDash([]);
+    if(z.friendly){
+      if(z.t>=z.tele && typeof drawFriendlyZone==='function') drawFriendlyZone(cx,z,elapsed);
+      else if(z.t>=z.tele){
+        const k=Math.max(0,1-(z.t-z.tele)/z.life);
+        const fill=z.col||'#bfe6ff';
+        cx.globalAlpha=0.16*k+0.06; cx.fillStyle=fill; cx.beginPath(); cx.arc(z.x,z.y,z.r,0,TAU); cx.fill();
+        cx.globalAlpha=0.7*k; cx.lineWidth=3; cx.strokeStyle=fill;
+        cx.setLineDash([4,8]); cx.lineDashOffset=elapsed*60;
+        cx.beginPath(); cx.arc(z.x,z.y,z.r,0,TAU); cx.stroke(); cx.setLineDash([]);
+      }
       cx.globalAlpha=1; continue;
     }
+    const zDashOff = -elapsed*140;
     if(z.t<z.tele){                       // telegraph: clearly shows WHERE + WHEN it lands
       const k=z.t/z.tele;                 // 0..1 charge
       const imminent = k>0.62;

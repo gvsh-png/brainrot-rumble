@@ -595,41 +595,56 @@
 
   function renderWorldSkillAuras(cx, elapsed) {
     if (!P.wsk) return;
+    const drawAura = typeof drawPlayerAura === 'function' ? drawPlayerAura : null;
 
     if (P.bogAura > 0) {
       const br = P.bogR || 88;
-      cx.globalAlpha = 0.1 + 0.04 * Math.sin(elapsed * 3);
-      cx.fillStyle = '#5a4830';
-      cx.beginPath(); cx.arc(P.x, P.y, br, 0, TAU); cx.fill();
-      cx.globalAlpha = 1;
+      if (drawAura) drawAura(cx, P.x, P.y, br, '#5a4830', 'bog', elapsed, 0.9);
+      else {
+        cx.globalAlpha = 0.1 + 0.04 * Math.sin(elapsed * 3);
+        cx.fillStyle = '#5a4830';
+        cx.beginPath(); cx.arc(P.x, P.y, br, 0, TAU); cx.fill();
+      }
     }
 
     if (wsk('lash') > 0 || wsk('sing') > 0) {
-      cx.globalAlpha = 0.08 + 0.04 * Math.sin(elapsed * 4);
-      cx.strokeStyle = wsk('sing') > 0 ? '#b06ff0' : '#30b8a0';
-      cx.lineWidth = 2;
-      cx.beginPath(); cx.arc(P.x, P.y, 70 + wsk('sing') * 10, 0, TAU); cx.stroke();
-      cx.globalAlpha = 1;
+      const col = wsk('sing') > 0 ? '#b06ff0' : '#30b8a0';
+      const R = 70 + wsk('sing') * 10;
+      if (drawAura) drawAura(cx, P.x, P.y, R, col, 'vortex', elapsed, 0.85);
     }
 
     if (wsk('eyewall') > 0) {
       const n = 2 + Math.min(2, wsk('eyewall'));
-      for (let i = 0; i < n; i++) {
-        const a = (P.wskEyeA || 0) + i * (TAU / n);
-        const ox = P.x + Math.cos(a) * (72 + wsk('eyewall') * 6);
-        const oy = P.y + Math.sin(a) * (72 + wsk('eyewall') * 6);
-        cx.globalAlpha = 0.7;
-        cx.fillStyle = '#80d0ff';
-        cx.beginPath(); cx.arc(ox, oy, 5, 0, TAU); cx.fill();
+      const R = 72 + wsk('eyewall') * 6;
+      if (typeof drawEyewallNodes === 'function') {
+        drawEyewallNodes(cx, P.x, P.y, n, R, P.wskEyeA || 0, wsk('eyewall'));
+      } else {
+        for (let i = 0; i < n; i++) {
+          const a = (P.wskEyeA || 0) + i * (TAU / n);
+          const ox = P.x + Math.cos(a) * R;
+          const oy = P.y + Math.sin(a) * R;
+          cx.globalAlpha = 0.7;
+          cx.fillStyle = '#80d0ff';
+          cx.beginPath(); cx.arc(ox, oy, 5, 0, TAU); cx.fill();
+        }
       }
       cx.globalAlpha = 1;
     }
 
     if (wsk('neon') > 0 && P.moving) {
-      cx.globalAlpha = 0.15 + 0.08 * Math.sin(elapsed * 12);
-      cx.fillStyle = '#ff60d8';
-      cx.beginPath(); cx.arc(P.x - Math.cos(P.face) * 20, P.y - Math.sin(P.face) * 20, 22, 0, TAU); cx.fill();
+      if (typeof drawNeonAfterimage === 'function') {
+        drawNeonAfterimage(cx, P.x, P.y, P.face, elapsed, 0.9);
+      } else {
+        cx.globalAlpha = 0.15 + 0.08 * Math.sin(elapsed * 12);
+        cx.fillStyle = '#ff60d8';
+        cx.beginPath(); cx.arc(P.x - Math.cos(P.face) * 20, P.y - Math.sin(P.face) * 20, 22, 0, TAU); cx.fill();
+      }
       cx.globalAlpha = 1;
+    }
+
+    if (wsk('mist') > 0) {
+      const R = 88 + wsk('mist') * 10;
+      if (drawAura) drawAura(cx, P.x, P.y, R, '#c8b0ff', 'mist', elapsed, 0.8);
     }
 
     const REG = typeof WSK_REGISTRY !== 'undefined' ? WSK_REGISTRY : null;
@@ -641,10 +656,10 @@
         if (!fx) continue;
         if (fx.type === 'aura' || fx.type === 'pull' || fx.type === 'mist') {
           const R = fx.type === 'pull' ? 88 + lv * 10 : fx.type === 'mist' ? 80 + lv * 8 : 72 + lv * 6;
-          cx.globalAlpha = 0.07 + 0.03 * Math.sin(elapsed * 3 + key.charCodeAt(0));
-          cx.strokeStyle = fx.col;
-          cx.lineWidth = 2;
-          cx.beginPath(); cx.arc(P.x, P.y, R, 0, TAU); cx.stroke();
+          const style = typeof auraStyleFromCol === 'function'
+            ? auraStyleFromCol(fx.col, fx.type === 'pull' ? 'pull' : fx.type)
+            : 'pulse';
+          if (drawAura) drawAura(cx, P.x, P.y, R, fx.col, style, elapsed + key.charCodeAt(0) * 0.01, 0.75);
         }
         if (fx.type === 'orbit') {
           const n = 1 + Math.min(2, Math.floor(lv / 2));
@@ -652,9 +667,12 @@
             const a = (P.wskOrbA && P.wskOrbA[key] || 0) + i * (TAU / n);
             const ox = P.x + Math.cos(a) * (58 + lv * 5);
             const oy = P.y + Math.sin(a) * (58 + lv * 5);
-            cx.globalAlpha = 0.75;
-            cx.fillStyle = fx.col;
-            cx.beginPath(); cx.arc(ox, oy, 5 + lv * 0.4, 0, TAU); cx.fill();
+            if (typeof drawOrbitNode === 'function') drawOrbitNode(cx, ox, oy, fx.col, elapsed, i, lv);
+            else {
+              cx.globalAlpha = 0.75;
+              cx.fillStyle = fx.col;
+              cx.beginPath(); cx.arc(ox, oy, 5 + lv * 0.4, 0, TAU); cx.fill();
+            }
           }
         }
       }
