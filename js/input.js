@@ -51,11 +51,12 @@ window.addEventListener('pointerdown', _resumeAC);
 window.addEventListener('keydown', _resumeAC);
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) _resumeAC(); });
 
-// ---- zoom controls: buttons + scroll wheel ----
-$('zoomin').addEventListener('click', ()=>zoomBy(0.2));
-$('zoomout').addEventListener('click', ()=>zoomBy(-0.2));
+// ---- zoom controls: discrete steps via buttons + scroll wheel ----
+$('zoomin').addEventListener('click', ()=>zoomInStep());
+$('zoomout').addEventListener('click', ()=>zoomOutStep());
 window.addEventListener('wheel', e=>{
   if(state===ST.MENU) return;
   e.preventDefault();
-  zoomBy(e.deltaY<0 ? 0.12 : -0.12);
+  if(e.deltaY < 0) zoomInStep();
+  else zoomOutStep();
 }, {passive:false});
