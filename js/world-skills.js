@@ -8,7 +8,6 @@
   }
 
   const CARD_DEFS = [
-    // W12–W16
     { wi: 11, id: 'neondrift', name: 'Neon Afterimage', icon: 'gembig', rarity: 'uncommon', cap: 5,
       steps: [{ desc: 'while moving, neon ghosts fire snap-shots behind you.', f: () => wskAdd('neon') }] },
     { wi: 12, id: 'rustthorns', name: 'Corrosion Spikes', icon: 'turtle', rarity: 'uncommon', cap: 5,
@@ -229,6 +228,37 @@
         desc: 'EVOLVE — lash, venom, quakes, and flares at full power.',
         f: () => { wskAdd('lash', 2); wskAdd('hive', 2); wskAdd('chaos', 2); wskAdd('flare', 2); P.abyssal = (P.abyssal || 0) + 2; } } },
   ];
+
+  if (typeof WSK_EXTRA_DEFS !== 'undefined' && Array.isArray(WSK_EXTRA_DEFS)) {
+    const REG = typeof WSK_REGISTRY !== 'undefined' ? WSK_REGISTRY : {};
+    for (const ex of WSK_EXTRA_DEFS) {
+      const fx = REG[ex.key] || {};
+      const card = {
+        wi: ex.wi,
+        id: ex.id,
+        name: ex.name,
+        icon: ex.icon,
+        rarity: ex.rarity,
+        steps: [{
+          desc: ex.desc,
+          f: () => {
+            wskAdd(ex.key);
+            if (fx.type === 'armor') P.armor *= 0.93;
+            else if (fx.type === 'speed') P.fireRate *= 0.90;
+            else if (fx.type === 'crit') P.crit = Math.min(0.85, P.crit + 0.06);
+            else if (fx.type === 'ricochet') P.ricochet += 1;
+            else if (fx.type === 'bounce') P.bounce = (P.bounce || 0) + 1;
+            else if (fx.type === 'thorns') P.thorns += 7;
+            else if (fx.type === 'magnet') { P.magnet *= 1.30; wskAdd('rift'); }
+            else if (fx.type === 'econ') { P.goldMul *= 1.14; P.xpMul *= 1.14; }
+            else if (fx.type === 'prism') { P.crit = Math.min(0.85, P.crit + 0.05); P.prismCrit = (P.prismCrit || 0) + 1; }
+          },
+        }],
+      };
+      if (ex.cap) card.cap = ex.cap;
+      CARD_DEFS.push(card);
+    }
+  }
 
   const WORLD_SKILLS = [];
   const WORLD_SKILL_MIN = {};

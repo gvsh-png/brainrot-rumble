@@ -1640,7 +1640,7 @@ function resetPlayer(){
     lavaKill:0,
     // World 11: DIRT DEPTHS
     quakeDash:0, buriedGold:0, earthward:0,
-    wsk:{}, wskCd:{}, wskEcho:null, wskHiveTgt:null, wskHiveStacks:0, wskEyeA:0, wskSlagT:0, wskQuakeCol:null,
+    wsk:{}, wskCd:{}, wskEcho:null, wskHiveTgt:null, wskHiveStacks:0, wskEyeA:0, wskSlagT:0, wskQuakeCol:null, wskOrbA:null,
     galeVolley:0, galeCount:0, cloudPierce:0,
     // World 1 additions
     seeker:0, laststand:0,
@@ -2639,6 +2639,7 @@ function update(dt){
       forEnemiesNear(P.x,P.y,R,(o)=>{ if(o.iv>0||o.under||o.lead) return; if(dist2(P.x,P.y,o.x,o.y)<R*R){ o.hp-=qd; o.hitT=Math.max(o.hitT,0.08); } });
       spawnPart(P.x,P.y,0,0,0.3,0.3,'#8a5d2c',R,1,R*2.2); burst(P.x,P.y,'#caa15a',12,260); shake=Math.max(shake,5);
     }
+    if(P.dashT<=0 && typeof worldSkillOnDashEnd==='function') worldSkillOnDashEnd();
   } else {
     const spd = P.speed * (P.slowT>0 ? 0.5 : 1);   // chilled by cold zones
     P.x += mx*spd*dt; P.y += my*spd*dt;

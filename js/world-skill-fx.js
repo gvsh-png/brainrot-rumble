@@ -223,10 +223,207 @@
       if (P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + wsk('reef') * 1.1 * dt);
       if (Math.random() < 0.1) spawnPart(P.x + rand(-14, 14), P.y + rand(-14, 14), 0, 0, 0.3, 0.3, '#40d8c0', 4, 1);
     }
+
+    tickWskRegistry(dt);
+  }
+
+  function tickWskRegistry(dt) {
+    const REG = typeof WSK_REGISTRY !== 'undefined' ? WSK_REGISTRY : null;
+    if (!REG || !P.wsk) return;
+    for (const key in P.wsk) {
+      const lv = wsk(key);
+      if (!lv) continue;
+      const fx = REG[key];
+      if (!fx) continue;
+      const col = fx.col || '#fff';
+      switch (fx.type) {
+        case 'aura':
+          forEnemiesNear(P.x, P.y, 72 + lv * 6, (e) => {
+            if (e.iv > 0 || e.lead) return;
+            if (dist2(P.x, P.y, e.x, e.y) < (72 + lv * 6) ** 2) {
+              e.hp -= (4 + lv * 1.8) * dt * (P.abyssalMul || 1);
+              e.hitT = Math.max(e.hitT, 0.05);
+              if (Math.random() < 0.14) spawnPart(e.x, e.y, 0, 0, 0.2, 0.2, col, 3, 1);
+            }
+          });
+          break;
+        case 'trail':
+          if (P.moving || P.dashT > 0) {
+            if (wskCd(key, dt) <= 0) {
+              wskResetCd(key, Math.max(0.16, 0.34 - lv * 0.02));
+              const slow = col === '#8a5030';
+              addZone(P.x, P.y, 34 + lv * 4, { tele: 0.06, life: 0.9 + lv * 0.08, dps: 5 + lv * 2, slow, col, friendly: true });
+              if (Math.random() < 0.3) spawnPart(P.x + rand(-8, 8), P.y + rand(-8, 8), 0, 0, 0.25, 0.25, col, 4, 1);
+            }
+          }
+          break;
+        case 'bolt':
+        case 'lash':
+          if (wskCd(key, dt) <= 0) {
+            wskResetCd(key, Math.max(2.4, 4.8 - lv * 0.28));
+            const t = nearestEnemy(P.x, P.y, P.range);
+            if (t) lashStrike(P.x, P.y, t.x, t.y, col, 0.95 + lv * 0.18, fx.type === 'lash' ? 3 : 2);
+          }
+          break;
+        case 'bloom':
+        case 'deluge':
+          if (wskCd(key, dt) <= 0) {
+            wskResetCd(key, Math.max(3.4, 5.4 - lv * 0.3));
+            const ax = fx.type === 'deluge' ? P.x + Math.cos(P.face) * 50 : P.x;
+            const ay = fx.type === 'deluge' ? P.y + Math.sin(P.face) * 50 : P.y;
+            addZone(ax, ay, 40 + lv * 6, { tele: 0.07, life: 1.3 + lv * 0.1, dps: 9 + lv * 2.5, slow: fx.type === 'deluge', col, friendly: true });
+            burst(ax, ay, col, 8, 180);
+          }
+          break;
+        case 'orbit': {
+          P.wskOrbA = P.wskOrbA || {};
+          P.wskOrbA[key] = (P.wskOrbA[key] || 0) + dt * (1.6 + lv * 0.12);
+          const n = 1 + Math.min(2, Math.floor(lv / 2));
+          for (let i = 0; i < n; i++) {
+            const a = P.wskOrbA[key] + i * (TAU / n);
+            const ox = P.x + Math.cos(a) * (58 + lv * 5);
+            const oy = P.y + Math.sin(a) * (58 + lv * 5);
+            forEnemiesNear(ox, oy, 24, (e) => {
+              if (e.iv > 0 || e.lead) return;
+              if (dist2(ox, oy, e.x, e.y) < 28 * 28) {
+                e.hp -= (5 + lv * 1.5) * dt * (P.abyssalMul || 1);
+                e.hitT = Math.max(e.hitT, 0.05);
+                if (Math.random() < 0.18) spawnPart(e.x, e.y, 0, 0, 0.15, 0.15, col, 3, 1);
+              }
+            });
+          }
+          break;
+        }
+        case 'pull': {
+          const R = 88 + lv * 10;
+          forEnemiesNear(P.x, P.y, R, (e) => {
+            if (e.iv > 0 || e.lead || e.isBoss) return;
+            const d = Math.sqrt(dist2(P.x, P.y, e.x, e.y)) || 1;
+            if (d < R) { e.x += (P.x - e.x) / d * 22 * dt; e.y += (P.y - e.y) / d * 22 * dt; }
+          });
+          if (Math.random() < 0.06) spawnPart(P.x + rand(-16, 16), P.y + rand(-16, 16), 0, 0, 0.2, 0.2, col, 2, 1);
+          break;
+        }
+        case 'flare':
+          if (wskCd(key, dt) <= 0) {
+            wskResetCd(key, Math.max(4.2, 6 - lv * 0.32));
+            const R = 88 + lv * 10;
+            const dmg = P.dmg * (0.55 + lv * 0.1) * (P.abyssalMul || 1);
+            burst(P.x, P.y, col, 14, 300);
+            forEnemiesNear(P.x, P.y, R, (e) => {
+              if (e.iv > 0 || e.lead) return;
+              if (dist2(P.x, P.y, e.x, e.y) < R * R) {
+                damageEnemy(e, dmg, P.x, P.y, false);
+                const a = Math.atan2(e.y - P.y, e.x - P.x);
+                e.x += Math.cos(a) * 16; e.y += Math.sin(a) * 16;
+              }
+            });
+          }
+          break;
+        case 'still':
+          if (!P.moving && (P.stillT || 0) > 0.35 && P.hp < P.maxHp) {
+            P.hp = Math.min(P.maxHp, P.hp + lv * 0.9 * dt);
+            if (Math.random() < 0.08) spawnPart(P.x + rand(-10, 10), P.y + rand(-10, 10), 0, 0, 0.25, 0.25, col, 3, 1);
+          }
+          break;
+        case 'mist': {
+          const R = 80 + lv * 8;
+          forEnemiesNear(P.x, P.y, R, (e) => {
+            if (e.iv > 0 || e.lead || e.isBoss) return;
+            if (dist2(P.x, P.y, e.x, e.y) < R * R) e.chillT = Math.max(e.chillT || 0, 0.18 + lv * 0.04);
+          });
+          if (Math.random() < 0.05) spawnPart(P.x + rand(-24, 24), P.y + rand(-24, 24), rand(-8, 8), rand(-16, -4), 0.4, 0.4, col, rand(3, 6));
+          break;
+        }
+        default: break;
+      }
+    }
+  }
+
+  function tickWskRegistryOnHit(e, dmg) {
+    const REG = typeof WSK_REGISTRY !== 'undefined' ? WSK_REGISTRY : null;
+    if (!REG || !P.wsk || e.isBoss || e.lead) return;
+    for (const key in P.wsk) {
+      const lv = wsk(key);
+      if (!lv) continue;
+      const fx = REG[key];
+      if (!fx) continue;
+      if (fx.type === 'hit') {
+        e.chillT = Math.max(e.chillT || 0, 0.4 + lv * 0.1);
+        if (Math.random() < 0.2) spawnPart(e.x, e.y, 0, 0, 0.2, 0.2, fx.col, 4, 1);
+      } else if (fx.type === 'mark') {
+        e.wskMark = Math.max(e.wskMark || 0, 2 + lv * 0.5);
+      } else if (fx.type === 'echo') {
+        P.wskEcho = P.wskEcho || [];
+        P.wskEcho.push({ x: e.x, y: e.y, t: 0.32, dmg: dmg * (0.4 + lv * 0.07) });
+      } else if (fx.type === 'dodge' && Math.random() < 0.06 + lv * 0.02) {
+        P.inv = Math.max(P.inv, 0.1);
+        spawnPart(P.x, P.y, rand(-40, 40), rand(-40, 40), 0.15, 0.15, fx.col, 5, 1);
+      }
+    }
+    if (e.wskMark > 0) e.wskMark -= 0.016;
+  }
+
+  function tickWskRegistryOnKill(x, y) {
+    const REG = typeof WSK_REGISTRY !== 'undefined' ? WSK_REGISTRY : null;
+    if (!REG || !P.wsk) return;
+    for (const key in P.wsk) {
+      const lv = wsk(key);
+      if (!lv) continue;
+      const fx = REG[key];
+      if (!fx) continue;
+      if (fx.type === 'killzone' && Math.random() < 0.35 + lv * 0.06) {
+        addZone(x, y, 40 + lv * 5, { tele: 0.07, life: 1.1, dps: 8 + lv * 2, col: fx.col, friendly: true });
+        burst(x, y, fx.col, 8, 160);
+      } else if (fx.type === 'killgold' && Math.random() < 0.16 + lv * 0.04) {
+        const bonus = 2 + lv * 2;
+        worldCoins += bonus;
+        floatText(x, y - 18, '+' + bonus, '#ffd24a', 13);
+        burst(x, y, fx.col, 6, 140);
+      }
+    }
+  }
+
+  function tickWskRegistryOnHurt() {
+    const REG = typeof WSK_REGISTRY !== 'undefined' ? WSK_REGISTRY : null;
+    if (!REG || !P.wsk) return;
+    for (const key in P.wsk) {
+      const lv = wsk(key);
+      if (!lv) continue;
+      const fx = REG[key];
+      if (!fx || fx.type !== 'hurt') continue;
+      const R = 48 + lv * 8;
+      const bd = P.dmg * 0.3 * lv * (P.abyssalMul || 1);
+      forEnemiesNear(P.x, P.y, R, (e) => {
+        if (e.iv > 0 || e.lead || e.isBoss) return;
+        if (dist2(P.x, P.y, e.x, e.y) < R * R) { e.hp -= bd; e.hitT = 0.1; }
+      });
+      burst(P.x, P.y, fx.col, 7, 160);
+    }
+  }
+
+  function worldSkillOnDashEnd() {
+    const REG = typeof WSK_REGISTRY !== 'undefined' ? WSK_REGISTRY : null;
+    if (!REG || !P.wsk) return;
+    for (const key in P.wsk) {
+      const lv = wsk(key);
+      if (!lv) continue;
+      const fx = REG[key];
+      if (!fx || fx.type !== 'dash') continue;
+      const R = 55 + lv * 8;
+      const qd = P.dmg * (0.8 + lv * 0.2) * (P.abyssalMul || 1);
+      forEnemiesNear(P.x, P.y, R, (e) => {
+        if (e.iv > 0 || e.lead) return;
+        if (dist2(P.x, P.y, e.x, e.y) < R * R) { e.hp -= qd; e.hitT = 0.1; }
+      });
+      burst(P.x, P.y, fx.col, 10, 200);
+      shake = Math.max(shake, 3);
+    }
   }
 
   function worldSkillDmgMul() {
-    return (P.wskSandMul || 1) * (P.wskHive && P.wskHiveTgt ? 1 + 0.06 * wsk('hive') : 1);
+    let mul = (P.wskSandMul || 1) * (P.wskHive && P.wskHiveTgt ? 1 + 0.06 * wsk('hive') : 1);
+    return mul;
   }
 
   function worldSkillOnHit(e, dmg, crit) {
@@ -285,6 +482,8 @@
       P.inv = Math.max(P.inv, 0.12);
       spawnPart(P.x, P.y, rand(-60, 60), rand(-60, 60), 0.2, 0.2, '#80ff80', 6, 1);
     }
+    tickWskRegistryOnHit(e, dmg);
+    if (e.wskMark > 0) dmg *= 1.12;
   }
 
   function tickWorldSkillEchoes(dt) {
@@ -367,6 +566,7 @@
         }
       }
     }
+    tickWskRegistryOnKill(x, y);
   }
 
   function worldSkillOnHurt() {
@@ -383,6 +583,7 @@
       P.burnAura = Math.max(P.burnAura, 4 + wsk('slag') * 2);
       if (P.wskSlagT == null) P.wskSlagT = 1.5;
     }
+    tickWskRegistryOnHurt();
   }
 
   function tickWorldSkillHurt(dt) {
@@ -430,8 +631,38 @@
       cx.beginPath(); cx.arc(P.x - Math.cos(P.face) * 20, P.y - Math.sin(P.face) * 20, 22, 0, TAU); cx.fill();
       cx.globalAlpha = 1;
     }
+
+    const REG = typeof WSK_REGISTRY !== 'undefined' ? WSK_REGISTRY : null;
+    if (REG && P.wsk) {
+      for (const key in P.wsk) {
+        const lv = wsk(key);
+        if (!lv) continue;
+        const fx = REG[key];
+        if (!fx) continue;
+        if (fx.type === 'aura' || fx.type === 'pull' || fx.type === 'mist') {
+          const R = fx.type === 'pull' ? 88 + lv * 10 : fx.type === 'mist' ? 80 + lv * 8 : 72 + lv * 6;
+          cx.globalAlpha = 0.07 + 0.03 * Math.sin(elapsed * 3 + key.charCodeAt(0));
+          cx.strokeStyle = fx.col;
+          cx.lineWidth = 2;
+          cx.beginPath(); cx.arc(P.x, P.y, R, 0, TAU); cx.stroke();
+        }
+        if (fx.type === 'orbit') {
+          const n = 1 + Math.min(2, Math.floor(lv / 2));
+          for (let i = 0; i < n; i++) {
+            const a = (P.wskOrbA && P.wskOrbA[key] || 0) + i * (TAU / n);
+            const ox = P.x + Math.cos(a) * (58 + lv * 5);
+            const oy = P.y + Math.sin(a) * (58 + lv * 5);
+            cx.globalAlpha = 0.75;
+            cx.fillStyle = fx.col;
+            cx.beginPath(); cx.arc(ox, oy, 5 + lv * 0.4, 0, TAU); cx.fill();
+          }
+        }
+      }
+      cx.globalAlpha = 1;
+    }
   }
 
+  window.worldSkillOnDashEnd = worldSkillOnDashEnd;
   window.tickWorldSkillFx = tickWorldSkillFx;
   window.tickWorldSkillEchoes = tickWorldSkillEchoes;
   window.tickWorldSkillHurt = tickWorldSkillHurt;
