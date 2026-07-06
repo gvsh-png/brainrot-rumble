@@ -92,7 +92,7 @@ function statIsFlat(stat){ return !!STAT[stat].flat; }
 function statIsArmor(stat){ return !!STAT[stat].armor; }
 function itemBonusShort(id){
   const s=itemStat(id), v=itemBonus(id);
-  if(statIsFlat(s)) return '+'+v;
+  if(statIsFlat(s)) return (v >= 1000 && typeof fmtPlus==='function' ? fmtPlus(v) : '+'+v);
   if(statIsArmor(s)) return '-'+Math.round(v*100)+'%';
   return '+'+Math.round(v*100)+'%';
 }
@@ -573,18 +573,18 @@ function renderInventory(){
     '<div class="eqside left">'+eqSlotHTML('cape')+eqSlotHTML('helmet')+eqSlotHTML('chest')+eqSlotHTML('gloves')+'</div>'+
     '<div class="eqmid"><img class="eqchar" src="'+compositeCharURL()+'" alt="">'+
       '<div class="eqstats">'+
-        eqStatChip('ic_dmg','+'+equippedFlatDmg())+
-        eqStatChip('ic_hp','+'+equippedHp())+
+        eqStatChip('ic_dmg', (typeof fmtPlus==='function' ? fmtPlus(equippedFlatDmg()) : '+'+equippedFlatDmg()))+
+        eqStatChip('ic_hp', (typeof fmtPlus==='function' ? fmtPlus(equippedHp()) : '+'+equippedHp()))+
         eqStatChip('ic_spd','+'+pct('speed')+'%')+
         eqStatChip('ic_rng','+'+pct('range')+'%')+
         eqStatChip('ic_crit','+'+Math.round(equippedCrit()*100)+'%')+
         eqStatChip('ic_armor','-'+Math.round((1-equippedArmorMult())*100)+'%')+
         eqStatChip('ic_rate','+'+pct('rate')+'%')+
         eqStatChip('ic_mag','+'+pct('magnet')+'%')+
-        eqStatChip('ic_regen','+'+equippedRegen()+'/s')+
+        eqStatChip('ic_regen', (typeof fmtPlus==='function' ? fmtPlus(equippedRegen()) : '+'+equippedRegen())+'/s')+
         eqStatChip('ic_gold','+'+pct('gold')+'%')+
-        eqStatChip('ic_vamp','+'+equippedVamp()+'/kill')+
-        eqStatChip('ic_pierce','+'+equippedPierce())+
+        eqStatChip('ic_vamp', (typeof fmtPlus==='function' ? fmtPlus(equippedVamp()) : '+'+equippedVamp())+'/kill')+
+        eqStatChip('ic_pierce', (typeof fmtPlus==='function' ? fmtPlus(equippedPierce()) : '+'+equippedPierce()))+
       '</div></div>'+
     '<div class="eqside right">'+eqSlotHTML('belt')+eqSlotHTML('pants')+eqSlotHTML('ring')+eqSlotHTML('shoes')+'</div>';
   stage.querySelectorAll('.eqslot[data-cat]').forEach(el=>el.addEventListener('click',()=>{

@@ -49,7 +49,7 @@ const _storyP = +(localStorage.getItem('br_unlocked')||0);
 let chalUnlocked = _storyP >= 3
   ? Math.max(0, +(localStorage.getItem('br_ch_unlocked')||0))
   : -1;   // -1 = fully locked (need story world 3 first); cap applied after WORLDS expands
-function setCoinHUD(){ const c=$('coincount'); if(c){ const s=c.querySelector('span'); if(s) s.textContent=worldCoins; } }
+function setCoinHUD(){ const c=$('coincount'); if(c){ const s=c.querySelector('span'); if(s) s.textContent=fmtNum(worldCoins); } }
 function setKillHUD(){ const k=$('killtag'); if(k && k.lastElementChild) k.lastElementChild.textContent=kills; }
 function fmtTime(s){ s=Math.max(0,Math.floor(s)); const m=Math.floor(s/60), q=s%60; return (m<10?'0':'')+m+':'+(q<10?'0':'')+q; }
 // re-sync the whole in-game HUD to current state (called on start so nothing shows a stale value)
@@ -179,11 +179,28 @@ function dropOrb(x,y,tier,smin=90,smax=210){
 // global HP scale: enemies have 10x HP and the player does 10x damage, so the
 // numbers are big enough that % upgrades (e.g. +25%) visibly change the damage.
 const HP_MULT = 10;
-// Compact display for large economy numbers (shop prices, gold HUD, etc.)
+// Compact display for large economy numbers (shop prices, gold HUD, stats, etc.)
+function _fmtCompactUnit(val, suffix){
+  const abs = Math.abs(val);
+  let out;
+  if(abs >= 100) out = String(Math.round(val));
+  else { out = String(Math.round(val * 10) / 10).replace(/\.0$/, ''); }
+  return out + suffix;
+}
 function fmtNum(n){
   n = Math.round(+n || 0);
-  if(Math.abs(n) >= 10000) return Math.round(n / 1000) + 'k';
+  if(!isFinite(n)) return '0';
+  const sign = n < 0 ? '-' : '';
+  const v = Math.abs(n);
+  if(v >= 1e9) return sign + _fmtCompactUnit(v / 1e9, 'B');
+  if(v >= 1e6) return sign + _fmtCompactUnit(v / 1e6, 'M');
+  if(v >= 1000) return sign + _fmtCompactUnit(v / 1000, 'k');
   return String(n);
+}
+function fmtPlus(n){
+  n = Math.round(+n || 0);
+  if(n < 0) return fmtNum(n);
+  return '+' + (n >= 1000 ? fmtNum(n) : String(n));
 }
 // ---- concurrency caps (perf + readability): keep specials few but make them buffy ----
 const MAX_ENEMIES  = IS_TOUCH ? 55 : 90;   // global hard cap on live actors (bosses are few, so this is ~enemies)
@@ -762,7 +779,7 @@ function toMenuFromClear(){
   if(!_clearData){ quitToMenu(); triggerUnlockReveal(); return; }
   const d=_clearData; _clearData=null;
   $('wc-title').textContent = d.isPractice ? 'TRAINING COMPLETE' : d.isChallenger ? 'WORLD '+d.worldNum+' CHALLENGER!' : 'WORLD '+d.worldNum+' CLEARED!';
-  $('wc-coins').textContent = d.coins;
+  $('wc-coins').textContent = fmtNum(d.coins);
   // Set coin icon from sprite (no emoji)
   const coinIco=$('wc-coinico');
   if(coinIco && typeof SP!=='undefined' && SP['coin']) coinIco.src=SP['coin'].toDataURL();
@@ -2180,7 +2197,7 @@ function gameOver(){
   if(typeof haptic === 'function') haptic('heavy');
   shake = 22; hitstop = 0.12;
   $('fwave').textContent = timerMode() ? 'time '+fmtTime(chalElapsed) : 'wave '+wave;
-  $('fcoins').textContent = worldCoins;
+  $('fcoins').textContent = fmtNum(worldCoins);
   $('fkills').textContent = kills;
   if(typeof showRunDebrief === 'function') showRunDebrief('over');
   $('hud').classList.add('hidden');
