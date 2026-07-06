@@ -53,8 +53,9 @@ const RUSH_HP_MULT = 0.62;     // same scale as story wave-5 bosses in world 1
 const RUSH_BASE_HP = 150;      // Tralalero base — every rush boss uses this pool
 let rushBossIdx = 0;           // 0-based index of the boss currently spawning
 let rushBossesBeaten = 0;      // cleared this run (score / game-over stat)
+let rushGemsEarned = 0;        // gems awarded this run (persistent via addGems)
 let rushGapT = 0;              // short breathe between chained boss arenas
-function rushUnlocked(){ return _storyP >= RUSH_UNLOCK_STORY; }
+function rushUnlocked(){ return unlockedMax >= RUSH_UNLOCK_STORY; }
 function rushIsActive(){ return gameMode === 'bossrush'; }
 let _rushCatalog = null;
 function rushCatalog(){
@@ -1122,16 +1123,17 @@ function trainingEmblemURL(){
 }
 function setStageEmblem(i){
   const img=$('charimg'); if(!img) return;
-  img.src = gameMode==='practice' ? trainingEmblemURL()
+  img.src = gameMode==='bossrush' ? worldEmblemURL(0)
+    : gameMode==='practice' ? trainingEmblemURL()
     : gameMode==='challenger' ? challengerEmblemURL(clamp(i,0,WORLDS.length-1))
     : worldEmblemURL(clamp(i,0,WORLDS.length-1));
 }
 function refreshWorldSel(){
-  $('wname').textContent = worldLabel(selWorld);
+  $('wname').textContent = gameMode==='bossrush' ? 'BOSS RUSH · GRASSLANDS' : worldLabel(selWorld);
   const ws=$('worldsub');
   if(ws){
     if(gameMode==='practice') ws.textContent = 'sandbox · no rewards';
-    else if(gameMode==='bossrush') ws.textContent = 'boss gauntlet · character & pet only';
+    else if(gameMode==='bossrush') ws.textContent = 'grasslands gauntlet · earn ◆ gems';
     else ws.textContent = 'survive the swarm';
   }
   $('wprev').disabled = selWorld<=0 || gameMode==='practice' || gameMode==='bossrush';
@@ -1613,7 +1615,8 @@ function _doStartGame(wi){
   if(typeof clearSuspendedRun === 'function') clearSuspendedRun();
   if(typeof resetRunEngagement === 'function') resetRunEngagement();
   resetZoom();
-  loadWorld(wi);
+  const runWi = rushIsActive() ? 0 : wi;
+  loadWorld(runWi);
   if(infiniteMapMode()){ WORLD.w=999999; WORLD.h=999999; }   // effectively infinite; ground drawn per-frame
   initAudio();
   playMusic(curTheme.music);
@@ -1666,7 +1669,7 @@ function _doStartGame(wi){
   luckyTimer=rand(10,18);
   worldCoins=0;
   chalElapsed=0; chalBossIdx=0; chalBossActive=false; chalLuckyT=5;
-  rushBossIdx=0; rushBossesBeaten=0; rushGapT=0;
+  rushBossIdx=0; rushBossesBeaten=0; rushGemsEarned=0; rushGapT=0;
   { const ci=$('coincount'); if(ci){ const img=ci.querySelector('img'); if(img && !img.getAttribute('src')) img.src=SP['coin'].toDataURL(); } }
   refreshHUD();   // reset level badge / kills / timer / coins so nothing shows last run's value
   state=ST.PLAY;
@@ -2333,7 +2336,9 @@ function gameOver(){
   sfx.die();
   if(typeof haptic === 'function') haptic('heavy');
   shake = 22; hitstop = 0.12;
-  $('fwave').textContent = rushIsActive() ? rushBossesBeaten+' bosses' : (timerMode() ? 'time '+fmtTime(chalElapsed) : 'wave '+wave);
+  $('fwave').textContent = rushIsActive()
+    ? rushBossesBeaten+' bosses · '+rushGemsEarned+' ◆'
+    : (timerMode() ? 'time '+fmtTime(chalElapsed) : 'wave '+wave);
   $('fcoins').textContent = fmtNum(worldCoins);
   $('fkills').textContent = kills;
   if(typeof showRunDebrief === 'function') showRunDebrief('over');
@@ -3355,10 +3360,14 @@ function update(dt){
         enemies=enemies.filter(o=>o.isBoss);
         playMusic(curTheme.music); sfx.win();
         rushBossesBeaten++;
+        const gemReward = (rushBossesBeaten % 5 === 0) ? 3 : 1;
+        if(typeof addGems==='function'){
+          addGems(gemReward);
+          rushGemsEarned += gemReward;
+          floatText(e.x, e.y - 40, '+'+gemReward+' ◆', '#b06ff0', 20);
+        }
         bigText('BOSS '+rushBossesBeaten+' DOWN','#4aa3df');
-        for(let g=0; g<8; g++) dropOrb(e.x, e.y, 3, 120, 300);
-        for(let g=0; g<2; g++){ const a=rand(0,TAU), s=rand(120,300); gems.push({x:e.x,y:e.y,coin:true,t:rand(0,6),vx:Math.cos(a)*s,vy:Math.sin(a)*s}); }
-        if(!P.hasMagnetPet){ const a=rand(0,TAU), s=rand(60,120); gems.push({x:e.x,y:e.y,magnet:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s}); }
+        for(let g=0; g<6; g++) dropOrb(e.x, e.y, 3, 120, 300);
         rushBossIdx++;
         rushGapT = 1.35;
         waveEnemiesLeft = 0;

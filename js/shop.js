@@ -482,6 +482,8 @@ function renderShop(){
   html += '</div>';
   // ---- CHARACTER SHOP ----
   html += (typeof renderShopCharSection==='function') ? renderShopCharSection() : '';
+  // ---- GEM BOUTIQUE ----
+  html += (typeof renderGemBoutiqueSection==='function') ? renderGemBoutiqueSection() : '';
   // ---- PET RECRUIT ----
   html += (typeof renderPetRecruitSection==='function') ? renderPetRecruitSection() : '';
   grid.innerHTML = html;
