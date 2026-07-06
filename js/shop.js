@@ -50,8 +50,8 @@ function buildTierVals(start, epicVal, maxVal, opts={}){
   return vals;
 }
 const STAT = {
-  dmg:   { label:'damage',        short:'DMG', icon:'coin',   flat:true, vals:buildTierVals(2,32,280) },
-  hp:    { label:'max HP',        short:'HP',  icon:'heart',  flat:true, vals:buildTierVals(8,100,520) },
+  dmg:   { label:'damage',        short:'DMG', icon:'coin',   flat:true, vals:buildTierVals(6,120,1800) },
+  hp:    { label:'max HP',        short:'HP',  icon:'heart',  flat:true, vals:buildTierVals(12,200,1200) },
   speed: { label:'move speed',    short:'SPD', icon:'heart',  vals:buildTierVals(0.02,0.08,0.28,{flat:false}) },
   range: { label:'attack range',  short:'RNG', icon:'gem',    vals:buildTierVals(0.04,0.16,0.55,{flat:false}) },
   crit:  { label:'crit chance',   short:'CRT', icon:'coin',   vals:buildTierVals(0.01,0.05,0.18,{flat:false}) },
@@ -285,6 +285,32 @@ function equippedRegen(){ return equippedStatBonus('regen'); }
 function equippedGoldMult(){ return equippedStatMult('gold'); }
 function equippedVamp(){ return equippedStatBonus('vamp'); }
 function equippedPierce(){ return equippedStatBonus('pierce'); }
+
+// Average equipped rarity tier (0 = Common … 38 = Omniscient). Empty slots don't count.
+function equippedGearTierScore(){
+  let sum=0, n=0;
+  for(const c of GEAR_CATS){
+    const uid=gearEquip[c], id=uid&&gearInstanceItem(uid);
+    if(!id) continue;
+    const idx=RAR_ORDER.indexOf(itemRar(id));
+    if(idx>=0){ sum+=idx; n++; }
+  }
+  return n ? sum/n : 0;
+}
+// World-appropriate gear should feel like a big power spike — undergeared runs stay tough.
+function gearWorldDmgMul(worldIdx){
+  const tier=equippedGearTierScore(), expect=worldTierIdx(worldIdx), delta=tier-expect;
+  const quality=1+tier*0.11;
+  const match=delta>=0 ? 1+Math.min(3.2, delta*0.22) : Math.max(0.45, 1+delta*0.14);
+  return quality*match;
+}
+function gearEnemyHpMul(worldIdx){
+  const tier=equippedGearTierScore(), expect=worldTierIdx(worldIdx), delta=tier-expect;
+  if(delta>=2) return Math.max(0.15, 0.38-delta*0.04);
+  if(delta>=0) return Math.max(0.22, 0.48-delta*0.08);
+  if(delta>=-2) return 0.72+delta*-0.12;
+  return Math.min(2.8, 1-delta*0.22);
+}
 
 function worldMaxIdx(){
   return (typeof WORLDS!=='undefined' && WORLDS.length>1) ? WORLDS.length-1 : 49;

@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.76';
+const CURRENT_VERSION = '1.77';
 const CHANGELOG = [
+  { v: '1.77', notes: 'Gear now scales hard with your world tier — on-tier loadout gets a big damage boost and enemies (especially fodder) have much lower HP; undergeared runs stay punishing. Round start: 3s spawn invuln, slower first spawns, lucky blocks delayed, and ground pre-render is chunked so huge maps no longer hitch-freeze you into a death on load.' },
   { v: '1.76', notes: 'World 1 boss tutorial pass: wave 5 Tralalero, wave 10 Bombardiro, and wave 15 Ting Ting now throw fake bullet-hell patterns — rainbow spirals, gapped ring walls, orbiting bombs, drum echoes — huge and flashy but slow, wide gaps, and low damage so they look hard but play easy. Debug APK: Unlock All Worlds also grants + equips Omniscient damage gear in every slot.' },
   { v: '1.75', notes: 'Battle tab fix: big PLAY button is back on top (no more buried under bounties). Removed Swarm Rank hub and the second XP bar in the topbar. Engagement feedback is now particles, shake, haptics, and SFX — no milestone/bounty/synergy text popups.' },
   { v: '1.74', notes: 'Removed the kill combo system (MULTI-KILL tiers, combo bar, combo bounties/achievements, and combo debrief stats). Daily bounties, Swarm Rank, milestones, and the rest of the retention features stay.' },

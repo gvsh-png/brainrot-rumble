@@ -13,6 +13,7 @@ let placedTurrets=[];  // Engineer "place turret" (replaces dash): stationary, d
 let timeScale=1.0;
 let _vis=[];   // reused per-frame scratch list of visible enemies (depth sort) — avoids GC churn
 let wave=1, kills=0, spawnTimer=0, waveEnemiesLeft=0, betweenWaves=false, boss=null;
+let runSpawnGrace=0;   // brief spawn slowdown + invuln right after a run starts (prevents start-of-round deaths)
 let worldCoins=0;
 // ---- CHAOS EVENTS ----
 let chaosSchedule=[],chaosWaveIdx=0,chaosMidTimer=-1;
@@ -681,7 +682,7 @@ function loadWorld(idx){
   for(const k of Object.keys(TINTED)) delete TINTED[k];
   if(typeof WorldMapLayout!=='undefined') curObstacles = WorldMapLayout.getObstacles(w, worldIdx, WORLD.w, WORLD.h);
   else curObstacles = [];
-  buildGround();   // pre-render this world's ground once (avoids per-frame tile loops)
+  startBuildGround();   // chunked pre-render — avoids multi-second hitch when entering huge maps
 }
 let cut = null;   // cutscene state
 let _clearData = null;
@@ -1481,7 +1482,10 @@ function startGame(idx){
   if(wl){
     if(wlt) wlt.textContent = 'entering ' + (WORLDS[wi]?.name||'world').toLowerCase() + '…';
     wl.classList.remove('hidden');
-    setTimeout(()=>{ _doStartGame(wi); wl.classList.add('hidden'); }, 550);
+    requestAnimationFrame(()=>{
+      _doStartGame(wi);
+      wl.classList.add('hidden');
+    });
   } else { _doStartGame(wi); }
 }
 function _doStartGame(wi){
@@ -1497,7 +1501,10 @@ function _doStartGame(wi){
   if(typeof clearHooks==='function') clearHooks();
   if(typeof applyCharBase==='function') applyCharBase(P.charId);
   // Gear applies on top; gearDmgMul lets characters reduce gear's dmg contribution
-  if(typeof equippedFlatDmg==='function')   P.dmg   += equippedFlatDmg() * (P.gearDmgMul||1);
+  if(typeof equippedFlatDmg==='function'){
+    const gearMul = (typeof gearWorldDmgMul==='function' ? gearWorldDmgMul(wi) : 1) * (P.gearDmgMul||1);
+    P.dmg += equippedFlatDmg() * gearMul;
+  }
   if(typeof equippedHp==='function'){ const h=equippedHp(); P.maxHp += h; P.hp = P.maxHp; }
   if(typeof equippedSpeedMult==='function') P.speed *= equippedSpeedMult();
   if(typeof equippedRangeMult==='function') P.range *= equippedRangeMult();
@@ -1520,6 +1527,8 @@ function _doStartGame(wi){
   timeScale=1.0;
   bullets=[]; ebullets=[]; petBullets=[]; enemies=[]; gems=[]; texts=[]; zones=[]; holes=[]; luckies=[]; clearParts();
   wave=1; kills=0; elapsed=0; boss=null; waveGapT=0; arena=null; bossPending=0;
+  runSpawnGrace = 3.0;
+  P.inv = Math.max(P.inv||0, runSpawnGrace);
   scheduleChaos();
   luckyTimer=rand(10,18);
   worldCoins=0;
@@ -1542,13 +1551,14 @@ function startWave(){
   $('wavetag').textContent = 'WAVE '+wave;
   if(typeof fireHook==='function') fireHook('waveStart');
   if(wave%5===0){ startBossArena(); waveEnemiesLeft=0; }
-  else { waveEnemiesLeft=Math.max(6,Math.round((16+wave*5.5)*(curWorld().enemyMul||1)*(wave<=9?1.3:1))); spawnTimer=0; sfx.wave();
+  else { waveEnemiesLeft=Math.max(6,Math.round((16+wave*5.5)*(curWorld().enemyMul||1)*(wave<=9?1.3:1))); spawnTimer=wave===1?1.35:0; sfx.wave();
     // schedule chaos mid-wave if this wave is a chaos wave
     if(!timerMode()&&chaosWaveIdx<chaosSchedule.length&&wave===chaosSchedule[chaosWaveIdx]){
       chaosMidTimer=rand(8,20); chaosWaveIdx++;
     }
     const luckyCap = Math.max(2, ...(typeof queryHook==='function' ? queryHook('getLuckyCap') : [2]));
-    spawnLuckyBatch(luckyCap);
+    const wv=wave;
+    setTimeout(()=>{ if(state===ST.PLAY && wave===wv) spawnLuckyBatch(luckyCap); }, 900);
   }
   bigText(wave%5===0 ? 'BOSS WAVE' : 'WAVE '+wave, wave%5===0?'#e54d4d':'#ffe08a');
 }
@@ -1657,7 +1667,9 @@ function spawnBoss(){
     ? curBosses[Math.floor(Math.random()*curBosses.length)]
     : curBosses[bossIdx];
   const chalMul = gameMode==='challenger' ? 3.5 : 1;
-  const mult = (1 + (wave-5)*0.12) * (curWorld().hpMul||1) * (1 + worldBand()*0.42) * chalMul;
+  const gearHp = (typeof gearEnemyHpMul==='function' ? gearEnemyHpMul(worldIdx) : 1);
+  const bossGearHp = 1 - (1-gearHp)*0.42;   // geared runs soften bosses too, but less than fodder
+  const mult = (1 + (wave-5)*0.12) * (curWorld().hpMul||1) * (1 + worldBand()*0.42) * chalMul * bossGearHp;
   const p = arena ? { x:arena.x+arena.w/2, y:arena.y+arena.h*0.28 } : ringPos();
   const bar1 = def.hp*HP_MULT*mult, bar2 = (def.hp2||0)*HP_MULT*mult;
   const baseTotal = bar1+bar2;
@@ -1906,7 +1918,8 @@ function spawnEnemy(){
   }
   const p = ringPos();
   const special = foeIsSpecial(def);
-  const hpMult = (1 + (wave-1)*0.07) * worldHpBand() * (curWorld().hpMul||1) * (special?SPECIAL_HP_BUFF:1) * 0.65;   // gentle per-wave growth + per-world band; -35% base so faster, lower-hp swarms kill quicker
+  const gearHp = (typeof gearEnemyHpMul==='function' ? gearEnemyHpMul(worldIdx) : 1);
+  const hpMult = (1 + (wave-1)*0.07) * worldHpBand() * (curWorld().hpMul||1) * (special?SPECIAL_HP_BUFF:1) * 0.65 * gearHp;   // gentle per-wave growth + per-world band; gear tier softens fodder when you're geared for this world
   enemies.push({
     spr:def.spr, name:def.name, x:p.x, y:p.y, r:def.r,
     hp:def.hp*HP_MULT*hpMult, maxHp:def.hp*HP_MULT*hpMult,
@@ -2906,11 +2919,17 @@ function update(dt){
   updateChaos(dt);
 
   // --- spawn during wave ---
+  if(runSpawnGrace>0){
+    runSpawnGrace -= dt;
+    P.inv = Math.max(P.inv||0, runSpawnGrace);
+  }
   spawnTimer -= dt;
   if(!betweenWaves && waveEnemiesLeft>0 && spawnTimer<=0){
     // Challenger's first stretch (before its 1st boss) spawns 30% faster, same early-game buff as story waves 1-9
     const chalEarlyMul = (gameMode==='challenger' && chalBossIdx===0) ? 1.3 : 1;
-    spawnTimer = Math.max(0.05, (0.40 - wave*0.03) / chalEarlyMul);
+    const graceMul = runSpawnGrace>0 ? 1.65 : 1;
+    spawnTimer = Math.max(0.05, (0.40 - wave*0.03) / chalEarlyMul * graceMul);
+    if(runSpawnGrace>0 && enemies.length>=4) spawnTimer = Math.max(spawnTimer, 0.55);
     if(spawnEnemy() !== false) waveEnemiesLeft--;   // at the cap? keep the budget and retry next tick
   }
 
@@ -4905,19 +4924,55 @@ function drawDebris(g,gx0,gy0,gx1,gy1){
 let groundCanvas=null, groundForWorld=-1;
 let infiniteGroundCanvas=null, infiniteGroundFor=null;
 const INFINITE_GROUND_SPAN = TILE * 12;   // 960px: repeats checker + tuft offset cleanly
+const GROUND_CHUNK_ROWS = 10;             // tile rows per budget slice — keeps round-start hitch-free
+let _groundBuild = null;
 function buildGround(){
-  if(!groundCanvas){ groundCanvas=document.createElement('canvas'); }
+  if(groundForWorld===worldIdx && groundCanvas) return;
+  startBuildGround();
+  while(_groundBuild) tickBuildGround(9999);
+}
+function startBuildGround(){
+  if(groundForWorld===worldIdx && groundCanvas) return;
+  if(_groundBuild && _groundBuild.worldIdx===worldIdx) return;
+  if(!groundCanvas) groundCanvas=document.createElement('canvas');
   groundCanvas.width=WORLD.w; groundCanvas.height=WORLD.h;
   const g=groundCanvas.getContext('2d');
-  for(let gy=0; gy<WORLD.h; gy+=TILE){
-    for(let gx=0; gx<WORLD.w; gx+=TILE){
-      fillGroundCell(g, gx, gy, TILE, curTheme, worldIdx);
-    }
-  }
+  g.clearRect(0,0,WORLD.w,WORLD.h);
+  _groundBuild = { worldIdx, g, gy:0, phase:'tiles' };
+}
+function finishBuildGround(job){
+  const g=job.g;
   drawGroundTufts(g, TILE, curTheme, WORLD.w, WORLD.h);
   if(curTheme.debris) drawDebris(g, 0,0, WORLD.w, WORLD.h);
   if(curObstacles.length && typeof WorldMapLayout!=='undefined') WorldMapLayout.drawObstacles(g, curObstacles, curTheme);
   groundForWorld=worldIdx;
+  _groundBuild=null;
+}
+function tickBuildGround(budgetMs){
+  const job=_groundBuild;
+  if(!job) return true;
+  const t0=performance.now();
+  const g=job.g;
+  while(job.phase==='tiles' && job.gy<WORLD.h && performance.now()-t0<budgetMs){
+    const gyEnd=Math.min(job.gy+GROUND_CHUNK_ROWS*TILE, WORLD.h);
+    for(let gy=job.gy; gy<gyEnd; gy+=TILE){
+      for(let gx=0; gx<WORLD.w; gx+=TILE) fillGroundCell(g, gx, gy, TILE, curTheme, worldIdx);
+    }
+    job.gy=gyEnd;
+  }
+  if(job.phase==='tiles' && job.gy>=WORLD.h){ job.phase='finish'; finishBuildGround(job); }
+  return !_groundBuild;
+}
+function groundReady(){ return groundForWorld===worldIdx && !!groundCanvas; }
+function drawGroundFallback(vx0,vy0,vx1,vy1){
+  const tile=TILE, c1=curTheme.tile1||curTheme.bg, c2=curTheme.tile2||c1;
+  const gx0=Math.floor(vx0/tile)*tile, gy0=Math.floor(vy0/tile)*tile;
+  for(let gy=gy0; gy<=vy1; gy+=tile){
+    for(let gx=gx0; gx<=vx1; gx+=tile){
+      cx.fillStyle=((Math.floor(gx/tile)+Math.floor(gy/tile))&1) ? c2 : c1;
+      cx.fillRect(gx, gy, tile, tile);
+    }
+  }
 }
 function buildInfiniteGround(){
   if(!infiniteGroundCanvas){ infiniteGroundCanvas=document.createElement('canvas'); }
@@ -4996,10 +5051,14 @@ function render(){
   if(infiniteMapMode()){
     renderInfiniteGround(vx0-40, vy0-40, vx1+40, vy1+40);
   } else {
-    if(!groundCanvas || groundForWorld!==worldIdx) buildGround();
-    const sx0=clamp(vx0-2,0,WORLD.w), sy0=clamp(vy0-2,0,WORLD.h);
-    const sx1=clamp(vx1+2,0,WORLD.w), sy1=clamp(vy1+2,0,WORLD.h);
-    if(sx1>sx0 && sy1>sy0) cx.drawImage(groundCanvas, sx0,sy0,sx1-sx0,sy1-sy0, sx0,sy0,sx1-sx0,sy1-sy0);
+    if(!groundReady()){
+      if(!_groundBuild) startBuildGround();
+      drawGroundFallback(vx0-40, vy0-40, vx1+40, vy1+40);
+    } else {
+      const sx0=clamp(vx0-2,0,WORLD.w), sy0=clamp(vy0-2,0,WORLD.h);
+      const sx1=clamp(vx1+2,0,WORLD.w), sy1=clamp(vy1+2,0,WORLD.h);
+      if(sx1>sx0 && sy1>sy0) cx.drawImage(groundCanvas, sx0,sy0,sx1-sx0,sy1-sy0, sx0,sy0,sx1-sx0,sy1-sy0);
+    }
     drawBorder(vx0,vy0,vx1,vy1);
   }
 
@@ -5681,6 +5740,7 @@ function loop(t){
   if(GFX.frameMin>0 && t - tPrev < GFX.frameMin) return;   // fps cap (user setting) — skip frames to cut render cost
   let dt = Math.min(0.033, (t-tPrev)/1000 || 0.016);
   tPrev = t;
+  if(_groundBuild) tickBuildGround(7);
   if(hitstop>0){ hitstop-=dt; dt=0; }
   if(state===ST.PLAY){
     update(dt*timeScale);

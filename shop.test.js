@@ -168,6 +168,43 @@ test('six crate tiers including premium platinum diamond vault', () => {
   assert.equal(sandbox.cratePrice('vault'), 95000);
 });
 
+test('gear tier helpers soften enemies when loadout matches world', () => {
+  const slots = ['cape','helmet','chest','gloves','belt','pants','ring','shoes'];
+  const commonEquip = {};
+  const ownedCommon = slots.map((cat, i) => {
+    const uid = 'g_c'+i;
+    commonEquip[cat] = uid;
+    return { uid, itemId: 'dmg_common_0' };
+  });
+  const { sandbox } = loadShop({
+    br_gear_reset_v4: '1',
+    br_items_owned: JSON.stringify(ownedCommon),
+    br_gear_equipped: JSON.stringify(commonEquip),
+  });
+  assert.equal(typeof sandbox.gearWorldDmgMul, 'function');
+  assert.equal(typeof sandbox.gearEnemyHpMul, 'function');
+  const underHp = sandbox.gearEnemyHpMul(20);
+  const underDmg = sandbox.gearWorldDmgMul(20);
+
+  const omniEquip = {};
+  const ownedOmni = slots.map((cat, i) => {
+    const uid = 'g_o'+i;
+    omniEquip[cat] = uid;
+    return { uid, itemId: 'dmg_omniscient_0' };
+  });
+  const geared = loadShop({
+    br_gear_reset_v4: '1',
+    br_items_owned: JSON.stringify(ownedOmni),
+    br_gear_equipped: JSON.stringify(omniEquip),
+  }).sandbox;
+  const gearedHp = geared.gearEnemyHpMul(20);
+  const gearedDmg = geared.gearWorldDmgMul(20);
+
+  assert.ok(gearedHp < underHp, 'on-tier omniscient gear should soften enemies vs common');
+  assert.ok(gearedDmg > underDmg, 'higher-tier loadout should boost damage multiplier');
+  assert.ok(gearedDmg > 2, 'on-tier endgame gear should feel like a big spike');
+});
+
 test('catalog includes new stat types and eight gear slots', () => {
   const { sandbox } = loadShop({ br_gear_reset_v4: '1' });
   const a = sandbox.addGearInstance('rate_epic_0');
