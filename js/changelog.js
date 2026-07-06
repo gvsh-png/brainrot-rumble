@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.99';
+const CURRENT_VERSION = '2.00';
 const CHANGELOG = [
+  { v: '2.00', notes: 'BOSS CRASH invader HP fix: chaos invaders now use HP scaled to your current world + wave (same milestone tier as the scheduled boss), not the foreign boss\'s native world stats — no more World 50 raid bosses tanking through World 1.' },
   { v: '1.99', notes: 'Final boss phase 3 armor rework: oversized hits are capped per shot — no single attack can chew more than ~7–11% of max HP (tighter on bullet-hell gimmicks). Milestone bosses (waves 5/10/15) still use flat % damage reduction.' },
   { v: '1.98', notes: 'Boss durability pass: wave 5/10/15 milestone bosses get more HP (extra chunky on World 1) plus 9–15% boss armor. Final / phase-3 bosses gain extra damage reduction tuned per gimmick (bullet-hell heavies up to ~26% total DR) so they don\'t melt instantly during big attack phases.' },
   { v: '1.97', notes: 'Cutscene & onboarding polish: HUD (XP bar, zoom, dash) hides during end cutscenes and intros/outros; SKIP button works on boss-death phase too. Shop unlock guide appears much faster after clearing a world. Spotlight guides no longer block taps on highlighted tabs. Closing the app mid-tutorial skips remaining guides while keeping feature unlocks from story progress.' },

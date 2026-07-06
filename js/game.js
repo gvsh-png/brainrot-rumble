@@ -1971,6 +1971,22 @@ function assignBossTuning(boss, def, bossIdx){
   boss.bossDRBase = boss.bossDR;
 }
 
+function chaosInvaderHp(){
+  const milestoneIdx = ((Math.floor(wave/5)-1) % curBosses.length + curBosses.length) % curBosses.length;
+  const localDef = curBosses[milestoneIdx] || curBosses[0];
+  const bossGearHp = (typeof gearBossHpMul==='function' ? gearBossHpMul(worldIdx) : 1);
+  const bandMul = 1 + (worldHpBand() - 1) * 0.32;
+  const waveMul = 1 + Math.max(0, wave - 5) * 0.07;
+  const storyScale = gameMode==='challenger' ? 1 : 0.62;
+  const chalMul = gameMode==='challenger' ? 3.5 : 1;
+  const milestoneMul = bossMilestoneHpMul(milestoneIdx);
+  const mult = waveMul * (curWorld().hpMul||1) * bandMul * chalMul * storyScale * bossGearHp * milestoneMul;
+  let hp = localDef.hp * HP_MULT * mult * 0.82;
+  const floor = bossMinHpFloor(milestoneIdx, false) * 0.72;
+  if(floor > hp) hp = floor;
+  return Math.round(hp);
+}
+
 function spawnBoss(){
   let def, bossIdx, isFinal;
   if(rushIsActive()){
@@ -2110,8 +2126,9 @@ function _chaosBossCrash(){
   const others=WORLDS.filter(w=>w.bosses&&w.bosses.length>0&&w!==curWorld());
   if(!others.length) return;
   const def=pick(pick(others).bosses.slice(0,-1)||pick(others).bosses);
-  const bossGearHp = (typeof gearBossHpMul==='function' ? gearBossHpMul(worldIdx) : 1);
-  const hp=def.hp*HP_MULT*(1+(wave-1)*0.08)*(curWorld().hpMul||1)*(1+(worldHpBand()-1)*0.28)*0.32*bossGearHp;
+  const milestoneIdx = ((Math.floor(wave/5)-1) % curBosses.length + curBosses.length) % curBosses.length;
+  const localDef = curBosses[milestoneIdx] || curBosses[0];
+  const hp = chaosInvaderHp();
   const p=ringPos();
   boss={
     spr:def.spr,name:'INVADER: '+def.name,pattern:def.pattern,mk:def.moveKey||def.spr,
@@ -2124,6 +2141,7 @@ function _chaosBossCrash(){
     rollSpray:0,warpT:0,wd:null,gsweep:null,carpet:0,cbT:0,tether:0,
     chaosInvader:true
   };
+  assignBossTuning(boss, localDef, milestoneIdx);
   enemies.push(boss);
   $('bossname').textContent=boss.name;
   $('bossfill').style.width='100%'; $('bossfill').style.background='#e88830';
