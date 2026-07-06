@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '2.04';
+const CURRENT_VERSION = '2.05';
 const CHANGELOG = [
+  { v: '2.05', notes: 'Boss Rush no longer spawns lucky blocks during fights — defeated bosses now scatter heal hearts instead (2 per kill, 3 on every 5th milestone boss), matching the sustain lucky blocks used to provide.' },
   { v: '2.04', notes: 'Debug APK: new "Skip World 1 (test tutorials)" button in Settings — sets story progress as if you just cleared World 1 and replays the Shop/Bounties/Game Modes unlock guides.' },
   { v: '2.03', notes: 'Ting Ting Ting Bahur bosses no longer have glitchy auto-rig legs (sprite legs removed). Tutorial guides for Daily Shop, Bounties, and Game Modes now mirror the highlighted UI above the overlay instead of blurring it out. Common gear always shows at least +1. Chaos GRAVITY pull stops ~8m from you instead of stacking enemies on top during swarms.' },
   { v: '2.02', notes: 'Skill VFX overhaul: player zones and auras no longer use flat dashed circles — each biome gets unique vector art (frost crystals, ember petals, spore caps, neon brackets, gravity vortices, oil-slick bogs, sunbeams, toxic drips, etc.). Registry auras, trails, burns, and frost fields all use the new renderer.' },

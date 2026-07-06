@@ -230,6 +230,14 @@ function spawnLuckyBatch(n=2){           // up to n blocks, capped at n
 function damageLucky(lb,dmg,fx,fy,crit){
   lb.hp -= dmg; lb.hitT=0.12; lb.sq=1; sfx.hit();
 }
+// scatter heal hearts from a boss kill (Boss Rush — replaces lucky-block sustain)
+function dropBossHearts(x, y, n, heal){
+  heal = heal || 25;
+  for(let k=0;k<n;k++){
+    const a=rand(0,TAU), s=rand(80,220);
+    gems.push({x,y,heart:true,heal,t:rand(0,6),vx:Math.cos(a)*s,vy:Math.sin(a)*s});
+  }
+}
 // burst the block open and scatter its reward: heal heart / magnet / 3 gold gems
 function popLucky(lb){
   burst(lb.x,lb.y,'#ffd23a',26,260); shake=Math.max(shake,6); sfx.evolve();
@@ -2066,8 +2074,8 @@ function spawnBoss(){
     };
     enemies.push(mate); boss.mate=mate;
   }
-  bossLuckyT = rushIsActive() ? 16 : 20;
-  if(rushIsActive() || isFinal) spawnBossLucky(1);
+  bossLuckyT = 20;
+  if(isFinal && !rushIsActive()) spawnBossLucky(1);
   // Challenger: much more aggressive — faster attacks, higher speed, hits harder
   if(gameMode==='challenger'){
     boss.gT  = (boss.gT  || 1.5) * 0.32;
@@ -3606,6 +3614,7 @@ function update(dt){
         }
         bigText('BOSS '+rushBossesBeaten+' DOWN','#4aa3df');
         for(let g=0; g<6; g++) dropOrb(e.x, e.y, 3, 120, 300);
+        dropBossHearts(e.x, e.y, rushBossesBeaten % 5 === 0 ? 3 : 2, 25);
         rushBossIdx++;
         rushGapT = 1.35;
         waveEnemiesLeft = 0;
@@ -3729,13 +3738,10 @@ function update(dt){
     for(let i=luckies.length-1;i>=0;i--){
       if(dist2(luckies[i].x,luckies[i].y,P.x,P.y)>LUCKY_CULL) luckies.splice(i,1);
     }
-  } else if(boss && boss.finalPhase && state===ST.PLAY){
+  } else if(boss && boss.finalPhase && state===ST.PLAY && !rushIsActive()){
     bossLuckyT -= dt;
     if(bossLuckyT<=0){ bossLuckyT = 20; spawnBossLucky(2); }
-  } else if(boss && rushIsActive() && state===ST.PLAY){
-    bossLuckyT -= dt;
-    if(bossLuckyT<=0){ bossLuckyT = 18; spawnBossLucky(1); }
-  } else if(boss && state===ST.PLAY){
+  } else if(boss && state===ST.PLAY && !rushIsActive()){
     if(P.hp/P.maxHp < 0.25 && luckies.length===0) spawnBossLucky(2, 15);
   }
   for(let i=luckies.length-1;i>=0;i--){
@@ -5141,7 +5147,7 @@ function updateBoss(e,dt){
     if(ph>e.vph){
       if(ph===3){ startFinalCharge(e); }
       else { e.vph=ph; bigText('PHASE '+ph+'!','#d2a0ff'); shake=Math.max(shake,12); e.iv=0.6; ebullets=[]; sfx.boss(); if(e.mate) e.mate.iv=0.6;
-        spawnBossLucky(1); }   // final bosses: a lucky block at the start of phase 2
+        if(!rushIsActive()) spawnBossLucky(1); }   // final bosses: a lucky block at the start of phase 2
     }
   } else if(e.bars===2 || e.phased || e.spr==='vaca'){
     let ph;
