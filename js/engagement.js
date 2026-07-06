@@ -14,6 +14,8 @@ const BOUNTY_POOL = [
   { id: 'k75',   label: 'Slay 75 foes today',       track: 'kills',   target: 75,  reward: { gold: 240 } },
   { id: 'coins600', label: 'Earn 600 coins today',  track: 'coins',   target: 600, reward: { gems: 2 } },
   { id: 'evo2',  label: 'Evolve 2 skills today',    track: 'evolves', target: 2,   reward: { gold: 280 } },
+  { id: 'rush3', label: 'Defeat 3 Boss Rush bosses today', track: 'rushbosses', target: 3, reward: { gems: 2 } },
+  { id: 'rush8', label: 'Defeat 8 Boss Rush bosses today', track: 'rushbosses', target: 8, reward: { gems: 4 } },
 ];
 
 const ACHIEVEMENTS = [
@@ -27,6 +29,10 @@ const ACHIEVEMENTS = [
   { id: 'synergy1',    name: 'Synergy Spark',    desc: 'Unlock a synergy skill.', check: s => s.totalSynergies >= 1 },
   { id: 'daily3',      name: 'Bounty Hunter',    desc: 'Complete 3 daily bounties.', check: s => s.bountiesDone >= 3 },
   { id: 'surv10',      name: 'Iron Will',        desc: 'Survive 10 minutes in one run.', check: s => s.bestSurvive >= 600 },
+  { id: 'rush5',       name: 'Rush Runner',      desc: 'Defeat 5 bosses in one Boss Rush run.', check: s => s.rushRunBosses >= 5 },
+  { id: 'rush15',      name: 'Rush Lord',        desc: 'Defeat 15 bosses in one Boss Rush run.', check: s => s.rushRunBosses >= 15 },
+  { id: 'rush25',      name: 'Unstoppable',      desc: 'Defeat 25 bosses in one Boss Rush run.', check: s => s.rushRunBosses >= 25 },
+  { id: 'rushbest10',  name: 'Rush Record',      desc: 'Set a Boss Rush personal best of 10+ bosses.', check: s => s.rushBest >= 10 },
 ];
 
 let runEng = { jackpots: 0, evolves: 0, bosses: 0, synergies: 0 };
@@ -35,6 +41,16 @@ let swarmRank = 1, swarmXp = 0;
 let engageStats = { runs: 0, bestWave: 0, bestSurvive: 0, totalBosses: 0, totalSynergies: 0, bountiesDone: 0 };
 let unlockedAch = new Set();
 let _killJuiceN = 0;
+
+function getRushBest(){ return Math.max(0, +(localStorage.getItem('br_rush_best') || 0)); }
+function setRushBest(n){
+  const next = Math.max(0, Math.floor(n || 0));
+  const prev = getRushBest();
+  if(next <= prev) return false;
+  try{ localStorage.setItem('br_rush_best', String(next)); }catch(e){}
+  return true;
+}
+function swarmRankTitle(lv){ return RANK_TITLES[Math.max(0, Math.min(RANK_TITLES.length - 1, (lv || 1) - 1))]; }
 
 function _dailyKey(){
   const d = new Date();
@@ -67,6 +83,7 @@ function loadEngagement(){
 function saveSwarmRank(){
   try{ localStorage.setItem('br_swarm_rank', JSON.stringify({ rank: swarmRank, xp: swarmXp })); }catch(e){}
   if(window.markDirty) window.markDirty();
+  if(typeof refreshTopbar === 'function') refreshTopbar();
 }
 function saveEngageStats(){
   try{ localStorage.setItem('br_engage_stats', JSON.stringify(engageStats)); }catch(e){}
@@ -102,6 +119,22 @@ function uiPulse(el, cls){
 
 function _menuResourcePulse(){
   uiPulse(document.querySelector('.respill'));
+}
+
+function showAchToast(title, desc){
+  let el = typeof $ === 'function' ? $('ach-toast') : document.getElementById('ach-toast');
+  if(!el && typeof document !== 'undefined'){
+    el = document.createElement('div');
+    el.id = 'ach-toast';
+    document.body.appendChild(el);
+  }
+  if(!el) return;
+  el.innerHTML = '<div class="ach-toast-title">' + title + '</div><div class="ach-toast-desc">' + desc + '</div>';
+  el.classList.remove('hidden', 'ach-pop');
+  void el.offsetWidth;
+  el.classList.add('ach-pop');
+  clearTimeout(el._achT);
+  el._achT = setTimeout(()=>{ el.classList.add('hidden'); }, 3200);
 }
 
 function grantSwarmXp(n){
@@ -143,6 +176,7 @@ function engageOnBossKill(){
   runEng.bosses++;
   engageStats.totalBosses++;
   tickDailyProgress('bosses', 1, false);
+  if(typeof rushIsActive === 'function' && rushIsActive()) tickDailyProgress('rushbosses', 1, false);
   _engageJuice('#4aa3df', 2);
 }
 
@@ -270,6 +304,8 @@ function checkAchievements(ctx){
     totalSynergies: engageStats.totalSynergies,
     bountiesDone: engageStats.bountiesDone,
     swarmRank,
+    rushBest: getRushBest(),
+    rushRunBosses: 0,
     runJackpots: runEng.jackpots,
   }, ctx || {});
   for(const a of ACHIEVEMENTS){
@@ -277,6 +313,7 @@ function checkAchievements(ctx){
     if(!a.check(ctx)) continue;
     unlockedAch.add(a.id);
     saveAchievements();
+    showAchToast(a.name, a.desc);
     _engageJuice('#f5c542', 2);
     if(typeof sfx !== 'undefined' && sfx.win) sfx.win();
   }
@@ -287,11 +324,20 @@ function engageTick(dt){
   const surv = timerMode() ? (typeof chalElapsed !== 'undefined' ? chalElapsed : elapsed) : elapsed;
   engageStats.bestSurvive = Math.max(engageStats.bestSurvive, surv);
   if(surv >= 300) tickDailyProgress('survive', surv, true);
-  if(typeof wave !== 'undefined') tickDailyProgress('wave', wave, true);
+  if(typeof wave !== 'undefined' && !(typeof rushIsActive === 'function' && rushIsActive())) tickDailyProgress('wave', wave, true);
+}
+
+function _buildDebriefLines(modeKey, prev, cur, flags){
+  const lines = [];
+  if(flags.kills) lines.push('New kill record — ' + cur.kills);
+  if(flags.wave) lines.push('New depth record — ' + cur.wave);
+  if(flags.survive) lines.push('New survive record — ' + (typeof fmtTime === 'function' ? fmtTime(cur.survive) : cur.survive + 's'));
+  if(flags.bosses) lines.push('New Boss Rush best — ' + cur.bosses + ' bosses');
+  return lines;
 }
 
 function finishRunEngagement(reason){
-  if(gameMode === 'practice') return { xp: 0, lines: [] };
+  if(gameMode === 'practice') return { xp: 0, lines: [], stats: [] };
   engageStats.runs++;
   const surv = timerMode() ? chalElapsed : elapsed;
   engageStats.bestSurvive = Math.max(engageStats.bestSurvive, surv);
@@ -300,27 +346,52 @@ function finishRunEngagement(reason){
   tickDailyProgress('coins', worldCoins, false);
 
   const bests = JSON.parse(localStorage.getItem('br_run_bests') || '{}');
-  const modeKey = gameMode + '_w' + worldIdx;
-  const prev = bests[modeKey] || { kills: 0, wave: 0, survive: 0 };
-  const curWave = timerMode() ? Math.floor(surv / 60) : wave;
-  if(kills > prev.kills) prev.kills = kills;
-  if(curWave > prev.wave) prev.wave = curWave;
-  if(surv > prev.survive) prev.survive = surv;
+  const rushRun = typeof rushIsActive === 'function' && rushIsActive();
+  const modeKey = rushRun ? 'bossrush' : (gameMode + '_w' + worldIdx);
+  const prev = bests[modeKey] || { kills: 0, wave: 0, survive: 0, bosses: 0 };
+  const cur = {
+    kills,
+    wave: rushRun ? (typeof rushBossesBeaten !== 'undefined' ? rushBossesBeaten : 0)
+      : (timerMode() ? Math.floor(surv / 60) : wave),
+    survive: surv,
+    bosses: rushRun ? (typeof rushBossesBeaten !== 'undefined' ? rushBossesBeaten : 0) : (prev.bosses || 0),
+  };
+  const flags = { kills: false, wave: false, survive: false, bosses: false };
+  if(kills > (prev.kills || 0)){ prev.kills = kills; flags.kills = true; }
+  if(cur.wave > (prev.wave || 0)){ prev.wave = cur.wave; flags.wave = true; }
+  if(surv > (prev.survive || 0)){ prev.survive = surv; flags.survive = true; }
+  if(rushRun && cur.bosses > (prev.bosses || 0)){
+    prev.bosses = cur.bosses;
+    flags.bosses = true;
+    setRushBest(cur.bosses);
+  }
   bests[modeKey] = prev;
   try{ localStorage.setItem('br_run_bests', JSON.stringify(bests)); }catch(e){}
 
-  const xp = Math.floor(kills * 2 + surv * 1.5 + wave * 6 + runEng.bosses * 25);
+  const xpBase = rushRun
+    ? (cur.bosses * 14 + surv * 1.2)
+    : (kills * 2 + surv * 1.5 + wave * 6 + runEng.bosses * 25);
+  const xp = Math.floor(xpBase);
   const gained = grantSwarmXp(xp);
 
   saveEngageStats();
-  checkAchievements({ runJackpots: runEng.jackpots });
+  checkAchievements({
+    runJackpots: runEng.jackpots,
+    rushRunBosses: rushRun ? cur.bosses : 0,
+    rushBest: getRushBest(),
+  });
 
-  return { xp: gained, lines: [], stats: [] };
+  const lines = _buildDebriefLines(modeKey, prev, cur, flags);
+  const stats = rushRun
+    ? [{ label: 'Boss Rush best', value: getRushBest() + ' bosses' }]
+    : [];
+  return { xp: gained, lines, stats, newBest: flags };
 }
 
 function showRunDebrief(reason){
-  finishRunEngagement(reason);
+  const result = finishRunEngagement(reason);
   refreshDailyBountiesUI();
+  return result;
 }
 
 loadEngagement();

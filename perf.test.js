@@ -54,6 +54,7 @@ function loadGame() {
   const nodes = new Map();
   const document = {
     body: { style: {}, classList: { add() {}, remove() {}, toggle() {} } },
+    querySelector() { return null; },
     createElement(tag) {
       if (tag === 'canvas' || tag === 'img') {
         return Object.assign(makeNode(), {

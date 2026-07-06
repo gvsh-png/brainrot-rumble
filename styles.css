@@ -189,9 +189,15 @@ html.is-native-android, html.is-native-android body {
   padding:max(10px,env(safe-area-inset-top)) clamp(10px,2.6vmin,24px) clamp(8px,1.6vmin,14px);
   background:linear-gradient(180deg, rgba(26,35,54,.72) 0%, rgba(26,35,54,.38) 100%);
   border-bottom:var(--border-card); box-shadow:0 4px 16px rgba(0,0,0,.22); }
-#topbadge { flex:0 0 auto; min-width:clamp(34px,6vmin,48px); height:clamp(38px,6.6vmin,52px); display:flex; align-items:center; justify-content:center;
+#topbadge { flex:0 0 auto; min-width:clamp(34px,6vmin,48px); height:clamp(38px,6.6vmin,52px); display:flex; flex-direction:column; align-items:center; justify-content:center;
   background:var(--accent); border:var(--border-card); border-radius:9px; color:#fff; font-weight:800; font-size:clamp(16px,3vmin,26px);
-  text-shadow:0 1px 2px rgba(0,0,0,.28); box-shadow:var(--shadow-card); }
+  text-shadow:0 1px 2px rgba(0,0,0,.28); box-shadow:var(--shadow-card); padding:2px 4px; }
+.toprank { font-size:clamp(7px,1.3vmin,10px); font-weight:700; letter-spacing:.04em; opacity:.92; line-height:1; margin-top:1px; }
+.shoprerow { display:flex; justify-content:center; margin:4px 0 8px; }
+.shoprerow .sbuy { font-size:clamp(11px,2vmin,15px); padding:6px 12px; }
+.go-extra { margin-top:10px; text-align:center; line-height:1.55; }
+.go-line { font-size:clamp(13px,2.5vmin,18px); font-weight:800; color:#9fe0ff; }
+.go-rank { margin-top:8px; font-size:clamp(13px,2.5vmin,18px); font-weight:900; color:#b06ff0; text-align:center; }
 #topxp { flex:0 1 auto; height:clamp(13px,2vmin,18px); background:var(--ink); border:var(--border-card); border-radius:9px; overflow:hidden;
   width:clamp(70px,18vmin,170px); }
 #topxpfill { height:100%; width:30%; background:linear-gradient(#8be24f,#4caf3a); transition:width .28s var(--ease-smooth); }

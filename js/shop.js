@@ -363,11 +363,25 @@ function shopRaritiesForWorld(worldIdx){
   return out;
 }
 function dailyShopCount(worldIdx){ return Math.min(10, 6 + Math.floor(worldTierIdx(worldIdx)/8)); }
+function dailyShopRerollCount(worldIdx){
+  const w = typeof worldIdx==='number' ? worldIdx : (typeof selWorld!=='undefined' ? selWorld : 0);
+  try{ return Math.max(0, +(localStorage.getItem('br_shop_reroll_'+dayKey()+'_w'+w)||0)); }catch(e){ return 0; }
+}
+function rerollDailyShop(){
+  const w = typeof selWorld!=='undefined' ? selWorld : 0;
+  if(typeof spendGems!=='function' || !spendGems(3)) return false;
+  const key = 'br_shop_reroll_'+dayKey()+'_w'+w;
+  localStorage.setItem(key, String(dailyShopRerollCount(w) + 1));
+  if(typeof sfx!=='undefined') sfx.pick();
+  renderShop();
+  return true;
+}
 function dailyShop(n, worldIdx){
   const w = typeof worldIdx==='number' ? worldIdx : (typeof selWorld!=='undefined' ? selWorld : 0);
   const count = n||dailyShopCount(w);
   const allowed = shopRaritiesForWorld(w);
-  const rng = mulberry32(hashStr(dayKey()+'|w'+w));
+  const rerolls = dailyShopRerollCount(w);
+  const rng = mulberry32(hashStr(dayKey()+'|w'+w+'|r'+rerolls));
   const pool = GEAR_CATALOG.filter(id=>allowed.has(itemRar(id)));
   for(let i=pool.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
   return pool.slice(0, Math.min(count, pool.length));
@@ -478,7 +492,8 @@ function renderShop(){
   const shopWorld = (typeof selWorld!=='undefined' ? selWorld : 0) + 1;
   const shopN = dailyShopCount(typeof selWorld!=='undefined' ? selWorld : 0);
   html += '<div class="banner"><span>DAILY SHOP</span></div>'+
-    '<div class="shopsub">World '+shopWorld+' · '+RAR[shopRar].name+' tier · '+shopN+' items · resets midnight UTC · up to -25%</div>';
+    '<div class="shopsub">World '+shopWorld+' · '+RAR[shopRar].name+' tier · '+shopN+' items · resets midnight UTC · up to -25%</div>'+
+    '<div class="shoprerow"><button class="sbuy shop-reroll'+((typeof gemBalance!=='undefined' && gemBalance<3)?' poor':'')+'" id="dailyshop-reroll" type="button"><span class="gemico-sm">◆</span>3 — REROLL STOCK</button></div>';
   html += '<div class="ggrid">';
   for(const id of dailyShop()) html += shopCardHTML(id, featuredPrice(id));
   html += '</div>';
@@ -502,6 +517,8 @@ function renderShop(){
   grid.querySelectorAll('button.sbuy[data-id]').forEach(b=>b.addEventListener('click',()=>buyItem(b.dataset.id, +b.dataset.price)));
   grid.querySelectorAll('button[data-crate]').forEach(b=>b.addEventListener('click',()=>openCrate(b.dataset.crate, +b.dataset.cprice)));
   grid.querySelectorAll('button[data-crinfo]').forEach(b=>b.addEventListener('click',(e)=>{ e.stopPropagation(); openCrateOdds(b.dataset.crinfo); }));
+  const rerollBtn = grid.querySelector('#dailyshop-reroll');
+  if(rerollBtn) rerollBtn.addEventListener('click', ()=>{ if(typeof rerollDailyShop==='function') rerollDailyShop(); });
   if(typeof initRecruitUI==='function') initRecruitUI(grid);
 }
 

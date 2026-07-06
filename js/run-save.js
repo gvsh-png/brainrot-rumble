@@ -2,7 +2,7 @@
 // Suspend / resume an in-progress run (localStorage). Cleared on game over or starting fresh.
 
 const RUN_SAVE_KEY = 'br_run_save';
-const RUN_SAVE_VER = 1;
+const RUN_SAVE_VER = 2;
 
 function canSuspendRun(){
   if(typeof state === 'undefined' || typeof ST === 'undefined') return false;
@@ -61,11 +61,18 @@ function getSuspendedRunMeta(){
   if(!d) return null;
   const wName = d.gameMode === 'practice'
     ? 'Practice'
+    : d.gameMode === 'bossrush'
+      ? 'Boss Rush'
     : ((typeof WORLDS !== 'undefined' && WORLDS[d.worldIdx]) ? WORLDS[d.worldIdx].name : ('World ' + (d.worldIdx + 1)));
-  const mode = d.gameMode === 'challenger' ? 'Challenger' : (d.gameMode === 'practice' ? 'Practice' : 'Story');
-  const progress = (d.gameMode === 'challenger' || (d.gameMode === 'practice' && d.practiceCfg && d.practiceCfg.timerBased))
+  const mode = d.gameMode === 'challenger' ? 'Challenger'
+    : d.gameMode === 'practice' ? 'Practice'
+    : d.gameMode === 'bossrush' ? 'Boss Rush'
+    : 'Story';
+  const progress = d.gameMode === 'bossrush'
+    ? ('Boss ' + ((d.rushBossIdx || 0) + 1) + ' · ' + (d.rushBossesBeaten || 0) + ' down')
+    : ((d.gameMode === 'challenger' || (d.gameMode === 'practice' && d.practiceCfg && d.practiceCfg.timerBased))
     ? (typeof fmtTime === 'function' ? fmtTime(d.chalElapsed || 0) : (d.chalElapsed + 's'))
-    : ('Wave ' + (d.wave || 1));
+    : ('Wave ' + (d.wave || 1)));
   return {
     world: wName,
     mode,
@@ -107,6 +114,7 @@ function saveSuspendedRun(){
     chaosSpeedT, chaosBlackoutT, chaosGiantN, chaosGravT,
     chaosShrinkT, chaosDisarmT, chaosBerserkT, chaosBombRainT, chaosBombRainCd, chaosLeechT,
     chalElapsed, chalBossIdx, chalBossActive, chalLuckyT,
+    rushBossIdx, rushBossesBeaten, rushGemsEarned, rushGapT, rushReviveUsed,
     arena: arena ? Object.assign({}, arena) : null,
     bossPending,
     luckyTimer, bossLuckyT,
@@ -151,10 +159,10 @@ function continueSuspendedRun(){
   const d = _readRunData();
   if(!d) return false;
 
-  loadWorld(d.worldIdx);
+  loadWorld(d.gameMode === 'bossrush' ? 0 : d.worldIdx);
   gameMode = d.gameMode;
   if(d.gameMode === 'practice') _applyPracticeCfg(d.practiceCfg);
-  if(infiniteMapMode()){ WORLD.w = 999999; WORLD.h = 999999; }
+  if(d.gameMode === 'bossrush' || infiniteMapMode()){ WORLD.w = 999999; WORLD.h = 999999; }
 
   Object.assign(P, d.P);
   if(d.P && d.P.up) P.up = Object.assign({}, d.P.up);
@@ -167,6 +175,11 @@ function continueSuspendedRun(){
   chaosShrinkT = d.chaosShrinkT; chaosDisarmT = d.chaosDisarmT; chaosBerserkT = d.chaosBerserkT;
   chaosBombRainT = d.chaosBombRainT; chaosBombRainCd = d.chaosBombRainCd; chaosLeechT = d.chaosLeechT;
   chalElapsed = d.chalElapsed; chalBossIdx = d.chalBossIdx; chalBossActive = d.chalBossActive; chalLuckyT = d.chalLuckyT;
+  rushBossIdx = d.rushBossIdx || 0;
+  rushBossesBeaten = d.rushBossesBeaten || 0;
+  rushGemsEarned = d.rushGemsEarned || 0;
+  rushGapT = d.rushGapT || 0;
+  rushReviveUsed = !!d.rushReviveUsed;
   arena = d.arena ? Object.assign({}, d.arena) : null;
   bossPending = d.bossPending;
   luckyTimer = d.luckyTimer; bossLuckyT = d.bossLuckyT;
@@ -211,6 +224,10 @@ function continueSuspendedRun(){
   if(ci){ const img = ci.querySelector('img'); if(img && !img.getAttribute('src') && typeof SP !== 'undefined') img.src = SP['coin'].toDataURL(); }
 
   refreshHUD();
+  if(gameMode === 'bossrush' && typeof rushIsActive === 'function' && rushIsActive()){
+    const wt = $('wavetag');
+    if(wt) wt.textContent = boss ? ('BOSS ' + (rushBossIdx + 1)) : ('BOSS ' + (rushBossIdx + 1));
+  }
   if(boss){
     $('bossname').textContent = boss.name;
     $('bossbar').classList.remove('hidden');

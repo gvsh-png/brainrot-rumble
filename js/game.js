@@ -55,8 +55,33 @@ let rushBossIdx = 0;           // 0-based index of the boss currently spawning
 let rushBossesBeaten = 0;      // cleared this run (score / game-over stat)
 let rushGemsEarned = 0;        // gems awarded this run (persistent via addGems)
 let rushGapT = 0;              // short breathe between chained boss arenas
-function rushUnlocked(){ return unlockedMax >= RUSH_UNLOCK_STORY; }
+let rushReviveUsed = false;    // one gem/token revive per Boss Rush run
+function getRushReviveTokens(){ return Math.max(0, +(localStorage.getItem('br_rush_revive_token')||0)); }
+function consumeRushReviveToken(){
+  const n = getRushReviveTokens();
+  if(n <= 0) return false;
+  localStorage.setItem('br_rush_revive_token', String(n - 1));
+  if(window.markDirty) window.markDirty();
+  return true;
+}
+function tryRushRevive(){
+  if(!rushIsActive() || rushReviveUsed || state !== ST.PLAY) return false;
+  let paid = false;
+  if(getRushReviveTokens() > 0) paid = consumeRushReviveToken();
+  else if(typeof spendGems === 'function') paid = spendGems(8);
+  if(!paid) return false;
+  rushReviveUsed = true;
+  P.hp = Math.max(1, Math.round(P.maxHp * 0.45));
+  P.inv = 2.2;
+  ebullets = [];
+  bigText('RUSH REVIVE','#b06ff0');
+  burst(P.x, P.y, '#b06ff0', 24, 320);
+  if(typeof sfx !== 'undefined' && sfx.win) sfx.win();
+  if(typeof haptic === 'function') haptic('win');
+  return true;
+}
 function rushIsActive(){ return gameMode === 'bossrush'; }
+function rushUnlocked(){ return unlockedMax >= RUSH_UNLOCK_STORY; }
 let _rushCatalog = null;
 function rushCatalog(){
   if(_rushCatalog) return _rushCatalog;
@@ -1140,7 +1165,8 @@ function refreshWorldSel(){
   const ws=$('worldsub');
   if(ws){
     if(gameMode==='practice') ws.textContent = 'sandbox · no rewards';
-    else if(gameMode==='bossrush') ws.textContent = 'grasslands · bosses from worlds 1–'+(unlockedMax+1);
+    else if(gameMode==='bossrush') ws.textContent = 'grasslands · bosses from worlds 1–'+(unlockedMax+1)
+      + (typeof getRushBest==='function' && getRushBest()>0 ? ' · best '+getRushBest() : '');
     else ws.textContent = 'survive the swarm';
   }
   $('wprev').disabled = selWorld<=0 || gameMode==='practice' || gameMode==='bossrush';
@@ -1676,7 +1702,7 @@ function _doStartGame(wi){
   luckyTimer=rand(10,18);
   worldCoins=0;
   chalElapsed=0; chalBossIdx=0; chalBossActive=false; chalLuckyT=5;
-  rushBossIdx=0; rushBossesBeaten=0; rushGemsEarned=0; rushGapT=0;
+  rushBossIdx=0; rushBossesBeaten=0; rushGemsEarned=0; rushGapT=0; rushReviveUsed=false;
   { const ci=$('coincount'); if(ci){ const img=ci.querySelector('img'); if(img && !img.getAttribute('src')) img.src=SP['coin'].toDataURL(); } }
   refreshHUD();   // reset level badge / kills / timer / coins so nothing shows last run's value
   state=ST.PLAY;
@@ -1695,6 +1721,14 @@ function startBossRush(){
   betweenWaves=false;
   waveEnemiesLeft=0;
   wave=5;
+  rushReviveUsed=false;
+  const bandage = Math.max(0, +(localStorage.getItem('br_rush_bandage')||0));
+  if(bandage > 0){
+    localStorage.setItem('br_rush_bandage', String(bandage - 1));
+    P.maxHp += 40; P.hp = P.maxHp;
+    if(window.markDirty) window.markDirty();
+    floatText(P.x, P.y - 36, '+40 HP', '#5fbf52', 14);
+  }
   $('wavetag').textContent='BOSS 1';
   sfx.wave();
   bigText('BOSS RUSH','#ff7a40');
@@ -2343,12 +2377,32 @@ function gameOver(){
   sfx.die();
   if(typeof haptic === 'function') haptic('heavy');
   shake = 22; hitstop = 0.12;
-  $('fwave').textContent = rushIsActive()
-    ? rushBossesBeaten+' bosses · '+rushGemsEarned+' ◆'
+  const rush = rushIsActive();
+  const fwave = $('fwave');
+  const fcoins = $('fcoins');
+  const fkills = $('fkills');
+  const goStatLbl = $('go-stat-lbl');
+  const goDebrief = $('go-debrief');
+  const goRushBest = $('go-rush-best');
+  if(fwave) fwave.textContent = rush
+    ? rushBossesBeaten + ' bosses defeated'
     : (timerMode() ? 'time '+fmtTime(chalElapsed) : 'wave '+wave);
-  $('fcoins').textContent = fmtNum(worldCoins);
-  $('fkills').textContent = kills;
-  if(typeof showRunDebrief === 'function') showRunDebrief('over');
+  if(fcoins) fcoins.textContent = rush ? (rushGemsEarned + ' ◆') : fmtNum(worldCoins);
+  if(fkills) fkills.textContent = kills;
+  if(goStatLbl) goStatLbl.textContent = rush ? 'gems earned' : 'coins collected';
+  const debrief = typeof showRunDebrief === 'function' ? showRunDebrief('over') : null;
+  if(goDebrief){
+    const lines = debrief && debrief.lines && debrief.lines.length ? debrief.lines : [];
+    goDebrief.classList.toggle('hidden', !lines.length);
+    goDebrief.innerHTML = lines.map(l => '<div class="go-line">★ ' + l + '</div>').join('');
+  }
+  if(goRushBest){
+    const best = typeof getRushBest === 'function' ? getRushBest() : 0;
+    goRushBest.classList.toggle('hidden', !rush);
+    goRushBest.textContent = rush
+      ? ('Personal best: ' + best + ' bosses' + (debrief && debrief.newBest && debrief.newBest.bosses ? ' · NEW BEST!' : ''))
+      : '';
+  }
   $('hud').classList.add('hidden');
   $('dashbtn').classList.add('hidden');
   $('zoomctl').classList.add('hidden');
@@ -5105,6 +5159,7 @@ function hurtPlayer(dmg, src){
       ebullets=[]; burst(P.x,P.y,'#4aa3df',20,280); sfx.win();
       bigText('SECOND WIND','#4aa3df'); return;
     }
+    if(rushIsActive() && typeof tryRushRevive === 'function' && tryRushRevive()) return;
     gameOver();
   }
 }
@@ -6107,8 +6162,15 @@ $('goldicon').src = SP['coin'].toDataURL();
 $('goldtxt').textContent = fmtNum(gold);
 // top resource bar: a "player level" badge from worlds unlocked + a progress fill + gold
 function refreshTopbar(){
-  const lv=$('topLvl'); if(lv) lv.textContent = unlockedMax+1;
-  const xf=$('topxpfill'); if(xf) xf.style.width = Math.round(((unlockedMax+1)/WORLDS.length)*100)+'%';
+  const rank = typeof swarmRank !== 'undefined' ? swarmRank : 1;
+  const lv=$('topLvl'); if(lv) lv.textContent = rank;
+  const rl=$('topRankLbl'); if(rl && typeof swarmRankTitle==='function') rl.textContent = swarmRankTitle(rank);
+  const xf=$('topxpfill');
+  if(xf && typeof swarmXpNext==='function'){
+    const need = swarmXpNext(rank);
+    const pct = need > 0 ? Math.min(100, Math.round((swarmXp / need) * 100)) : 0;
+    xf.style.width = pct + '%';
+  }
   const gt=$('goldtxt'); if(gt) gt.textContent = fmtNum(typeof gold!=='undefined'?gold:0);
 }
 refreshTopbar();
@@ -6209,7 +6271,8 @@ if(typeof setHapticOn === 'function') setHapticOn(hapticOn);
 // ---- pause / resume / quit ----
 function refreshRunResumeUI(){
   const panel=$('run-resume'), start=$('startbtn'), meta=$('run-resume-meta');
-  const hint=document.querySelector('#menubot .hint');
+  const hint = (typeof document !== 'undefined' && document.querySelector)
+    ? document.querySelector('#menubot .hint') : null;
   const has = typeof hasSuspendedRun === 'function' && hasSuspendedRun();
   if(panel) panel.classList.toggle('hidden', !has);
   if(start) start.classList.toggle('hidden', has);

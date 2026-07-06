@@ -251,6 +251,26 @@ const GEM_GOLD_BUNDLES = [
   { gems: 10, gold: 3800, label: 'Treasure Chest' },
   { gems: 25, gold: 12000, label: 'Royal Hoard' },
 ];
+const RUSH_GEM_ITEMS = [
+  { id: 'revive', cost: 8, name: 'Rush Revive Token', desc: 'Auto-revive once in Boss Rush (uses token before gems)' },
+  { id: 'bandage', cost: 5, name: 'Rush Bandage', desc: '+40 max HP at the start of your next Boss Rush' },
+];
+
+function buyRushGemItem(id){
+  const item = RUSH_GEM_ITEMS.find(x => x.id === id);
+  if(!item || !spendGems(item.cost)) return false;
+  if(id === 'revive'){
+    const n = Math.max(0, +(localStorage.getItem('br_rush_revive_token')||0));
+    localStorage.setItem('br_rush_revive_token', String(n + 1));
+  } else if(id === 'bandage'){
+    const n = Math.max(0, +(localStorage.getItem('br_rush_bandage')||0));
+    localStorage.setItem('br_rush_bandage', String(n + 1));
+  }
+  if(window.markDirty) window.markDirty();
+  if(typeof sfx!=='undefined') sfx.evolve();
+  if(typeof renderShop==='function') renderShop();
+  return true;
+}
 
 function rollGemCrateItem(floorRar){
   const start = (typeof RAR_ORDER!=='undefined' ? RAR_ORDER.indexOf(floorRar) : 2);
@@ -320,6 +340,18 @@ function renderGemBoutiqueSection(){
   }
   html+='</div>';
   const triplePoor=gemBalance<12;
+  html+='<div class="secttl">Boss Rush Supplies</div><div class="ggrid">';
+  for(const item of RUSH_GEM_ITEMS){
+    const owned = item.id==='revive'
+      ? Math.max(0, +(localStorage.getItem('br_rush_revive_token')||0))
+      : Math.max(0, +(localStorage.getItem('br_rush_bandage')||0));
+    const poor=gemBalance<item.cost;
+    html+='<div class="scard r-epic" style="min-height:auto;padding:12px">'+
+      '<div class="sname">'+item.name+'</div>'+
+      '<div class="sbonus">'+item.desc+(owned?(' · owned ×'+owned):'')+'</div>'+
+      '<div class="sfoot"><button class="sbuy rushgem-buy'+(poor?' poor':'')+'" data-rushgem="'+item.id+'">'+gem+item.cost+'</button></div></div>';
+  }
+  html+='</div>';
   html+='<div class="secttl">Pet Bundles</div>';
   html+='<div class="scard r-epic" style="min-height:auto;padding:12px;max-width:360px">'+
     '<div class="sname">Triple Recruit</div>'+
@@ -499,6 +531,9 @@ function initRecruitUI(container) {
   });
   container.querySelectorAll('.gemgold-buy[data-gemgold]').forEach(btn=>{
     btn.addEventListener('click',()=>buyGoldBundle(+btn.dataset.gemgold, +btn.dataset.goldamt));
+  });
+  container.querySelectorAll('.rushgem-buy[data-rushgem]').forEach(btn=>{
+    btn.addEventListener('click',()=>buyRushGemItem(btn.dataset.rushgem));
   });
   const tripleBtn=container.querySelector('.pettriple-buy, #pettriplebtn');
   if(tripleBtn) tripleBtn.addEventListener('click',()=>recruitPetTriple());
