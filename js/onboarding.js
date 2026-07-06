@@ -251,7 +251,35 @@
       guideMirror = null;
     }
     const ov = getOverlay();
-    if (ov) ov.classList.remove('guide-tab-target');
+    if (ov) ov.classList.remove('guide-tab-target', 'guide-has-target');
+  }
+
+  function mirrorGuideClass(el) {
+    if (el.closest('#tabbar')) return 'guide-mirror tabbtn';
+    if (el.classList.contains('banner')) return 'guide-mirror guide-mirror-banner';
+    if (el.id === 'gamemodebtn') return 'guide-mirror guide-mirror-btn';
+    return 'guide-mirror guide-mirror-panel';
+  }
+
+  function ensureGuideMirror(el, ov) {
+    if (!el || !ov) {
+      clearGuideMirror();
+      return;
+    }
+    ov.classList.add('guide-has-target');
+    if (el.closest('#tabbar')) ov.classList.add('guide-tab-target');
+    if (!guideMirror) {
+      guideMirror = document.createElement('div');
+      guideMirror.setAttribute('aria-hidden', 'true');
+      ov.insertBefore(guideMirror, ov.querySelector('.guide-ring'));
+    }
+    guideMirror.className = mirrorGuideClass(el);
+    guideMirror.innerHTML = el.innerHTML;
+    const r = el.getBoundingClientRect();
+    guideMirror.style.left = r.left + 'px';
+    guideMirror.style.top = r.top + 'px';
+    guideMirror.style.width = r.width + 'px';
+    guideMirror.style.height = r.height + 'px';
   }
 
   function clearElevatedTarget() {
@@ -267,7 +295,7 @@
     const ov = getOverlay();
     if (!ov) return;
     ov.classList.add('hidden');
-    ov.classList.remove('active', 'guide-passthrough', 'guide-block-mode', 'guide-tab-target');
+    ov.classList.remove('active', 'guide-passthrough', 'guide-block-mode', 'guide-tab-target', 'guide-has-target');
     guideActive = false;
     clearElevatedTarget();
     if (resizeObs) {
@@ -330,26 +358,6 @@
     guideActive._target = el;
   }
 
-  function ensureGuideMirror(el, ov) {
-    if (!el.closest('#tabbar')) {
-      clearGuideMirror();
-      return;
-    }
-    ov.classList.add('guide-tab-target');
-    if (!guideMirror) {
-      guideMirror = document.createElement('div');
-      guideMirror.className = 'guide-mirror tabbtn';
-      guideMirror.setAttribute('aria-hidden', 'true');
-      ov.insertBefore(guideMirror, ov.querySelector('.guide-ring'));
-    }
-    guideMirror.innerHTML = el.innerHTML;
-    const r = el.getBoundingClientRect();
-    guideMirror.style.left = r.left + 'px';
-    guideMirror.style.top = r.top + 'px';
-    guideMirror.style.width = r.width + 'px';
-    guideMirror.style.height = r.height + 'px';
-  }
-
   function showGuide(step) {
     if (!step || hasGuide(step.id)) return false;
     const el = document.querySelector(step.sel);
@@ -381,13 +389,11 @@
     if (finger) finger.classList.toggle('hidden', !step.tap);
 
     clearElevatedTarget();
-    if (step.tap) {
+    if (step.sel) {
       el.classList.add('guide-target-elevated', 'guide-spotlight-tab');
       elevatedEl = el;
-      if (el.closest('#tabbar')) {
-        document.body.classList.add('guide-elevate-tabbar');
-        ensureGuideMirror(el, ov);
-      }
+      if (el.closest('#tabbar')) document.body.classList.add('guide-elevate-tabbar');
+      ensureGuideMirror(el, ov);
     }
 
     repositionGuide();

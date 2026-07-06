@@ -239,11 +239,8 @@ makeSprite('crocodilo', 120, (g,u)=>{
   eyes(g,u,26*u,-12*u,5*u,3.4*u);
 });
 
-// ---- Ting Ting Ting Bahur: wooden mallet creature with a bat ----
+// ---- Ting Ting Ting Bahur: wooden mallet creature with a bat (legless — floats on rhythm)
 makeSprite('sahur', 130, (g,u)=>{
-  // legs
-  sh(g,'#7a5230',3*u,(g)=>{ g.roundRect(-12*u,26*u,8*u,16*u,3*u); });
-  sh(g,'#7a5230',3*u,(g)=>{ g.roundRect(4*u,26*u,8*u,16*u,3*u); });
   // wooden mallet body
   sh(g,'#a9763e',3.6*u,(g)=>{ g.roundRect(-16*u,-10*u,32*u,38*u,8*u); });
   sh(g,'#8a5d2c',2*u,(g)=>{ g.moveTo(-10*u,-6*u); g.lineTo(-10*u,24*u); });
@@ -1882,7 +1879,6 @@ function autoRig(name, cfg) {
     bicus:     ['#f0a23a', 18, 10, 4, 4],
     ambalabu:  ['#5a9e3f', 24, 12, 7, 5],
     dindin:    ['#9a7a52', 24, 12, 9, 5],
-    tatasahur: ['#caa96a', 22, 12, 8, 5],
     saturnita: ['#e6e0d4', 22, 11, 7, 5],
     madudung:  ['#6b5a48', 26, 15,10, 6],
     garamaraman:['#3a2a26',24, 13, 9, 5],
@@ -1913,7 +1909,6 @@ function autoRig(name, cfg) {
     forzutoorsino: ['#8d5a32', 22, 13, 9, 5],
     maestrofoccino:['#7d8893', 24, 12, 6, 4],
     // ── Bosses ──
-    sahur:          ['#caa96a', 26, 13, 9, 5],
     vaca:           ['#e6e0d4', 26, 14, 8, 5],
     gorillo:        ['#4a4a52', 28, 15, 9, 5],
     bobritto:       ['#8a5f38', 26, 14, 7, 5],

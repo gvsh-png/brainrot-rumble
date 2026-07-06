@@ -3446,12 +3446,22 @@ function update(dt){
       e.walkAmt = (e.walkAmt||0) + ((e.moving?1:0)-(e.walkAmt||0)) * Math.min(1, dt*8);
       separate(e);   // resolve overlaps with nearby foes so the pack spreads + flows around
       clampEnemyWorld(e);
-      // chaos gravity: scatter away (>0) or rush in (<0)
+      // chaos gravity: scatter away (>0) or pull inward (<0) — pull stops ~8m out so swarms don't stack on you
       if(_gravOn&&e.iv<=0){
         const ga=chaosGravT>0?Math.atan2(e.y-P.y,e.x-P.x):Math.atan2(P.y-e.y,P.x-e.x);
-        const gs=chaosGravT>0?270:420;
-        e.x=clamp(e.x+Math.cos(ga)*gs*dt,WALL,WORLD.w-WALL);
-        e.y=clamp(e.y+Math.sin(ga)*gs*dt,WALL,WORLD.h-WALL);
+        const gs=chaosGravT>0?270:320;
+        if(chaosGravT<0){
+          const d=Math.sqrt(dist2(P.x,P.y,e.x,e.y))||1;
+          const minDist=95;
+          if(d>minDist){
+            const step=Math.min(gs*dt, d-minDist);
+            e.x=clamp(e.x+Math.cos(ga)*step,WALL,WORLD.w-WALL);
+            e.y=clamp(e.y+Math.sin(ga)*step,WALL,WORLD.h-WALL);
+          }
+        } else {
+          e.x=clamp(e.x+Math.cos(ga)*gs*dt,WALL,WORLD.w-WALL);
+          e.y=clamp(e.y+Math.sin(ga)*gs*dt,WALL,WORLD.h-WALL);
+        }
         resolveEnemyObstacles(e);
       }
       // skip shooting / casting / aoe / support for enemies well outside player's screen

@@ -61,7 +61,7 @@ const STAT = {
   regen: { label:'HP regen',      short:'RGN', icon:'heart',  flat:true, vals:buildTierVals(1,3,12), pctVals:buildTierVals(0.0012,0.004,0.022,{flat:false}) },
   gold:  { label:'gold & XP',     short:'GLD', icon:'coin',   vals:buildTierVals(0.03,0.12,0.40,{flat:false}) },
   vamp:  { label:'heal per kill', short:'VMP', icon:'heart',  flat:true, vals:buildTierVals(1,4,14), pctVals:buildTierVals(0.008,0.018,0.065,{flat:false}) },
-  pierce:{ label:'bullet pierce', short:'PRC', icon:'coin',   flat:true, vals:buildTierVals(0,1,4,{minVal:0}) },
+  pierce:{ label:'bullet pierce', short:'PRC', icon:'coin',   flat:true, vals:buildTierVals(1,1,4,{minVal:1}) },
 };
 const STAT_ORDER = ['dmg','hp','speed','range','crit','armor','rate','magnet','regen','gold','vamp','pierce'];
 const ITEM_ADJ = {
@@ -107,7 +107,10 @@ function statDisplaysFlat(stat, worldIdx){
 function statIsArmor(stat){ return !!STAT[stat].armor; }
 function itemBonusShort(id, worldIdx){
   const s=itemStat(id), v=itemBonus(id, worldIdx);
-  if(statDisplaysFlat(s, worldIdx)) return (v >= 1000 && typeof fmtPlus==='function' ? fmtPlus(v) : '+'+v);
+  if(statDisplaysFlat(s, worldIdx)) {
+    const n = Math.max(1, Math.round(v));
+    return (n >= 1000 && typeof fmtPlus==='function' ? fmtPlus(n) : '+'+n);
+  }
   if(statIsArmor(s)) return '-'+Math.round(v*100)+'%';
   return '+'+Math.round(v*100)+'%';
 }
