@@ -3,76 +3,150 @@
 // Loaded after game.js so it shares the globals `gold`, `P`, sprite helpers, sfx, $.
 // Items boost STARTING stats — damage (FLAT +N) / move speed (%) / attack range (%). 4 typed slots:
 // the equipped piece's SLOT picks the on-character silhouette + rarity tint, its STAT picks the bonus.
-// Catalog = 4 stats × 6 rarities × 7 named variants = 168 items (28 per rarity).
+// Catalog = 12 stats × 39 rarities × 9 variants × 8 slots = 4212 items.
+// Daily shop tier scales across all 50 worlds — W1 = Common … W50 = Omniscient.
 
-const GEAR_CATS = ['helmet','chest','pants','shoes'];
-const CAT_LABEL = { helmet:'Helmet', chest:'Chestplate', pants:'Pants', shoes:'Shoes' };
-const CAT_NOUN  = { helmet:'Helm', chest:'Plate', pants:'Greaves', shoes:'Boots' };
+const GEAR_VARIANTS = 9;
+const GEAR_CATS = ['cape','helmet','chest','gloves','belt','pants','ring','shoes'];
+const CAT_LABEL = { cape:'Cape', helmet:'Helmet', chest:'Chestplate', gloves:'Gloves', belt:'Belt', pants:'Pants', ring:'Ring', shoes:'Shoes' };
+const CAT_NOUN  = { cape:'Mantle', helmet:'Helm', chest:'Plate', gloves:'Gauntlets', belt:'Girdle', pants:'Greaves', ring:'Band', shoes:'Boots' };
 
-// rarity: border color + base price (prices cut to ~1/3 of the old shop)
-// prices scale ~3-4x per tier so the next rarity costs "about one world of grinding"
-// (tied to the rarity-banded gear gate — see docs/specs/2026-06-14-worlds-expansion-design.md)
-const RAR = {
-  common:    { name:'COMMON',    color:'#9aa3af', price:30    },
-  uncommon:  { name:'UNCOMMON',  color:'#5fbf52', price:120   },
-  rare:      { name:'RARE',      color:'#4aa3df', price:450   },
-  epic:      { name:'EPIC',      color:'#b06ff0', price:1500  },
-  legendary: { name:'LEGENDARY', color:'#e0a92e', price:4500  },
-  mythic:    { name:'MYTHIC',    color:'#ff3b5c', price:13500 },
-};
-const RAR_ORDER = ['common','uncommon','rare','epic','legendary','mythic'];
+// 39-tier ladder — one smooth progression curve from W1 through W50.
+const RAR_LADDER = [
+  ['common','COMMON'],['cplus','COMMON+'],['cpp','COMMON++'],
+  ['uncommon','UNCOMMON'],['uplus','UNCOMMON+'],['unpp','UNCOMMON++'],
+  ['rare','RARE'],['rplus','RARE+'],['rpp','RARE++'],
+  ['epic','EPIC'],['eplus','EPIC+'],['epp','EPIC++'],
+  ['legendary','LEGENDARY'],['lplus','LEGENDARY+'],['lpp','LEGENDARY++'],
+  ['mythic','MYTHIC'],['mplus','MYTHIC+'],['mpp','MYTHIC++'],
+  ['cosmic','COSMIC'],['cosplus','COSMIC+'],['cospp','COSMIC++'],
+  ['stellar','STELLAR'],['stplus','STELLAR+'],['stpp','STELLAR++'],
+  ['nebula','NEBULA'],['nebplus','NEBULA+'],['nebpp','NEBULA++'],
+  ['void','VOID'],['voidplus','VOID+'],['voidpp','VOID++'],
+  ['omega','OMEGA'],['omplus','OMEGA+'],['ompp','OMEGA++'],
+  ['apex','APEX'],['apexplus','APEX+'],['apexpp','APEX++'],
+  ['eternal','ETERNAL'],['eternplus','ETERNAL+'],['omniscient','OMNISCIENT'],
+];
+function tierHue(i, total){ return Math.round((i/(total-1))*300); } // gray → violet → gold → hot pink
+function tierColor(i, total){
+  const h=tierHue(i,total), s=i<4?12:58+(i/total)*18, l=i<3?62:46+(i/total)*14;
+  return 'hsl('+h+','+s+'%,'+l+'%)';
+}
+const RAR = {}, RAR_ORDER = [];
+for(let i=0;i<RAR_LADDER.length;i++){
+  const [id,name]=RAR_LADDER[i];
+  RAR_ORDER.push(id);
+  RAR[id] = { name, color:tierColor(i,RAR_LADDER.length), price:Math.round(20*Math.pow(1.28,i)) };
+}
 
-// stat lines: damage adds a FLAT amount; speed/range add a fraction of the starting stat.
-// `flat:true` marks a stat whose vals are absolute numbers (shown "+N") rather than percentages.
+function buildTierVals(start, epicVal, maxVal, opts={}){
+  const flat = opts.flat!==false;
+  const minVal = opts.minVal!=null ? opts.minVal : (flat ? 1 : 0);
+  const epicIdx = 9, maxIdx = RAR_ORDER.length-1, vals = {};
+  for(let i=0;i<=maxIdx;i++){
+    let v = i<=epicIdx ? start+(epicVal-start)*i/epicIdx : epicVal+(maxVal-epicVal)*(i-epicIdx)/(maxIdx-epicIdx);
+    vals[RAR_ORDER[i]] = flat ? Math.max(minVal, Math.round(v)) : +v.toFixed(4);
+  }
+  return vals;
+}
 const STAT = {
-  dmg:   { label:'damage',       short:'DMG', icon:'coin',  flat:true, vals:{common:2,uncommon:4,rare:7,epic:12,legendary:20,mythic:32} },
-  hp:    { label:'max HP',       short:'HP',  icon:'heart', flat:true, vals:{common:8,uncommon:15,rare:25,epic:40,legendary:65,mythic:100} },
-  speed: { label:'move speed',   short:'SPD', icon:'heart', vals:{common:0.03,uncommon:0.05,rare:0.08,epic:0.12,legendary:0.18,mythic:0.27} },
-  range: { label:'attack range', short:'RNG', icon:'gem',   vals:{common:0.05,uncommon:0.09,rare:0.14,epic:0.20,legendary:0.30,mythic:0.45} },
+  dmg:   { label:'damage',        short:'DMG', icon:'coin',   flat:true, vals:buildTierVals(6,120,1800) },
+  hp:    { label:'max HP',        short:'HP',  icon:'heart',  flat:true, vals:buildTierVals(12,200,1200) },
+  speed: { label:'move speed',    short:'SPD', icon:'heart',  vals:buildTierVals(0.02,0.08,0.28,{flat:false}) },
+  range: { label:'attack range',  short:'RNG', icon:'gem',    vals:buildTierVals(0.04,0.16,0.55,{flat:false}) },
+  crit:  { label:'crit chance',   short:'CRT', icon:'coin',   vals:buildTierVals(0.01,0.05,0.18,{flat:false}) },
+  armor: { label:'damage resist', short:'ARM', icon:'turtle', armor:true, vals:buildTierVals(0.015,0.055,0.16,{flat:false}) },
+  rate:  { label:'attack speed',  short:'RAT', icon:'gem',    vals:buildTierVals(0.02,0.08,0.30,{flat:false}) },
+  magnet:{ label:'pickup radius', short:'MAG', icon:'gem',    vals:buildTierVals(0.04,0.16,0.50,{flat:false}) },
+  regen: { label:'HP regen',      short:'RGN', icon:'heart',  flat:true, vals:buildTierVals(1,3,12), pctVals:buildTierVals(0.0012,0.004,0.022,{flat:false}) },
+  gold:  { label:'gold & XP',     short:'GLD', icon:'coin',   vals:buildTierVals(0.03,0.12,0.40,{flat:false}) },
+  vamp:  { label:'heal per kill', short:'VMP', icon:'heart',  flat:true, vals:buildTierVals(1,4,14), pctVals:buildTierVals(0.008,0.018,0.065,{flat:false}) },
+  pierce:{ label:'bullet pierce', short:'PRC', icon:'coin',   flat:true, vals:buildTierVals(0,1,4,{minVal:0}) },
 };
-const STAT_ORDER = ['dmg','hp','speed','range'];
-// 7 flavour adjectives per stat -> 7 variants per (stat,rarity)
+const STAT_ORDER = ['dmg','hp','speed','range','crit','armor','rate','magnet','regen','gold','vamp','pierce'];
 const ITEM_ADJ = {
-  dmg:   ['Brawler','Berserker','Warlord','Crusher','Onslaught','Ravager','Titan'],
-  hp:    ['Stalwart','Guardian','Bulwark','Ironhide','Bastion','Colossus','Immortal'],
-  speed: ['Swift','Sprinter','Gale','Dasher','Quicksilver','Zephyr','Tempo'],
-  range: ['Hawkeye','Marksman','Farsight','Sniper','Longshot','Eagle','Horizon'],
+  dmg:   ['Brawler','Berserker','Warlord','Crusher','Onslaught','Ravager','Titan','Annihilator','Worldbreaker'],
+  hp:    ['Stalwart','Guardian','Bulwark','Ironhide','Bastion','Colossus','Immortal','Unyielding','Eternal'],
+  speed: ['Swift','Sprinter','Gale','Dasher','Quicksilver','Zephyr','Tempo','Blur','Lightspeed'],
+  range: ['Hawkeye','Marksman','Farsight','Sniper','Longshot','Eagle','Horizon','Sighted','Orbital'],
+  crit:  ['Keen','Sharp','Lethal','Deadly','Fatal','Killer','Assassin','Executioner','Obliterator'],
+  armor: ['Padded','Plated','Reinforced','Ironclad','Steelbound','Fortress','Titanplate','Adamant','Invincible'],
+  rate:  ['Trigger','Rapid','Burst','Frenzy','Barrage','Gatling','Overclock','Machine','Bulletstorm'],
+  magnet:['Attract','Pull','Draw','Latch','Snare','Vacuum','Singularity','Gravity','EventHorizon'],
+  regen: ['Mending','Soothing','Recovery','Vitality','Renewal','Restoration','Regrowth','Phoenix','Immortal'],
+  gold:  ['Greedy','Hoarder','Miser','Prospector','Treasure','Fortune','Jackpot','Gilded','Midas'],
+  vamp:  ['Leech','Siphon','Drain','Bloodlust','Predator','Reaper','Soulsteal','Hemomancer','Lifestealer'],
+  pierce:['Pierce','Penetrate','Puncture','Drill','Lance','Spear','Impale','Perforate','Transcendent'],
 };
 
 // id = "<stat>_<rarity>_<variant>"  e.g. "range_epic_3"
 function itemStat(id){ return id.split('_')[0]; }
 function itemRar(id){  return id.split('_')[1]; }
 function itemVar(id){  return +id.split('_')[2]; }
-function itemCat(id){  return GEAR_CATS[itemVar(id) % 4]; }   // slot spreads across all 4 gear pieces
-function itemBonus(id){ return STAT[itemStat(id)].vals[itemRar(id)]; }
+function itemCat(id){  return GEAR_CATS[itemVar(id) % GEAR_CATS.length]; }
+function shopWorldIdx(){ return typeof selWorld!=='undefined' ? selWorld : 0; }
+// W11+: gear regen/vamp use % of max HP (dmg/hp gear stay flat everywhere).
+function gearStatUsesPercent(stat, wi){
+  if(wi == null) wi = (typeof worldIdx === 'number' ? worldIdx : shopWorldIdx());
+  return (wi|0) >= 10 && (stat === 'regen' || stat === 'vamp');
+}
+function itemBonus(id, worldIdx){
+  const s=itemStat(id), r=itemRar(id), st=STAT[s];
+  const wi = worldIdx != null ? worldIdx : shopWorldIdx();
+  if(gearStatUsesPercent(s, wi) && st.pctVals) return st.pctVals[r];
+  return st.vals[r];
+}
 function itemPrice(id){ return RAR[itemRar(id)].price; }
 function itemName(id){ return ITEM_ADJ[itemStat(id)][itemVar(id)] + ' ' + CAT_NOUN[itemCat(id)]; }
 // short "+N" (flat stats) or "+N%" (percent stats) badge used on tiles/slots
 function statIsFlat(stat){ return !!STAT[stat].flat; }
-function itemBonusShort(id){ const s=itemStat(id); return statIsFlat(s) ? '+'+itemBonus(id) : '+'+Math.round(itemBonus(id)*100)+'%'; }
-function itemBonusTxt(id){ const s=itemStat(id); return (statIsFlat(s) ? '+'+itemBonus(id) : '+'+Math.round(itemBonus(id)*100)+'%') + ' ' + STAT[s].label; }
+function statDisplaysFlat(stat, worldIdx){
+  if(gearStatUsesPercent(stat, worldIdx)) return false;
+  return statIsFlat(stat);
+}
+function statIsArmor(stat){ return !!STAT[stat].armor; }
+function itemBonusShort(id, worldIdx){
+  const s=itemStat(id), v=itemBonus(id, worldIdx);
+  if(statDisplaysFlat(s, worldIdx)) return (v >= 1000 && typeof fmtPlus==='function' ? fmtPlus(v) : '+'+v);
+  if(statIsArmor(s)) return '-'+Math.round(v*100)+'%';
+  return '+'+Math.round(v*100)+'%';
+}
+function itemBonusTxt(id){ return itemBonusShort(id)+' '+STAT[itemStat(id)].label; }
 
 const GEAR_CATALOG = [];
-for(const s of STAT_ORDER) for(const r of RAR_ORDER) for(let i=0;i<7;i++) GEAR_CATALOG.push(s+'_'+r+'_'+i);
+for(const s of STAT_ORDER) for(const r of RAR_ORDER) for(let i=0;i<GEAR_VARIANTS;i++) GEAR_CATALOG.push(s+'_'+r+'_'+i);
 function catalogByRarity(r){ return GEAR_CATALOG.filter(id=>itemRar(id)===r); }
 
-// crates: weighted random pulls. cheaper crate = mostly low rarity, pricier = better odds.
+function gaussOdds(center, spread){
+  const odds = {};
+  let total = 0;
+  for(let i=0;i<RAR_ORDER.length;i++){
+    const d=i-center, w=Math.exp(-(d*d)/(2*spread*spread));
+    odds[RAR_ORDER[i]] = w; total += w;
+  }
+  for(const r of RAR_ORDER) odds[r] = Math.max(0, Math.round(odds[r]/total*100));
+  return odds;
+}
 const CRATES = {
-  wood:   { name:'Wooden Crate', price:40,   glow:'#9aa3af', odds:{common:60,uncommon:30,rare:8, epic:2, legendary:0, mythic:0} },
-  silver: { name:'Silver Crate', price:240,  glow:'#bcd0e0', odds:{common:6, uncommon:30,rare:36,epic:20,legendary:7, mythic:1} },
-  gold:   { name:'Gold Crate',   price:1200, glow:'#e0a92e', odds:{common:0, uncommon:5, rare:25,epic:38,legendary:23,mythic:9} },
+  wood:     { name:'Wooden Crate',   price:35,     glow:'#9aa3af', odds:gaussOdds(4, 4.5) },
+  silver:   { name:'Silver Crate',   price:220,    glow:'#bcd0e0', odds:gaussOdds(16, 6) },
+  gold:     { name:'Gold Crate',     price:1100,   glow:'#e0a92e', odds:gaussOdds(30, 7) },
+  platinum: { name:'Platinum Crate', price:6500,   glow:'#c8e0ff', odds:gaussOdds(33, 5) },
+  diamond:  { name:'Diamond Crate',  price:28000,  glow:'#7fe7ff', odds:gaussOdds(36, 4) },
+  vault:    { name:'Vault Crate',    price:95000,  glow:'#e8b0ff', odds:gaussOdds(37, 3.5) },
 };
-const CRATE_ORDER = ['wood','silver','gold'];
+const CRATE_ORDER = ['wood','silver','gold','platinum','diamond','vault'];
 const GEAR_UID_KEY = 'br_gear_uid_seq';
 const SELL_RATE = 0.4;
 const FUSE_BASE = 20;
 const FUSE_STEP = 10;
 const FUSE_CAP = 100;
 
-// ---- persistent state (one-time wipe when the item-id scheme changed to stat-based) ----
-if(!localStorage.getItem('br_gear_reset_v2')){
+// ---- persistent state (one-time wipe when gear ladder expanded to 39 tiers / 8 slots) ----
+if(!localStorage.getItem('br_gear_reset_v4')){
   localStorage.removeItem('br_items_owned'); localStorage.removeItem('br_gear_equipped');
-  localStorage.setItem('br_gear_reset_v2','1');
+  localStorage.removeItem('br_gear_seen');
+  localStorage.setItem('br_gear_reset_v4','1');
 }
 function makeGearUid(){ return 'g'+Date.now().toString(36)+(Math.random()*1e8>>>0).toString(36); }
 function isGearInstance(v){ return !!v && typeof v==='object' && typeof v.itemId==='string'; }
@@ -104,7 +178,7 @@ function normalizeEquip(raw, owned){
   const byUid = new Map(owned.map(x=>[x.uid, x]));
   const byItem = new Map();
   for(const inst of owned) if(!byItem.has(inst.itemId)) byItem.set(inst.itemId, inst.uid);
-  const out = { helmet:null, chest:null, pants:null, shoes:null };
+  const out = Object.fromEntries(GEAR_CATS.map(c=>[c,null]));
   let dirty = false;
   for(const cat of GEAR_CATS){
     const value = raw && raw[cat]!=null ? raw[cat] : null;
@@ -206,27 +280,97 @@ function updateInvBadge(){ const b=$('invbadge'); if(!b) return; const n=unseenC
 
 // ---- equipped bonuses (summed across the 4 slots) ----
 // percent stats (speed/range) return a starting-stat multiplier; flat stats (dmg) return a raw sum.
-function equippedStatBonus(stat){
-  let b=0; for(const c of GEAR_CATS){ const uid=gearEquip[c], id=uid&&gearInstanceItem(uid); if(id && itemStat(id)===stat) b+=itemBonus(id); }
+function equippedStatBonus(stat, wi){
+  let b=0; for(const c of GEAR_CATS){ const uid=gearEquip[c], id=uid&&gearInstanceItem(uid); if(id && itemStat(id)===stat) b+=itemBonus(id, wi); }
   return b;
 }
-function equippedStatMult(stat){ return 1 + equippedStatBonus(stat); }   // for percent stats / UI
-function equippedFlatDmg(){   return equippedStatBonus('dmg');   }   // consumed by game.js startGame() (flat +damage)
-function equippedHp(){        return equippedStatBonus('hp');    }   // consumed by game.js startGame() (flat +max HP)
+function equippedStatMult(stat, wi){ return 1 + equippedStatBonus(stat, wi); }   // for percent stats / UI
+function equippedFlatDmg(wi){ return equippedStatBonus('dmg', wi); }
+function equippedHp(wi){ return equippedStatBonus('hp', wi); }
 function equippedSpeedMult(){ return equippedStatMult('speed'); }
 function equippedRangeMult(){ return equippedStatMult('range'); }
+function equippedCrit(){ return equippedStatBonus('crit'); }
+function equippedArmorMult(){
+  let m=1; for(const c of GEAR_CATS){ const uid=gearEquip[c], id=uid&&gearInstanceItem(uid); if(id && itemStat(id)==='armor') m*=(1-itemBonus(id)); }
+  return m;
+}
+function equippedRateMult(){ return equippedStatMult('rate'); }
+function equippedMagnetMult(){ return equippedStatMult('magnet'); }
+function equippedRegen(wi){ return equippedStatBonus('regen', wi); }
+function equippedGoldMult(){ return equippedStatMult('gold'); }
+function equippedVamp(wi){ return equippedStatBonus('vamp', wi); }
+function equippedPierce(){ return equippedStatBonus('pierce'); }
 
-// ---- daily featured rotation: deterministic by UTC date, discounted ----
+// Average equipped rarity tier (0 = Common … 38 = Omniscient). Empty slots don't count.
+function equippedGearTierScore(){
+  let sum=0, n=0;
+  for(const c of GEAR_CATS){
+    const uid=gearEquip[c], id=uid&&gearInstanceItem(uid);
+    if(!id) continue;
+    const idx=RAR_ORDER.indexOf(itemRar(id));
+    if(idx>=0){ sum+=idx; n++; }
+  }
+  return n ? sum/n : 0;
+}
+// World-appropriate gear should feel like a big power spike — undergeared runs stay tough.
+function gearWorldDmgMul(worldIdx){
+  const tier=equippedGearTierScore(), expect=worldTierIdx(worldIdx), delta=tier-expect;
+  const quality=1+tier*0.11;
+  const match=delta>=0 ? 1+Math.min(3.2, delta*0.22) : Math.max(0.45, 1+delta*0.14);
+  return quality*match;
+}
+function gearBossHpMul(worldIdx){
+  const hp=gearEnemyHpMul(worldIdx);
+  const delta=equippedGearTierScore()-worldTierIdx(worldIdx);
+  if(delta>=2) return Math.min(hp, 0.12);
+  if(delta>=0) return Math.min(hp, 0.18+delta*0.01);
+  if(delta>=-2) return Math.max(hp, 0.55+delta*-0.1);
+  return Math.max(hp, 0.9);
+}
+function gearEnemyHpMul(worldIdx){
+  const tier=equippedGearTierScore(), expect=worldTierIdx(worldIdx), delta=tier-expect;
+  if(delta>=2) return Math.max(0.15, 0.38-delta*0.04);
+  if(delta>=0) return Math.max(0.22, 0.48-delta*0.08);
+  if(delta>=-2) return 0.72+delta*-0.12;
+  return Math.min(2.8, 1-delta*0.22);
+}
+function worldMaxIdx(){
+  return (typeof WORLDS!=='undefined' && WORLDS.length>1) ? WORLDS.length-1 : 49;
+}
+function worldTierIdx(worldIdx){
+  const maxW = worldMaxIdx();
+  const w = Math.max(0, Math.min(worldIdx|0, maxW));
+  if(maxW<=0) return 0;
+  return Math.round(w*(RAR_ORDER.length-1)/maxW);
+}
+function rarBorderStyle(rar){ return ' style="border-color:'+RAR[rar].color+'"'; }
+function rarSlotStyle(rar){ const c=RAR[rar].color; return ' style="border-color:'+c+';background:linear-gradient('+c+'d9,'+c+')"'; }
+function rarTagStyle(rar){ const c=RAR[rar].color; return ' style="color:'+c+';border-color:'+c+'"'; }
+
+// ---- daily featured rotation: deterministic by UTC date, discounted, world-tier stock ----
 function dayKey(){ const d=new Date(); return d.getUTCFullYear()+'-'+(d.getUTCMonth()+1)+'-'+d.getUTCDate(); }
 function hashStr(s){ let h=2166136261>>>0; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
 function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 const FEATURED_OFF = 0.25;   // 25% off featured items
 function featuredPrice(id){ return Math.max(5, Math.round(itemPrice(id)*(1-FEATURED_OFF))); }
-function dailyShop(n=6){
-  const rng = mulberry32(hashStr(dayKey()));
-  const pool = GEAR_CATALOG.slice();
+function primaryShopRarity(worldIdx){ return RAR_ORDER[worldTierIdx(worldIdx)]; }
+function shopRaritiesForWorld(worldIdx){
+  const i = worldTierIdx(worldIdx);
+  const out = new Set();
+  if(i>=0) out.add(RAR_ORDER[i]);
+  if(i>0) out.add(RAR_ORDER[i-1]);
+  if(i<RAR_ORDER.length-1) out.add(RAR_ORDER[i+1]);
+  return out;
+}
+function dailyShopCount(worldIdx){ return Math.min(10, 6 + Math.floor(worldTierIdx(worldIdx)/8)); }
+function dailyShop(n, worldIdx){
+  const w = typeof worldIdx==='number' ? worldIdx : (typeof selWorld!=='undefined' ? selWorld : 0);
+  const count = n||dailyShopCount(w);
+  const allowed = shopRaritiesForWorld(w);
+  const rng = mulberry32(hashStr(dayKey()+'|w'+w));
+  const pool = GEAR_CATALOG.filter(id=>allowed.has(itemRar(id)));
   for(let i=pool.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
-  return pool.slice(0,n);
+  return pool.slice(0, Math.min(count, pool.length));
 }
 
 // ---- gear icon (tinted silhouette on transparent bg) ----
@@ -271,14 +415,20 @@ function compositeCharURL(){
 // Inventory tab (#eqchar). Keep this as the world-emblem refresher so equipping gear doesn't clobber it.
 function refreshMenuChar(){ if(typeof setStageEmblem==='function' && typeof selWorld!=='undefined') setStageEmblem(selWorld); }
 
+function fmtGold(n){ return typeof fmtNum==='function' ? fmtNum(n) : String(Math.round(+n||0)); }
+function cratePrice(key){
+  const w = typeof selWorld!=='undefined' ? selWorld : 0;
+  return Math.round(CRATES[key].price * Math.pow(1.09, w / 5));
+}
+
 // ---- gold display + coin chip ----
-function refreshGoldUI(){ const t=$('goldtxt'); if(t) t.textContent=gold; }
+function refreshGoldUI(){ const t=$('goldtxt'); if(t) t.textContent=fmtGold(gold); }
 let _coinURL='';
 function coinTag(){ if(!_coinURL && SP['coin']) _coinURL=SP['coin'].toDataURL(); return '<img class="coinico" src="'+_coinURL+'" alt="">'; }
 const _ICURL={};   // cached data-URLs for the house-drawn UI icons
 function icURL(n){ if(!_ICURL[n] && SP[n]) _ICURL[n]=SP[n].toDataURL(); return _ICURL[n]||''; }
-const STAT_IC = { dmg:'ic_dmg', hp:'ic_hp', speed:'ic_spd', range:'ic_rng' };
-function rtagHTML(rar){ return '<span class="rtag r-'+rar+'">'+RAR[rar].name+'</span>'; }
+const STAT_IC = { dmg:'ic_dmg', hp:'ic_hp', speed:'ic_spd', range:'ic_rng', crit:'ic_crit', armor:'ic_armor', rate:'ic_rate', magnet:'ic_mag', regen:'ic_regen', gold:'ic_gold', vamp:'ic_vamp', pierce:'ic_pierce' };
+function rtagHTML(rar){ return '<span class="rtag r-'+rar+'"'+rarTagStyle(rar)+'>'+RAR[rar].name+'</span>'; }
 function statTag(stat){ return '<span class="stag s-'+stat+'">'+STAT[stat].short+'</span>'; }
 
 // ============ PURCHASING ============
@@ -298,29 +448,36 @@ function shopCardHTML(id, price){
   const off = Math.round((1 - price/itemPrice(id))*100);
   const ribbon = off>0 ? '<div class="sribbon'+(off>=40?' big':'')+'">-'+off+'%</div>' : '';
   const action = owned ? '<div class="scheck">✓</div>'
-    : '<button class="sbuy'+(gold<price?' poor':'')+'" data-id="'+id+'" data-price="'+price+'">'+coinTag()+price+'</button>';
-  return '<div class="scard r-'+rar+(owned?' owned':'')+'">'+ribbon+
+    : '<button class="sbuy'+(gold<price?' poor':'')+'" data-id="'+id+'" data-price="'+price+'">'+coinTag()+fmtGold(price)+'</button>';
+  return '<div class="scard r-'+rar+(owned?' owned':'')+'"'+rarBorderStyle(rar)+'>'+ribbon+
     '<div class="sname">'+itemName(id)+'</div>'+
     '<div class="sicon"><img src="'+gearIconURL(id)+'" alt=""></div>'+
-    '<div class="stagrow">'+rtagHTML(rar)+statTag(itemStat(id))+'<span class="sbonus">'+itemBonusShort(id)+'</span></div>'+
-    action+'</div>';
+    '<div class="smeta">'+
+      '<div class="stagline">'+rtagHTML(rar)+statTag(itemStat(id))+'</div>'+
+      '<div class="sbonus">'+itemBonusShort(id)+'</div>'+
+    '</div>'+
+    '<div class="sfoot">'+action+'</div></div>';
 }
 
 function renderShop(){
   const grid=$('shopgrid'); if(!grid) return;
   let html = '';
-  // ---- DAILY SHOP (rotating, discounted) ----
-  html += '<div class="banner"><span>DAILY SHOP</span></div><div class="shopsub">Resets at midnight (UTC) · up to -25%</div>';
+  // ---- DAILY SHOP (rotating, discounted, tier matches selected world) ----
+  const shopRar = primaryShopRarity(typeof selWorld!=='undefined' ? selWorld : 0);
+  const shopWorld = (typeof selWorld!=='undefined' ? selWorld : 0) + 1;
+  const shopN = dailyShopCount(typeof selWorld!=='undefined' ? selWorld : 0);
+  html += '<div class="banner"><span>DAILY SHOP</span></div>'+
+    '<div class="shopsub">World '+shopWorld+' · '+RAR[shopRar].name+' tier · '+shopN+' items · resets midnight UTC · up to -25%</div>';
   html += '<div class="ggrid">';
-  for(const id of dailyShop(6)) html += shopCardHTML(id, featuredPrice(id));
+  for(const id of dailyShop()) html += shopCardHTML(id, featuredPrice(id));
   html += '</div>';
   // ---- CASES ----
   html += '<div class="banner"><span>CASES</span></div><div class="crates">';
-  for(const key of CRATE_ORDER){ const cr=CRATES[key]; const poor=gold<cr.price;
+  for(const key of CRATE_ORDER){ const cr=CRATES[key]; const price=cratePrice(key); const poor=gold<price;
     html += '<div class="crate c-'+key+'" style="--glow:'+cr.glow+'">'+
       '<button class="crinfo" data-crinfo="'+key+'" title="Drop chances" aria-label="Drop chances">i</button>'+
       '<div class="cratebox"><img src="'+icURL('ic_crate')+'" alt=""></div><div class="cratename">'+cr.name+'</div>'+
-      '<button class="sbuy cratebuy'+(poor?' poor':'')+'" data-crate="'+key+'">'+coinTag()+cr.price+'</button></div>';
+      '<button class="sbuy cratebuy'+(poor?' poor':'')+'" data-crate="'+key+'" data-cprice="'+price+'">'+coinTag()+fmtGold(price)+'</button></div>';
   }
   html += '</div>';
   // ---- CHARACTER SHOP ----
@@ -330,7 +487,7 @@ function renderShop(){
   grid.innerHTML = html;
 
   grid.querySelectorAll('button.sbuy[data-id]').forEach(b=>b.addEventListener('click',()=>buyItem(b.dataset.id, +b.dataset.price)));
-  grid.querySelectorAll('button[data-crate]').forEach(b=>b.addEventListener('click',()=>openCrate(b.dataset.crate)));
+  grid.querySelectorAll('button[data-crate]').forEach(b=>b.addEventListener('click',()=>openCrate(b.dataset.crate, +b.dataset.cprice)));
   grid.querySelectorAll('button[data-crinfo]').forEach(b=>b.addEventListener('click',(e)=>{ e.stopPropagation(); openCrateOdds(b.dataset.crinfo); }));
   if(typeof initRecruitUI==='function') initRecruitUI(grid);
 }
@@ -343,9 +500,9 @@ function rollCrateRarity(key){
 }
 function rollCrateItem(key){ const r=rollCrateRarity(key); const pool=catalogByRarity(r); return pool[Math.floor(Math.random()*pool.length)]; }
 
-function openCrate(key){
-  const cr=CRATES[key]; if(gold<cr.price) return;
-  gold-=cr.price; saveGold(); refreshGoldUI();
+function openCrate(key, price){
+  const cr=CRATES[key]; const pay=price||cratePrice(key); if(gold<pay) return;
+  gold-=pay; saveGold(); refreshGoldUI();
   if(typeof sfx!=='undefined') sfx.pick();
   const won = rollCrateItem(key);
   const dup = hasItemId(won);
@@ -361,7 +518,7 @@ function openCrate(key){
   const strip=$('crstrip'); strip.innerHTML='';
   for(let i=0;i<REELN;i++){
     const id = i===WINIDX ? won : GEAR_CATALOG[Math.floor(Math.random()*GEAR_CATALOG.length)];
-    strip.innerHTML += '<div class="reelitem r-'+itemRar(id)+'"><img src="'+gearIconURL(id)+'"></div>';
+    strip.innerHTML += '<div class="reelitem r-'+itemRar(id)+'"'+rarBorderStyle(itemRar(id))+'><img src="'+gearIconURL(id)+'"></div>';
   }
   ov.classList.remove('hidden'); $('crresult').classList.add('hidden'); $('crclaim').classList.add('hidden');
   strip.style.transition='none'; strip.style.transform='translateX(0)';
@@ -375,10 +532,11 @@ function openCrate(key){
     if(typeof sfx!=='undefined'){ sfx.evolve(); }
     const res=$('crresult');
     res.className='crresult r-'+itemRar(won);
+    res.setAttribute('style','border-color:'+RAR[itemRar(won)].color);
     res.innerHTML='<img src="'+gearIconURL(won)+'"><div><div class="crwname">'+itemName(won)+'</div>'+
       rtagHTML(itemRar(won))+statTag(itemStat(won))+'<div class="gbonus">'+itemBonusTxt(won)+'</div>'+
       (dup
-        ? '<div class="crdup">duplicate found</div><div class="cractrow"><button class="cract keep" id="crkeep">KEEP</button><button class="cract sell" id="crsell">SELL +'+sellValue(won)+'</button></div>'
+        ? '<div class="crdup">duplicate found</div><div class="cractrow"><button class="cract keep" id="crkeep">KEEP</button><button class="cract sell" id="crsell">SELL +'+fmtGold(sellValue(won))+'</button></div>'
         : '<div class="crnew">NEW!</div>')+'</div>';
     res.classList.remove('hidden');
     const claim=$('crclaim');
@@ -425,23 +583,32 @@ function autoEquipBest(){   // fill every slot with its rarest owned piece — o
 
 function eqSlotHTML(cat){
   const uid=gearEquip[cat], id=uid&&gearInstanceItem(uid);
-  if(id) return '<div class="eqslot r-'+itemRar(id)+'" data-cat="'+cat+'"><span class="eqlv">'+STAT[itemStat(id)].short+'</span>'+
+  if(id) return '<div class="eqslot r-'+itemRar(id)+'" data-cat="'+cat+'"'+rarSlotStyle(itemRar(id))+'><span class="eqlv">'+STAT[itemStat(id)].short+'</span>'+
     '<img src="'+gearIconURL(id)+'"><span class="eqpct">'+itemBonusShort(id)+'</span></div>';
   return '<div class="eqslot" data-cat="'+cat+'"><span class="eqlv">'+CAT_LABEL[cat]+'</span><span class="eqempty">+</span></div>';
 }
+function eqStatChip(ic, txt){ return '<span class="eqstat"><img class="ei" src="'+icURL(ic)+'">'+txt+'</span>'; }
 function renderInventory(){
   const stage=$('eqstage'); const owned=$('invowned'); if(!stage||!owned) return;
   const pct=(stat)=>Math.round((equippedStatMult(stat)-1)*100);
   stage.innerHTML =
-    '<div class="eqside left">'+eqSlotHTML('helmet')+eqSlotHTML('chest')+'</div>'+
+    '<div class="eqside left">'+eqSlotHTML('cape')+eqSlotHTML('helmet')+eqSlotHTML('chest')+eqSlotHTML('gloves')+'</div>'+
     '<div class="eqmid"><img class="eqchar" src="'+compositeCharURL()+'" alt="">'+
       '<div class="eqstats">'+
-        '<span class="eqstat"><img class="ei" src="'+icURL('ic_dmg')+'">+'+equippedFlatDmg()+'</span>'+
-        '<span class="eqstat"><img class="ei" src="'+icURL('ic_hp')+'">+'+equippedHp()+'</span>'+
-        '<span class="eqstat"><img class="ei" src="'+icURL('ic_spd')+'">+'+pct('speed')+'%</span>'+
-        '<span class="eqstat"><img class="ei" src="'+icURL('ic_rng')+'">+'+pct('range')+'%</span>'+
+        eqStatChip('ic_dmg', (typeof fmtPlus==='function' ? fmtPlus(equippedFlatDmg()) : '+'+equippedFlatDmg()))+
+        eqStatChip('ic_hp', (typeof fmtPlus==='function' ? fmtPlus(equippedHp()) : '+'+equippedHp()))+
+        eqStatChip('ic_spd','+'+pct('speed')+'%')+
+        eqStatChip('ic_rng','+'+pct('range')+'%')+
+        eqStatChip('ic_crit','+'+Math.round(equippedCrit()*100)+'%')+
+        eqStatChip('ic_armor','-'+Math.round((1-equippedArmorMult())*100)+'%')+
+        eqStatChip('ic_rate','+'+pct('rate')+'%')+
+        eqStatChip('ic_mag','+'+pct('magnet')+'%')+
+        eqStatChip('ic_regen', (gearStatUsesPercent('regen', shopWorldIdx()) ? '+'+Math.round(equippedRegen()*100)+'%' : ((typeof fmtPlus==='function' ? fmtPlus(equippedRegen()) : '+'+equippedRegen())))+'/s')+
+        eqStatChip('ic_gold','+'+pct('gold')+'%')+
+        eqStatChip('ic_vamp', (gearStatUsesPercent('vamp', shopWorldIdx()) ? '+'+Math.round(equippedVamp()*100)+'%' : ((typeof fmtPlus==='function' ? fmtPlus(equippedVamp()) : '+'+equippedVamp())))+'/kill')+
+        eqStatChip('ic_pierce', (typeof fmtPlus==='function' ? fmtPlus(equippedPierce()) : '+'+equippedPierce()))+
       '</div></div>'+
-    '<div class="eqside right">'+eqSlotHTML('pants')+eqSlotHTML('shoes')+'</div>';
+    '<div class="eqside right">'+eqSlotHTML('belt')+eqSlotHTML('pants')+eqSlotHTML('ring')+eqSlotHTML('shoes')+'</div>';
   stage.querySelectorAll('.eqslot[data-cat]').forEach(el=>el.addEventListener('click',()=>{
     const uid=gearEquip[el.dataset.cat]; if(uid) openItemPop(uid); }));
 
@@ -467,7 +634,7 @@ function renderInventory(){
   if(!list.length){ owned.innerHTML='<div class="invhint">Open a Case or buy gear in the Shop to fill your slots.</div>'; return; }
   let html='';
   for(const inst of list){ const id=inst.itemId, selected=fuseSelected.has(inst.uid), equipped=gearEquip[itemCat(id)]===inst.uid;
-    html += '<div class="itile r-'+itemRar(id)+(equipped?' equipped':'')+(selected?' selected':'')+(fuseSelectMode?' fusemode':'')+'" data-uid="'+inst.uid+'" title="'+itemName(id)+'">'+
+    html += '<div class="itile r-'+itemRar(id)+(equipped?' equipped':'')+(selected?' selected':'')+(fuseSelectMode?' fusemode':'')+'" data-uid="'+inst.uid+'" title="'+itemName(id)+'"'+rarSlotStyle(itemRar(id))+'>'+
       (equipped?'<span class="ieq">✓</span>':'')+'<span class="ilv">'+STAT[itemStat(id)].short+'</span>'+
       '<img src="'+gearIconURL(id)+'"><span class="ipct">'+itemBonusShort(id)+'</span></div>';
   }
@@ -484,16 +651,16 @@ function openItemPop(uid){
   const id=gearInstanceItem(uid); if(!id) return;
   const cat=itemCat(id), rar=itemRar(id), equipped=gearEquip[cat]===uid;
   ov.innerHTML =
-    '<div class="ipcard r-'+rar+'">'+
+    '<div class="ipcard r-'+rar+'"'+rarBorderStyle(rar)+'>'+
       '<button class="ipx" id="ipclose">✕</button>'+
-      '<div class="ipicon r-'+rar+'"><img src="'+gearIconURL(id)+'"></div>'+
+      '<div class="ipicon r-'+rar+'"'+rarSlotStyle(rar)+'><img src="'+gearIconURL(id)+'"></div>'+
       '<div class="ipname">'+itemName(id)+'</div>'+
       '<div class="iptags">'+rtagHTML(rar)+statTag(itemStat(id))+'</div>'+
       '<div class="ipstat">'+itemBonusTxt(id)+'</div>'+
       '<div class="ipslot">Slot · '+CAT_LABEL[cat]+'</div>'+
       '<div class="ipactions">'+
         '<button class="ipbtn'+(equipped?' un':'')+'" id="ipequip">'+(equipped?'UNEQUIP':'EQUIP')+'</button>'+
-        '<button class="ipbtn sell" id="ipsell">SELL +'+sellValue(id)+'</button>'+
+        '<button class="ipbtn sell" id="ipsell">SELL +'+fmtGold(sellValue(id))+'</button>'+
       '</div>'+
     '</div>';
   ov.classList.remove('hidden');
@@ -549,7 +716,7 @@ function openConfirmCard(title, body, yesText, onYes, tone){
 }
 function openSellConfirm(uid){
   const id=gearInstanceItem(uid); if(!id) return;
-  openConfirmCard('SELL ITEM', 'Sell '+itemName(id)+' for '+sellValue(id)+' coins?', 'YES', ()=>{
+  openConfirmCard('SELL ITEM', 'Sell '+itemName(id)+' for '+fmtGold(sellValue(id))+' coins?', 'YES', ()=>{
     sellGearInstance(uid);
   }, 'warn');
 }
@@ -585,9 +752,9 @@ function openFuseResult(result){
   const ov=$('itempop'); if(!ov) return;
   const id=result.itemId, rar=itemRar(id);
   ov.innerHTML =
-    '<div class="ipcard r-'+rar+'">'+
+    '<div class="ipcard r-'+rar+'"'+rarBorderStyle(rar)+'>'+
       '<button class="ipx" id="ipclose">✕</button>'+
-      '<div class="ipicon r-'+rar+'"><img src="'+gearIconURL(id)+'"></div>'+
+      '<div class="ipicon r-'+rar+'"'+rarSlotStyle(rar)+'><img src="'+gearIconURL(id)+'"></div>'+
       '<div class="ipname">'+(result.success?'FUSE SUCCESS':'FUSE FAILED')+'</div>'+
       '<div class="iptags">'+rtagHTML(rar)+statTag(itemStat(id))+'</div>'+
       '<div class="ipstat">'+itemName(id)+'</div>'+
@@ -607,7 +774,7 @@ function openCrateOdds(key){
   let rows='';
   for(const r of RAR_ORDER){ const w=odds[r]||0; if(w<=0) continue;
     const pct=w/total*100;
-    rows += '<div class="oddsrow"><span class="rtag r-'+r+'">'+RAR[r].name+'</span>'+
+    rows += '<div class="oddsrow"><span class="rtag r-'+r+'"'+rarTagStyle(r)+'>'+RAR[r].name+'</span>'+
             '<span class="oddsbarwrap"><span class="oddsbar" style="width:'+pct.toFixed(1)+'%;background:'+RAR[r].color+'"></span></span>'+
             '<span class="oddspct">'+(pct<0.1?'<0.1':pct.toFixed(1))+'%</span></div>';
   }
@@ -886,13 +1053,28 @@ const _initTab = (location.hash||'').slice(1);
 showTab(['battle','shop','inventory','character','pets'].indexOf(_initTab)>=0 ? _initTab : 'battle');
 
 // ---- asset prewarm + loading screen ----
+function dismissLoading(){
+  const L=$('loading');
+  if(L && !L.classList.contains('hidden')){
+    L.classList.add('fade');
+    setTimeout(()=>L.classList.add('hidden'), 420);
+  }
+}
+window.dismissLoading = dismissLoading;
+
 // All sprites are procedural canvases built at script-load. Warm the GPU upload of every sprite
 // and pre-generate each gear tint so nothing is built mid-game, then fade out the loading overlay.
 (function prewarmAssets(){
-  const scr=document.createElement('canvas'); scr.width=scr.height=8; const sg=scr.getContext('2d');
-  for(const k in SP){  try{ sg.drawImage(SP[k],0,0,8,8);  }catch(e){} }
-  for(const k in SPW){ try{ sg.drawImage(SPW[k],0,0,8,8); }catch(e){} }
-  if(typeof tintedSprite==='function'){ for(const cat of GEAR_CATS) for(const r of RAR_ORDER){ try{ tintedSprite('gear_'+cat, RAR[r].color); }catch(e){} } }
-  const L=$('loading');
-  if(L) requestAnimationFrame(()=>{ L.classList.add('fade'); setTimeout(()=>L.classList.add('hidden'), 420); });
+  dismissLoading();   // hide immediately — prewarm continues in background
+  const run = ()=>{
+    const scr=document.createElement('canvas'); scr.width=scr.height=8; const sg=scr.getContext('2d');
+    for(const k in SP){  try{ sg.drawImage(SP[k],0,0,8,8);  }catch(e){} }
+    for(const k in SPW){ try{ sg.drawImage(SPW[k],0,0,8,8); }catch(e){} }
+    if(typeof tintedSprite==='function'){
+      for(const cat of GEAR_CATS) for(const r of RAR_ORDER){ try{ tintedSprite('gear_'+cat, RAR[r].color); }catch(e){} }
+    }
+  };
+  if(typeof requestIdleCallback==='function') requestIdleCallback(run, { timeout: 3000 });
+  else setTimeout(run, 50);
 })();
+setTimeout(dismissLoading, 8000);   // safety net — never stuck on loading forever
