@@ -1893,11 +1893,11 @@ const BOSS_ARMOR_BY_KEY = {
   tatasahur:0.11, hotspot:0.12, saturnita:0.13, tralala2:0.14, croco2:0.13, orcalero:0.12,
   flank:0.15, w1shoe:0.10, w1bomb:0.13, w1drum:0.09,
 };
-const BOSS_P3_ARMOR_BY_GIMMICK = {
-  w1bomb:0.14, w1drum:0.12, w1shoe:0.10, storm:0.14, spiral:0.11, chaos:0.12,
-  flank:0.06, ext_fin_storm:0.15, ext_fin_hive:0.16, ext_fin_clock:0.13, ext_fin_frost:0.12,
-  ext_fin_ember:0.11, ext_fin_gravity:0.13, ext_fin_quantum:0.12, ext_fin_toxic:0.12,
-  ext_fin_bone:0.14, ext_fin_void:0.13,
+const BOSS_P3_HIT_CAP_BY_GIMMICK = {
+  w1bomb:0.08, w1drum:0.09, w1shoe:0.10, storm:0.08, spiral:0.10, chaos:0.09,
+  flank:0.11, ext_fin_storm:0.07, ext_fin_hive:0.07, ext_fin_clock:0.08, ext_fin_frost:0.09,
+  ext_fin_ember:0.10, ext_fin_gravity:0.08, ext_fin_quantum:0.09, ext_fin_toxic:0.09,
+  ext_fin_bone:0.08, ext_fin_void:0.08,
 };
 
 function bossMilestoneHpMul(bossIdx){
@@ -1927,25 +1927,43 @@ function bossBaseDR(def, bossIdx){
   return Math.min(0.18, dr);
 }
 
+function bossP3HitCapPct(e){
+  const gimm = e.gimmick || '';
+  if(BOSS_P3_HIT_CAP_BY_GIMMICK[gimm]) return BOSS_P3_HIT_CAP_BY_GIMMICK[gimm];
+  if(gimm.startsWith('ext_fin')) return 0.08;
+  const mk = e.mk || e.spr || '';
+  if(mk.includes('storm') || mk.includes('bomb')) return 0.08;
+  return Math.min(0.12, Math.max(0.08, e.bossDRBase ?? 0.10));
+}
+
 function bossP3ExtraDR(e){
   const gimm = e.gimmick || '';
-  if(BOSS_P3_ARMOR_BY_GIMMICK[gimm]) return BOSS_P3_ARMOR_BY_GIMMICK[gimm];
-  if(gimm.startsWith('ext_fin_')){
-    for(const k in BOSS_P3_ARMOR_BY_GIMMICK){ if(k.startsWith('ext_fin_') && gimm.includes(k.slice(8))) return BOSS_P3_ARMOR_BY_GIMMICK[k]; }
-    return 0.12;
-  }
-  const mk = e.mk || e.spr || '';
-  if(mk.includes('storm') || mk.includes('bomb')) return 0.13;
-  if(e.finalPhase) return 0.11;
-  return 0.09;
+  if(gimm.startsWith('ext_fin')) return 0.10;
+  return 0.08;
 }
 
 function applyBossPhase3Armor(e){
   const lead = e.lead || e;
   if(lead._p3Armor) return;
   lead._p3Armor = true;
-  const extra = bossP3ExtraDR(lead);
-  lead.bossDR = Math.min(0.32, (lead.bossDRBase ?? lead.bossDR ?? 0.11) + extra);
+  if(lead.finalPhase){
+    lead.bossHitCapPct = bossP3HitCapPct(lead);
+  } else {
+    const extra = bossP3ExtraDR(lead);
+    lead.bossDR = Math.min(0.28, (lead.bossDRBase ?? lead.bossDR ?? 0.11) + extra);
+  }
+}
+
+function applyBossHitArmor(lead, dmg){
+  if(!lead || !lead.isBoss) return dmg;
+  if(lead.finalPhase && lead.vph >= 3 && lead.bossHitCapPct > 0){
+    const cap = lead.maxHp * lead.bossHitCapPct;
+    if(dmg > cap) return cap;
+    return dmg;
+  }
+  const dr = lead.bossDR || 0;
+  if(dr > 0) return dmg * (1 - dr);
+  return dmg;
 }
 
 function assignBossTuning(boss, def, bossIdx){
@@ -3787,11 +3805,6 @@ function damageEnemy(e,dmg,fx,fy,crit){
     dmg *= e.scriptVulnMul;
   }
   if(e.lead){ damageEnemy(e.lead,dmg,fx,fy,crit); e.hitT=0.12; e.sq=1; return; }  // duo partner routes to the lead's shared HP
-  if(e.isBoss){
-    const lead = e.lead || e;
-    const dr = lead.bossDR || 0;
-    if(dr > 0) dmg *= (1 - dr);
-  }
   if(!P.trueDmg && e.front>0 && fx!=null){     // frontal armor: hits from the player-facing arc are softened
     const toSrc=Math.atan2(fy-e.y,fx-e.x), toP=Math.atan2(P.y-e.y,P.x-e.x);
     let d=Math.abs(((toSrc-toP+Math.PI)%TAU+TAU)%TAU-Math.PI);
@@ -3807,6 +3820,7 @@ function damageEnemy(e,dmg,fx,fy,crit){
     if(typeof haptic === 'function') haptic('jackpot');
     if(typeof engageOnJackpot === 'function') engageOnJackpot();
   }
+  if(e.isBoss) dmg = applyBossHitArmor(e.lead || e, dmg);
   e.hp -= dmg; e.hitT=0.12; e.sq=1;
   if(!e.isBoss && !e.under && fx!=null && fy!=null && !(fx===e.x && fy===e.y)){   // small knockback away from the hit source
     const a=Math.atan2(e.y-fy,e.x-fx);
