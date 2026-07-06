@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.79';
+const CURRENT_VERSION = '1.80';
 const CHANGELOG = [
+  { v: '1.80', notes: 'Swarm enemy XP is now flat in every world — fodder drops the same small blue / medium green orbs as World 1. No more large yellow boss orbs or lucky-block gold orbs from regular swarm kills (those stay boss/lucky-block only).' },
   { v: '1.79', notes: 'Compact number formatting from 1k upward — gold, shop prices, run coins, and big gear stats now show as 1.3k, 14.4k, 1.2M, etc. instead of raw four-digit+ values.' },
   { v: '1.78', notes: 'Hotfix: runs no longer bounce straight back to the menu when you have high-tier gear. Anti-cheat stat caps now scale with your equipped loadout (v1.77 had fixed ceilings that legit Omniscient gear exceeded on frame one).' },
   { v: '1.77', notes: 'Gear now scales hard with your world tier — on-tier loadout gets a big damage boost and enemies (especially fodder) have much lower HP; undergeared runs stay punishing. Round start: 3s spawn invuln, slower first spawns, lucky blocks delayed, and ground pre-render is chunked so huge maps no longer hitch-freeze you into a death on load.' },

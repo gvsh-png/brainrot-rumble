@@ -126,7 +126,7 @@ function scaleStat(base, band, wi, key) {
   const scale = 1 + band * 0.09 + (wi - 11) * 0.02;
   if (key === 'hp') return Math.max(3, Math.round(base * scale));
   if (key === 'score') return Math.round(base * (1 + band * 0.05));
-  if (key === 'xp') return Math.max(1, Math.round(base * (1 + band * 0.04)));
+  if (key === 'xp') return Math.max(1, Math.round(base));   // flat across worlds — orb size stays W1-like
   return base;
 }
 

@@ -95,6 +95,12 @@ const BOSS_WIND=0.9;      // boss attack wind-up: how long the telegraph shows b
 // Tier 4 is the gold "lucky" gem — only dropped by lucky blocks, never rolled by orbTier().
 const ORB = [null, {spr:'orbS',v:1,sz:28}, {spr:'orbM',v:4,sz:34}, {spr:'orbL',v:10,sz:44}, {spr:'orbGold',v:6,sz:40}];
 function orbTier(xp){ return xp<=1 ? 1 : xp<=3 ? 2 : 3; }
+// Swarm XP is flat in every world — W1-sized orbs only (small blue / medium green), never large gold or lucky-tier.
+function normalizeSwarmXp(xp){
+  const x = Math.round(+xp || 1);
+  return x <= 1 ? 1 : 2;
+}
+function swarmOrbTier(xp){ return normalizeSwarmXp(xp) <= 1 ? 1 : 2; }
 // ---- lucky blocks: stationary, shootable ? blocks that spawn around the map and drop a reward ----
 const LUCKY_CAP = 2;                 // most live at once (overworld spawns 2 at the start of each wave)
 let luckyTimer = 0;                  // countdown to the next spawn batch
@@ -1853,7 +1859,7 @@ const CHAOS_EVENTS=[
   {name:'GRAVITY',      fn:()=>{chaosGravT=3;}},
   {name:'BERSERK',      fn:()=>{chaosBerserkT=7;for(const e of enemies){if(!e.isBoss&&!e.under)e.hp=Math.min(e.maxHp,e.hp+e.maxHp*0.20);}}},
   {name:'DISARM',       fn:()=>{chaosDisarmT=3.5;}},
-  {name:'SWARM',        fn:()=>{ let n=18;while(n-->0&&enemies.length<MAX_ENEMIES-1){const p=ringPos(),f=curFoes[0];enemies.push({spr:f.spr,name:f.name,x:p.x,y:p.y,r:f.r*0.65,hp:f.hp*HP_MULT*0.28,maxHp:f.hp*HP_MULT*0.28,_shooter:false,_hazard:false,_burst:false,dmgBuff:0.5,sp:f.sp*1.8,xp:f.xp*0.25,score:8,range:0,shoot:null,death:null,aoe:null,aoeCd:3,dash:false,dst:'idle',dcd:2,da:0,dwin:0,ddur:0,shell:false,shellCd:5,iv:0.25,support:null,supCd:3,front:0,kb:0,pullAura:0,trail:null,trailT:0,cast:null,castCd:0,under:false,digT:0,spin:0,t:rand(0,TAU),wob:rand(2,4),shootCd:3,frz:0,isBoss:false,hitT:0,sq:0,face:1,chaosSwarm:true});}}},
+  {name:'SWARM',        fn:()=>{ let n=18;while(n-->0&&enemies.length<MAX_ENEMIES-1){const p=ringPos(),f=curFoes[0];enemies.push({spr:f.spr,name:f.name,x:p.x,y:p.y,r:f.r*0.65,hp:f.hp*HP_MULT*0.28,maxHp:f.hp*HP_MULT*0.28,_shooter:false,_hazard:false,_burst:false,dmgBuff:0.5,sp:f.sp*1.8,xp:normalizeSwarmXp(f.xp),score:8,range:0,shoot:null,death:null,aoe:null,aoeCd:3,dash:false,dst:'idle',dcd:2,da:0,dwin:0,ddur:0,shell:false,shellCd:5,iv:0.25,support:null,supCd:3,front:0,kb:0,pullAura:0,trail:null,trailT:0,cast:null,castCd:0,under:false,digT:0,spin:0,t:rand(0,TAU),wob:rand(2,4),shootCd:3,frz:0,isBoss:false,hitT:0,sq:0,face:1,chaosSwarm:true});}}},
   {name:'BOMB RAIN',    fn:()=>{chaosBombRainT=20;chaosBombRainCd=0;}},
 ];
 
@@ -1954,7 +1960,7 @@ function spawnEnemy(){
     hp:def.hp*HP_MULT*hpMult, maxHp:def.hp*HP_MULT*hpMult,
     _shooter:foeIsShooter(def), _hazard:foeIsHazard(def), _burst:foeIsBurst(def),
     dmgBuff: special?SPECIAL_DMG_BUFF:1,                // buffy specials also hit harder on contact
-    sp:def.sp*(1+wave*0.02), xp:def.xp, score:def.score, range:def.range, shoot:def.shoot, death:def.death,
+    sp:def.sp*(1+wave*0.02), xp:normalizeSwarmXp(def.xp), score:def.score, range:def.range, shoot:def.shoot, death:def.death,
     aoe:def.aoe, aoeCd:rand(1.5,3),
     dash:def.dash, dst:'idle', dcd:rand(2,4), da:0, dwin:0, ddur:0,
     shell:def.shell, shellCd:rand(3,5), iv:0,
@@ -3258,7 +3264,7 @@ function update(dt){
       } else {
         if(e.death && e.death.type==='ring'){ const n=e.death.n||4; for(let k=0;k<n;k++) fireEB(e.x,e.y,k*TAU/n,150,'#e58a3a'); }
         if(e.death && e.death.type==='split') spawnSplit(e);
-        dropOrb(e.x, e.y, orbTier(e.xp));
+        dropOrb(e.x, e.y, swarmOrbTier(e.xp));
         const coinChance = Math.min(0.22, 0.04 + worldIdx * 0.0035);
         if(Math.random()<coinChance){ const a=rand(0,TAU), s=rand(90,210); gems.push({x:e.x,y:e.y,coin:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s}); }
         if(gameMode!=='practice'){
@@ -3536,7 +3542,7 @@ function debrisDrop(n=3,col){
 function spawnMini(spr,x,y,summoner){
   const def = curFoes.find(f=>f.spr===spr) || {spr, hp:3, sp:84, r:15, xp:1, score:8};
   enemies.push({ spr:def.spr, name:def.name||'', x:clamp(x,WALL,WORLD.w-WALL), y:clamp(y,WALL,WORLD.h-WALL),
-    r:def.r||15, hp:(def.hp||3)*HP_MULT, maxHp:(def.hp||3)*HP_MULT, sp:def.sp||84, xp:def.xp||1, score:def.score||8,
+    r:def.r||15, hp:(def.hp||3)*HP_MULT, maxHp:(def.hp||3)*HP_MULT, sp:def.sp||84, xp:normalizeSwarmXp(def.xp), score:def.score||8,
     t:rand(0,TAU), wob:rand(2,4), shootCd:99, frz:0, iv:0, isBoss:false, hitT:0, sq:0, face:1, summoner });
   resolveEnemyObstacles(enemies[enemies.length-1]);
 }
