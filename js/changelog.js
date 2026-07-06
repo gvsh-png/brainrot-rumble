@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.97';
+const CURRENT_VERSION = '1.98';
 const CHANGELOG = [
+  { v: '1.98', notes: 'Boss durability pass: wave 5/10/15 milestone bosses get more HP (extra chunky on World 1) plus 9–15% boss armor. Final / phase-3 bosses gain extra damage reduction tuned per gimmick (bullet-hell heavies up to ~26% total DR) so they don\'t melt instantly during big attack phases.' },
   { v: '1.97', notes: 'Cutscene & onboarding polish: HUD (XP bar, zoom, dash) hides during end cutscenes and intros/outros; SKIP button works on boss-death phase too. Shop unlock guide appears much faster after clearing a world. Spotlight guides no longer block taps on highlighted tabs. Closing the app mid-tutorial skips remaining guides while keeping feature unlocks from story progress.' },
   { v: '1.96', notes: 'Hotfix: SWARM chaos event enemies no longer take 0 damage — spawn used front:0 which the frontal-armor check treated as full immunity from the front (and you are surrounded during swarms).' },
   { v: '1.95', notes: 'Massive world ability expansion: every extended world (W12–W50) now offers 3 themed picks at level-up — a signature primary plus two biome extras (Sign Flare, Oil Slick, Marsh Gas, Low-G Drift, etc.). W6–W11 gain a fourth signature each (Acorn Shot, Will-o-Wisp, Cloud Bank, Gem Glow, Ashfall, Fossil Cache). New registry FX engine handles auras, trails, bolts, blooms, orbits, pulls, dash quakes, kill zones, echo hits, and more with matching particle rings.' },

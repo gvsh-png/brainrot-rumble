@@ -1887,6 +1887,72 @@ function ringPos(){ // spawn point on a ring around player, clamped to world + c
            y: clamp(P.y+Math.sin(a)*d, WALL+30, WORLD.h-WALL-30) };
 }
 
+// Milestone boss tuning — wave 5/10/15 (and finals) get more HP + flat damage reduction.
+const BOSS_ARMOR_BY_KEY = {
+  tralalero:0.10, crocodilo:0.13, sahur:0.11, vaca:0.12, gorillo:0.14, trippi:0.11,
+  tatasahur:0.11, hotspot:0.12, saturnita:0.13, tralala2:0.14, croco2:0.13, orcalero:0.12,
+  flank:0.15, w1shoe:0.10, w1bomb:0.13, w1drum:0.09,
+};
+const BOSS_P3_ARMOR_BY_GIMMICK = {
+  w1bomb:0.14, w1drum:0.12, w1shoe:0.10, storm:0.14, spiral:0.11, chaos:0.12,
+  flank:0.06, ext_fin_storm:0.15, ext_fin_hive:0.16, ext_fin_clock:0.13, ext_fin_frost:0.12,
+  ext_fin_ember:0.11, ext_fin_gravity:0.13, ext_fin_quantum:0.12, ext_fin_toxic:0.12,
+  ext_fin_bone:0.14, ext_fin_void:0.13,
+};
+
+function bossMilestoneHpMul(bossIdx){
+  if(rushIsActive() || gameMode==='practice') return 1;
+  let mul = bossIdx===0 ? 1.32 : bossIdx===1 ? 1.26 : bossIdx===2 ? 1.20 : 1.14;
+  if(worldIdx===0 && gameMode==='story' && bossIdx<=2){
+    mul *= bossIdx===0 ? 1.30 : bossIdx===1 ? 1.24 : 1.18;
+  }
+  mul *= 1 + worldBand() * 0.035;
+  return mul;
+}
+
+function bossMinHpFloor(bossIdx, isFinal){
+  if(rushIsActive() || gameMode==='practice' || gameMode==='challenger') return 0;
+  const w = worldIdx;
+  const early = w===0 ? [520, 780, 1080] : [400, 620, 860];
+  const idx = Math.min(bossIdx, 2);
+  let floor = early[idx] || 420;
+  if(isFinal || wave>=curWorld().waveTarget) floor *= 1.45;
+  return Math.round(floor * (1 + w * 0.055));
+}
+
+function bossBaseDR(def, bossIdx){
+  const mk = def.moveKey || def.spr || '';
+  let dr = BOSS_ARMOR_BY_KEY[mk] ?? BOSS_ARMOR_BY_KEY[def.spr] ?? 0.11;
+  if(worldIdx===0 && gameMode==='story' && bossIdx<=2) dr = Math.max(dr, 0.09 + bossIdx*0.02);
+  return Math.min(0.18, dr);
+}
+
+function bossP3ExtraDR(e){
+  const gimm = e.gimmick || '';
+  if(BOSS_P3_ARMOR_BY_GIMMICK[gimm]) return BOSS_P3_ARMOR_BY_GIMMICK[gimm];
+  if(gimm.startsWith('ext_fin_')){
+    for(const k in BOSS_P3_ARMOR_BY_GIMMICK){ if(k.startsWith('ext_fin_') && gimm.includes(k.slice(8))) return BOSS_P3_ARMOR_BY_GIMMICK[k]; }
+    return 0.12;
+  }
+  const mk = e.mk || e.spr || '';
+  if(mk.includes('storm') || mk.includes('bomb')) return 0.13;
+  if(e.finalPhase) return 0.11;
+  return 0.09;
+}
+
+function applyBossPhase3Armor(e){
+  const lead = e.lead || e;
+  if(lead._p3Armor) return;
+  lead._p3Armor = true;
+  const extra = bossP3ExtraDR(lead);
+  lead.bossDR = Math.min(0.32, (lead.bossDRBase ?? lead.bossDR ?? 0.11) + extra);
+}
+
+function assignBossTuning(boss, def, bossIdx){
+  boss.bossDR = bossBaseDR(def, bossIdx);
+  boss.bossDRBase = boss.bossDR;
+}
+
 function spawnBoss(){
   let def, bossIdx, isFinal;
   if(rushIsActive()){
@@ -1919,13 +1985,16 @@ function spawnBoss(){
     const bandMul = 1 + (worldHpBand() - 1) * 0.32;
     const waveMul = 1 + Math.max(0, wave - 5) * 0.07;
     const storyScale = gameMode==='challenger' ? 1 : 0.62;
-    const mult = waveMul * (curWorld().hpMul||1) * bandMul * chalMul * storyScale * bossGearHp;
+    const milestoneMul = bossMilestoneHpMul(bossIdx);
+    const mult = waveMul * (curWorld().hpMul||1) * bandMul * chalMul * storyScale * bossGearHp * milestoneMul;
     bar1 = def.hp*HP_MULT*mult;
     bar2 = (def.hp2||0)*HP_MULT*mult;
     baseTotal = bar1+bar2;
-    const p3Scale = bossGearHp < 0.22 ? 0.45 : bossGearHp < 0.35 ? 0.62 : 0.85;
+    const p3Scale = bossGearHp < 0.22 ? 0.52 : bossGearHp < 0.35 ? 0.68 : 0.92;
     p3pool = isFinal ? baseTotal * p3Scale : 0;
     total = baseTotal + p3pool;
+    const floor = bossMinHpFloor(bossIdx, isFinal);
+    if(floor > total) total = floor;
   }
   boss = {
     spr:def.spr, name:def.name, pattern:def.pattern, mk:def.moveKey||def.spr,
@@ -1939,6 +2008,7 @@ function spawnBoss(){
     rollSpray:0, warpT:0, wd:null, gsweep:null, carpet:0, cbT:0, tether:0
   };
   if(boss.gimmick==='flank') boss.front=0.5;   // Pit Armor: front hits softened, so you must flank
+  assignBossTuning(boss, def, bossIdx);
   if(worldIdx===0 && gameMode==='story' && bossIdx<3){
     const gmap = { tralalero:'w1shoe', crocodilo:'w1bomb', sahur:'w1drum' };
     if(gmap[def.spr]) boss.gimmick = gmap[def.spr];
@@ -3717,6 +3787,11 @@ function damageEnemy(e,dmg,fx,fy,crit){
     dmg *= e.scriptVulnMul;
   }
   if(e.lead){ damageEnemy(e.lead,dmg,fx,fy,crit); e.hitT=0.12; e.sq=1; return; }  // duo partner routes to the lead's shared HP
+  if(e.isBoss){
+    const lead = e.lead || e;
+    const dr = lead.bossDR || 0;
+    if(dr > 0) dmg *= (1 - dr);
+  }
   if(!P.trueDmg && e.front>0 && fx!=null){     // frontal armor: hits from the player-facing arc are softened
     const toSrc=Math.atan2(fy-e.y,fx-e.x), toP=Math.atan2(P.y-e.y,P.x-e.x);
     let d=Math.abs(((toSrc-toP+Math.PI)%TAU+TAU)%TAU-Math.PI);
@@ -4720,6 +4795,7 @@ function updateGimmick(e,dt){
 // final boss enters phase 3: lock invincible, halt all attacks, grow the arena, begin the charge-up
 function startFinalCharge(e){
   e.vph=3; e.charging=FINAL_CHARGE; e.iv=FINAL_CHARGE+0.3;
+  applyBossPhase3Armor(e);
   // wipe every sustained attack so the boss truly stands down while charging
   e.storm=0; e.spin=0; e.pull=0; e.echo=null; e.gsweep=null; e.wd=null; e.warpT=0;
   e.carpet=0; e.tether=0; e.stun=0; e.dst='idle'; e.rollSpray=0; e.dashRepeat=0;
@@ -5022,7 +5098,8 @@ function updateBoss(e,dt){
     if(e.bars===2){ ph = e.hp > e.bar2 + e.bar1*0.5 ? 1 : e.hp > e.bar2 ? 2 : 3; }
     else { const frac=e.hp/e.maxHp; ph = frac<0.33?3 : frac<0.66?2 : 1; }
     if(ph>e.vph){ e.vph=ph; bigText(e.bars===2 && ph===3 ? 'FINAL PHASE!' : 'PHASE '+ph+'!','#d2a0ff');
-      shake=Math.max(shake,12); e.iv=0.6; ebullets=[]; sfx.boss(); if(e.mate) e.mate.iv=0.6; }
+      shake=Math.max(shake,12); e.iv=0.6; ebullets=[]; sfx.boss(); if(e.mate) e.mate.iv=0.6;
+      if(ph===3) applyBossPhase3Armor(e); }
   }
 
   // FINAL-PHASE CHARGE-UP: boss is invincible, stands still and stops attacking while powering up
