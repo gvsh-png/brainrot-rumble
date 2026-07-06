@@ -3537,6 +3537,36 @@ function mRingGap(e,n,spd,col,gapFrac,gapAt,dmgMul){
 function w1EarlyBossHell(e){
   return worldIdx===0 && gameMode==='story' && (e.spr==='tralalero' || e.spr==='crocodilo' || e.spr==='sahur');
 }
+// fake bullet-hell tuning: flashy patterns, wide gaps, low chip damage
+function bossHellDmg(e){
+  if(gameMode==='challenger') return 0.45;
+  if(w1EarlyBossHell(e)) return 0.32;
+  return (e && e.finalPhase) ? 0.34 : 0.38;
+}
+function bossHellStorm(e, opts){
+  const dm=bossHellDmg(e), o=opts||{};
+  e.storm=o.dur!=null?o.dur:2.4; e.stormN=o.n!=null?o.n:6; e.stormSpd=o.spd!=null?o.spd:102;
+  e.stormStep=o.step!=null?o.step:0.32; e.stormDir=o.dir!=null?o.dir:(Math.random()<0.5?1:-1);
+  e.stormCol=o.col||'#ff5acd'; e.stormCd=o.cd!=null?o.cd:0.16;
+  e.stormTwin=!!o.twin; e.stormRainbow=!!o.rainbow; e.stormDmgMul=o.dmg!=null?o.dmg:dm;
+  if(o.shake) shake=Math.max(shake,o.shake);
+  if(o.warn!==false) sfx.warn();
+  return e.storm;
+}
+function bossHellEcho(e, opts){
+  const o=opts||{};
+  e.echo={ t:o.dur!=null?o.dur:2.0, ivT:0, n:o.n!=null?o.n:16, spd:o.spd!=null?o.spd:94,
+    col:o.col||'#bff0ff', gap:o.gap!=null?o.gap:0.42, at:rand(0,TAU), dmgMul:o.dmg!=null?o.dmg:bossHellDmg(e) };
+  if(o.warn!==false) sfx.warn();
+}
+function bossHellOrbit(e, n, col, angV, radV){
+  const dm=bossHellDmg(e), off=rand(0,TAU);
+  for(let k=0;k<n;k++) fireEB(e.x,e.y,0,0,col||'#ff5acd',{dmgMul:dm,orbit:{cx:e.x,cy:e.y,ang:off+k*TAU/n,rad:54,angV:angV||0.8,radV:radV||32}});
+  muzzleFlash(e.x,e.y,col||'#ff5acd');
+}
+function finalBossTint(){
+  const w=curWorld(); return (w&&w.enemyTint)||(w&&w.theme&&w.theme.tint)||'#b06ff0';
+}
 
 // ---- World 2 shared hazard helpers (used by dirt enemies AND bosses) ----
 // a marching row of telegraphed zones erupting from (x,y) along angle a
@@ -3636,9 +3666,9 @@ function bossMoves(e){
       if(e.vph>=2) return ['warp','spiral','ring16','SPIRAL_STORM'];
       return ['warp','spiral','ring16'];
     case 'vaca':
-      if(e.vph>=3) return ['ring2x','pullspiral','aimed5','SPIRAL_STORM'];
-      if(e.vph>=2) return ['ring2','spiral','aimed5','pull','RING_VOLLEY'];
-      return ['ring16','pull'];
+      if(e.vph>=3) return ['VACA_MOON','pullspiral','VACA_STORM','aimed5'];
+      if(e.vph>=2) return ['VACA_ECHO','spiral','aimed5','pull','VACA_GAPS'];
+      return ['VACA_GAPS','ring16','pull'];
     // ---- World 2 (CITRUS COAST) — original movesets, unique per phase. Flashy but forgiving. ----
     case 'eccocavallo':                    // B1: echo / music bruiser
       if(e.vph>=3) return ['NOTE_SPIRAL','ECHO_RINGS','GALLOP','HOOF_STOMP','NOTE_VOLLEY'];
@@ -3652,10 +3682,10 @@ function bossMoves(e){
       if(e.vph>=3) return ['PIT_PINWHEEL','BOULDER_ROLL','CHEST_POUND','AVO_SMASH','GUAC_RAIN'];
       if(e.vph>=2) return ['AVO_SMASH','BOULDER_ROLL','CHEST_POUND','GUAC_RAIN'];
       return ['CHEST_POUND','AVO_SMASH','GUAC_RAIN'];
-    case 'tracotucotulu':                  // B4: aerial toucan finale — spectacle bullet-hell, forgiving
-      if(e.vph>=3) return ['RAINBOW_SPIRAL','DIVE_BOMB','BEAK_BARRAGE','FRUIT_RAIN','FEATHER_FAN'];
-      if(e.vph>=2) return ['DIVE_BOMB','FEATHER_FAN','BEAK_BARRAGE','FRUIT_RAIN'];
-      return ['BEAK_BARRAGE','DIVE_BOMB','FRUIT_RAIN'];
+    case 'tracotucotulu':                  // B4: aerial toucan finale — unique fake bullet-hell per phase
+      if(e.vph>=3) return ['TOUCAN_RAINBOW','DIVE_BOMB','TOUCAN_WALL','TOUCAN_FEATHER'];
+      if(e.vph>=2) return ['TOUCAN_ECHO','FEATHER_FAN','BEAK_BARRAGE','FRUIT_RAIN'];
+      return ['TOUCAN_FEATHER','DIVE_BOMB','FRUIT_RAIN'];
     // ---- World 3 (FORESTA FRUTOSA) — telegraphed melee/zone fights ----
     case 'subrosa':                        // B1: thorn garden
       if(e.vph>=3) return ['ROSE_LUNGE','THORN_RING','PETAL_FAN','BLOOM_STORM','THORN_RING'];
@@ -3669,10 +3699,10 @@ function bossMoves(e){
       if(e.vph>=3) return ['BLENDER_CHARGE','GRIND_ZONE','VORTEX_PULL','BLENDER_CHARGE'];
       if(e.vph>=2) return ['BLENDER_CHARGE','GRIND_ZONE','BLENDER_CHARGE'];
       return ['BLENDER_CHARGE','GRIND_ZONE','BLENDER_CHARGE'];       // removed meaningless ring spray
-    case 'cocofantoboss':                  // B4 FINAL: armoured colossus w/ arena quake gimmick + coconut bullet-hell
-      if(e.vph>=3) return ['COCONUT_STORM','QUAKE_RING','STAMPEDE','TREMOR_STOMP','COCONUT_BARRAGE'];
-      if(e.vph>=2) return ['STOMP_QUAKE','QUAKE_RING','COCONUT_BARRAGE','TUSK_SWEEP'];
-      return ['STOMP_QUAKE','COCONUT_BARRAGE','TUSK_SWEEP'];
+    case 'cocofantoboss':                  // B4 FINAL: armoured colossus w/ unique coconut bullet-hell per phase
+      if(e.vph>=3) return ['COCO_STORM','QUAKE_RING','COCO_MONSOON','STAMPEDE'];
+      if(e.vph>=2) return ['COCO_WALL','QUAKE_RING','COCONUT_BARRAGE','TUSK_SWEEP'];
+      return ['COCO_GAPS','COCONUT_BARRAGE','TUSK_SWEEP'];
     // ---- World 4 (GELATO GLACIER) — original frozen-dessert movesets, telegraphed & forgiving ----
     case 'tiramisubmarini':                // B1: submerging coffee sub-train (gimmick: dives & surfaces)
       if(e.vph>=3) return ['STEAM_RING','DEPTH_CHARGE','BUBBLE_VOLLEY','TORPEDO_DASH','DEPTH_CHARGE'];
@@ -3686,10 +3716,10 @@ function bossMoves(e){
       if(e.vph>=3) return ['ARCANE_SPIRAL','FROST_BOLTS','HEX_FIELD','CONJURE','ARCANE_RING'];
       if(e.vph>=2) return ['FROST_BOLTS','HEX_FIELD','ARCANE_RING','CONJURE'];
       return ['FROST_BOLTS','ARCANE_RING','HEX_FIELD'];
-    case 'icebearlini':                    // B4: polar-bear colossus (W4 finale)
-      if(e.vph>=3) return ['FROST_SPIRAL','AVALANCHE_CHARGE','ORANGE_BURST','GLACIER_SLAM','PERMA_RING'];
-      if(e.vph>=2) return ['AVALANCHE_CHARGE','ORANGE_BURST','GLACIER_SLAM','PERMA_RING'];
-      return ['GLACIER_SLAM','ORANGE_BURST','AVALANCHE_CHARGE'];
+    case 'icebearlini':                    // B4: polar-bear colossus (W4 finale) — frost bullet-hell per phase
+      if(e.vph>=3) return ['ICE_STORM','AVALANCHE_CHARGE','ICE_NOVA','GLACIER_SLAM'];
+      if(e.vph>=2) return ['ICE_WALL','ORANGE_BURST','GLACIER_SLAM','ICE_ECHO'];
+      return ['ICE_ECHO','ORANGE_BURST','AVALANCHE_CHARGE'];
     // ---- World 5 (CIRCO BRAINROTTO) — carnival movesets w/ bounce/teleport flourishes (band 3) ----
     case 'trapezino':                      // B1: acrobat (gimmick: swings across the arena)
       if(e.vph>=3) return ['RING_TOSS','HOOP_RING','CONFETTI_TOSS','TRAPEZE_SWING'];
@@ -3703,10 +3733,10 @@ function bossMoves(e){
       if(e.vph>=3) return ['EMBER_JUGGLE','FIRE_JUGGLE','FIRE_BREATH','EMBER_RING'];
       if(e.vph>=2) return ['FIRE_BREATH','EMBER_RING','EMBER_JUGGLE','FIRE_JUGGLE'];
       return ['FIRE_BREATH','EMBER_RING','EMBER_JUGGLE'];             // p1 now has 3 moves
-    case 'granpagliaccio':                 // B4 FINAL: the Great Ringmaster (gimmick: blinks + summons acts)
-      if(e.vph>=3) return ['CONFETTI_SPIRAL','BALLOON_RING','SUMMON_ACT','CONFETTI_SPIRAL'];
-      if(e.vph>=2) return ['BALLOON_RING','CONFETTI_SPIRAL','SUMMON_ACT'];
-      return ['BALLOON_RING','SUMMON_ACT'];
+    case 'granpagliaccio':                 // B4 FINAL: ringmaster — carnival bullet-hell per phase
+      if(e.vph>=3) return ['CLOWN_CYCLONE','BALLOON_RING','CLOWN_FINALE','SUMMON_ACT'];
+      if(e.vph>=2) return ['CLOWN_WALL','CONFETTI_SPIRAL','SUMMON_ACT'];
+      return ['CLOWN_CONFETTI','BALLOON_RING','SUMMON_ACT'];
     // ---- Worlds 6-10 (shared BOSSES_DIRT roster, world-aware attacks) ----
     case 'tatasahur': {                    // burrow-slam drummer — adapts to world terrain
       const wid=curWorld().id;
@@ -3781,27 +3811,25 @@ function bossMoves(e){
     case 'tralala2': {                     // bounce boss — ricochet thrives in every arena shape
       const wid=curWorld().id;
       if(wid==='swamp'){
-        // wide flat — ricochet bounces horizontally; add flood for lane control
-        if(e.vph>=3) return ['RICOCHET','SWAMP_FLOOD','SWEEP_DUAL','ring2','TWIN_STORM'];
-        if(e.vph>=2) return ['RICOCHET','SWAMP_FLOOD','ring2','RING_VOLLEY'];
-        return ['RICOCHET','SWAMP_FLOOD','ring16'];
+        if(e.vph>=3) return ['TRALA_RICO','TRALA_STORM','SWEEP_DUAL','TRALA_WALL','ring2'];
+        if(e.vph>=2) return ['TRALA_RICO','TRALA_ECHO','ring2','TRALA_GAPS'];
+        return ['TRALA_RICO','TRALA_GAPS','ring16'];
       } if(wid==='sky'){
-        if(e.vph>=3) return ['RICOCHET','SKY_PLUNGE','SWEEP_DUAL','ring2','TWIN_STORM'];
-        if(e.vph>=2) return ['RICOCHET','SKY_PLUNGE','PRISM_SPLIT','RING_VOLLEY'];
-        return ['RICOCHET','SKY_PLUNGE','ring16'];
+        if(e.vph>=3) return ['TRALA_RICO','TRALA_STORM','SKY_PLUNGE','TRALA_WALL','ring2'];
+        if(e.vph>=2) return ['TRALA_RICO','TRALA_ECHO','SKY_PLUNGE','TRALA_GAPS'];
+        return ['TRALA_RICO','SKY_PLUNGE','ring16'];
       } if(wid==='crystal'){
-        // narrow tall — ricochet is brutal; vertical crystal spikes add squeeze
-        if(e.vph>=3) return ['RICOCHET','CRYSTAL_SPIKE','SWEEP_DUAL','ring2','TWIN_STORM'];
-        if(e.vph>=2) return ['RICOCHET','CRYSTAL_SPIKE','PRISM_SPLIT','RING_VOLLEY'];
-        return ['RICOCHET','CRYSTAL_SPIKE','aimed3'];
+        if(e.vph>=3) return ['TRALA_RICO','TRALA_STORM','CRYSTAL_SPIKE','TRALA_WALL','ring2'];
+        if(e.vph>=2) return ['TRALA_RICO','TRALA_ECHO','CRYSTAL_SPIKE','TRALA_GAPS'];
+        return ['TRALA_RICO','CRYSTAL_SPIKE','aimed3'];
       } if(wid==='volcano'){
-        if(e.vph>=3) return ['RICOCHET','ERUPTION','SWEEP_DUAL','ring2','TWIN_STORM'];
-        if(e.vph>=2) return ['RICOCHET','ERUPTION','PRISM_SPLIT','RING_VOLLEY'];
-        return ['RICOCHET','ERUPTION','ring16'];
+        if(e.vph>=3) return ['TRALA_RICO','TRALA_STORM','ERUPTION','TRALA_WALL','ring2'];
+        if(e.vph>=2) return ['TRALA_RICO','TRALA_ECHO','ERUPTION','TRALA_GAPS'];
+        return ['TRALA_RICO','ERUPTION','ring16'];
       }
-      if(e.vph>=3) return ['RICOCHET','SWEEP_DUAL','ring2','TWIN_STORM'];
-      if(e.vph>=2) return ['RICOCHET','PRISM_SPLIT','ring2','RING_VOLLEY'];
-      return ['SWEEP','ring16','aimed3'];
+      if(e.vph>=3) return ['TRALA_RICO','TRALA_STORM','SWEEP_DUAL','TRALA_WALL','ring2'];
+      if(e.vph>=2) return ['TRALA_RICO','TRALA_ECHO','ring2','TRALA_GAPS'];
+      return ['TRALA_RICO','TRALA_GAPS','ring16'];
     }
     case 'croco2': {                       // brood + carpet — world-themed adds and bombing
       const wid=curWorld().id;
@@ -3829,25 +3857,25 @@ function bossMoves(e){
     case 'madudung': {                     // final boss lead — world-themed chaos
       const wid=curWorld().id;
       if(wid==='swamp'){
-        if(e.vph>=3) return ['TETHER','DEVOUR','SWAMP_FLOOD','SUMMON','TWIN_STORM'];
-        if(e.vph>=2) return ['TETHER','SWAMP_FLOOD','SWEEP_DUAL','BURROW_DOUBLE','RING_VOLLEY'];
-        return ['BURROW_SLAM','SWAMP_FLOOD','aimed5','ring16'];
+        if(e.vph>=3) return ['MUD_TEMPEST','TETHER','DEVOUR','MUD_WALL','MUD_ECHO'];
+        if(e.vph>=2) return ['MUD_STORM','TETHER','SWAMP_FLOOD','MUD_GAPS','BURROW_DOUBLE'];
+        return ['MUD_GAPS','BURROW_SLAM','SWAMP_FLOOD','aimed5'];
       } if(wid==='sky'){
-        if(e.vph>=3) return ['TETHER','DEVOUR','SKY_PLUNGE','EXPAND_IMPLODE','SPIRAL_STORM'];
-        if(e.vph>=2) return ['TETHER','SKY_PLUNGE','SWEEP_DUAL','ring2','RING_VOLLEY'];
-        return ['SKY_PLUNGE','BURROW_SLAM','aimed5','ring16'];
+        if(e.vph>=3) return ['MUD_TEMPEST','TETHER','DEVOUR','MUD_WALL','SKY_PLUNGE'];
+        if(e.vph>=2) return ['MUD_STORM','TETHER','SKY_PLUNGE','MUD_ECHO','MUD_GAPS'];
+        return ['MUD_GAPS','SKY_PLUNGE','BURROW_SLAM','aimed5'];
       } if(wid==='crystal'){
-        if(e.vph>=3) return ['TETHER','DEVOUR','CRYSTAL_SPIKE','PRISM_SPLIT','TWIN_STORM'];
-        if(e.vph>=2) return ['TETHER','CRYSTAL_SPIKE','SWEEP_DUAL','BURROW_DOUBLE','RING_VOLLEY'];
-        return ['BURROW_SLAM','CRYSTAL_SPIKE','aimed5','ring12'];
+        if(e.vph>=3) return ['MUD_TEMPEST','TETHER','DEVOUR','MUD_WALL','CRYSTAL_SPIKE'];
+        if(e.vph>=2) return ['MUD_STORM','TETHER','CRYSTAL_SPIKE','MUD_ECHO','BURROW_DOUBLE'];
+        return ['MUD_GAPS','BURROW_SLAM','CRYSTAL_SPIKE','aimed5'];
       } if(wid==='volcano'){
-        if(e.vph>=3) return ['TETHER','DEVOUR','ERUPTION','SATURN_RING','SPIRAL_STORM'];
-        if(e.vph>=2) return ['TETHER','ERUPTION','QUAKE_RADIAL','MELTDOWN','RING_VOLLEY'];
-        return ['BURROW_SLAM','ERUPTION','QUAKE_LINE','ring16'];
+        if(e.vph>=3) return ['MUD_TEMPEST','TETHER','DEVOUR','MUD_WALL','ERUPTION'];
+        if(e.vph>=2) return ['MUD_STORM','TETHER','ERUPTION','MUD_ECHO','QUAKE_RADIAL'];
+        return ['MUD_GAPS','BURROW_SLAM','ERUPTION','QUAKE_LINE'];
       }
-      if(e.vph>=3) return ['TETHER','DEVOUR','MELTDOWN','SUMMON','SPIRAL_STORM'];
-      if(e.vph>=2) return ['TETHER','LAVA_POOL','SWEEP_DUAL','BURROW_DOUBLE','RING_VOLLEY'];
-      return ['BURROW_SLAM','QUAKE_LINE','aimed5','ring16'];
+      if(e.vph>=3) return ['MUD_TEMPEST','TETHER','DEVOUR','MUD_STORM','SUMMON'];
+      if(e.vph>=2) return ['MUD_STORM','TETHER','LAVA_POOL','MUD_ECHO','BURROW_DOUBLE'];
+      return ['MUD_GAPS','BURROW_SLAM','QUAKE_LINE','aimed5'];
     }
     case 'garamaraman': {                  // final boss duo partner — complements lead
       const wid=curWorld().id;
@@ -3885,10 +3913,10 @@ function bossMoves(e){
       if(e.vph>=3) return ['CANOPY_PLUNGE','DOUBLE_DASH','RICOCHET','aimed5','SPIRAL_STORM'];
       if(e.vph>=2) return ['CANOPY_PLUNGE','DOUBLE_DASH','GEYSER_SWEEP','aimed5','RING_VOLLEY'];
       return ['CANOPY_PLUNGE','POUNCE','aimed5','ring16'];
-    case 'bobritto':                       // B4 FINAL: woodland warlord — flood + tether + eruption
-      if(e.vph>=3) return ['FOREST_FLOOD','TETHER','DEVOUR','ERUPTION','SPIRAL_STORM'];
-      if(e.vph>=2) return ['FOREST_FLOOD','TETHER','GEYSER_SWEEP','BURROW_DOUBLE','RING_VOLLEY'];
-      return ['FOREST_FLOOD','BURROW_SLAM','GEYSER_SWEEP','ring16'];
+    case 'bobritto':                       // B4 FINAL: woodland warlord — leaf bullet-hell per phase
+      if(e.vph>=3) return ['BOB_TEMPEST','TETHER','BOB_LEAVES','ERUPTION'];
+      if(e.vph>=2) return ['BOB_WALL','FOREST_FLOOD','GEYSER_SWEEP','BURROW_DOUBLE'];
+      return ['BOB_LEAVES','FOREST_FLOOD','GEYSER_SWEEP'];
   }
   if(typeof extBossMoves==='function'){ const ext=extBossMoves(e); if(ext) return ext; }
   return ['ring16'];
@@ -3943,12 +3971,20 @@ const MOVE_COL = { dash:'#e54d4d', spiral:'#e54d4d', aimed3:'#e23b3b', aimed5:'#
   // World 1 tutorial bosses (fake bullet-hell)
   W1_SHARK_SPIRAL:'#5fe0ff', W1_SHARK_GAPS:'#bff0ff', W1_SHARK_WALL:'#5fe0ff', W1_SHARK_DASH:'#5fe0ff',
   W1_BOMB_ORBIT:'#ff7a2a', W1_BOMB_CROSS:'#ff7a2a', W1_BOMB_RING:'#ffd24a', W1_BOMB_WALL:'#ff7a2a',
-  W1_DRUM_ECHO:'#ffe08a', W1_DRUM_STORM:'#ffe08a', W1_DRUM_SLAM:'#c9923f', W1_DRUM_WALL:'#ffd24a' };
+  W1_DRUM_ECHO:'#ffe08a', W1_DRUM_STORM:'#ffe08a', W1_DRUM_SLAM:'#c9923f', W1_DRUM_WALL:'#ffd24a',
+  // final-boss fake bullet-hell (unique per boss + phase)
+  VACA_GAPS:'#d2a0ff', VACA_ECHO:'#b06ff0', VACA_MOON:'#d2a0ff', VACA_STORM:'#ff5acd',
+  TOUCAN_FEATHER:'#9fe0ff', TOUCAN_ECHO:'#ff7a2a', TOUCAN_WALL:'#ff5acd', TOUCAN_RAINBOW:'#ff5acd',
+  COCO_GAPS:'#8d6e63', COCO_WALL:'#a06a4a', COCO_STORM:'#8d6e63', COCO_MONSOON:'#6d4c41',
+  ICE_ECHO:'#9fd0ff', ICE_WALL:'#bfe6ff', ICE_STORM:'#7ec8ff', ICE_NOVA:'#ff8f2e',
+  CLOWN_CONFETTI:'#ff5ea8', CLOWN_WALL:'#ffd24a', CLOWN_CYCLONE:'#ff5ea8', CLOWN_FINALE:'#ffd24a',
+  BOB_LEAVES:'#5a7a3a', BOB_WALL:'#c87a30', BOB_TEMPEST:'#3a5a2a',
+  TRALA_GAPS:'#5fe0ff', TRALA_ECHO:'#bff0ff', TRALA_STORM:'#5fe0ff', TRALA_WALL:'#2f8fa0',
+  MUD_GAPS:'#e8a050', MUD_ECHO:'#d2a0ff', MUD_STORM:'#ff5acd', MUD_TEMPEST:'#ff5acd', MUD_WALL:'#a9763e' };
 function pickMove(e){
   let pool=bossMoves(e);
-  // bullet-hell injection: a LOT more for final-boss phase 3, a moderate bit for mid-bosses past phase 1
-  if(e.finalPhase && e.vph>=3)        pool = pool.concat('MEGA_STORM','RING_VOLLEY');
-  else if(!e.finalPhase && !e.partner && e.vph>=2) pool = pool.concat('SPIRAL_LITE','RING_VOLLEY');
+  // mid-boss phase 2+: occasional sparse spiral (no extra ring spam)
+  if(!e.finalPhase && !e.partner && e.vph>=2) pool = pool.concat('SPIRAL_LITE');
   let m; do{ m=pick(pool); }while(pool.length>1 && m===e.lastMv); e.lastMv=m; return m;
 }
 // run one move; returns how long the boss stays in the "fire" state before recovering
@@ -4039,7 +4075,9 @@ function execMove(e){
     case 'BROOD_BURST':   summonAdds(e,'golubiro',4,8); mRing(e,20,160,'#d2a0ff'); mRing(e,16,110,'#b06ff0'); return 0.4;
     case 'DEVOUR':        e.pull=1.4; e.pullStr=150; mRing(e,20,160,'#d2a0ff'); mRing(e,20,110,'#b06ff0'); return 1.2;
     // ---- original signature attacks ----
-    case 'RICOCHET':      e.wd={ n:3, ang:Math.atan2(P.y-e.y,P.x-e.x), spd:e.enraged?500:430, tT:0, life:2.4 }; sfx.warn(); burst(e.x,e.y,'#7ec8ff',20,320); return 2.4;
+    case 'RICOCHET':
+    case 'TRALA_RICO':
+      e.wd={ n:3, ang:Math.atan2(P.y-e.y,P.x-e.x), spd:e.enraged?500:430, tT:0, life:2.4 }; sfx.warn(); burst(e.x,e.y,'#7ec8ff',20,320); return 2.4;
     case 'DRUM_MARCH':    { const a=Math.atan2(P.y-e.y,P.x-e.x); for(let k=1;k<=5;k++) addZone(e.x+Math.cos(a)*92*k, e.y+Math.sin(a)*92*k, 70, {tele:0.3+k*0.22, life:0.45, dps:20, col:'#a9763e', fromX:e.x, fromY:e.y}); sfx.hit(); return 0.7; }
     case 'GEYSER_SWEEP':  e.gsweep={ t:1.8, ang:Math.atan2(P.y-e.y,P.x-e.x), dir:Math.random()<0.5?1:-1, dropT:0 }; return 1.8;
     case 'SATURN_RING':   { const N=18, off=rand(0,TAU), dir=Math.random()<0.5?1:-1; for(let k=0;k<N;k++) fireEB(e.x,e.y,0,0,'#ffd24a',{orbit:{cx:e.x,cy:e.y,ang:off+k*TAU/N,rad:42,angV:dir*1.8,radV:58}}); muzzleFlash(e.x,e.y,'#ffd24a'); return 0.4; }
@@ -4068,20 +4106,95 @@ function execMove(e){
     case 'DIVE_BOMB':    e.dst='wind'; e.dwin=e.enraged?0.3:0.45; e.da=Math.atan2(P.y-e.y,P.x-e.x); e.landFx={type:'dive'}; e.dashTrail={kind:'feather',col:'#9fe0ff'}; sfx.warn(); return 0.9;
     case 'FRUIT_RAIN':   { const fc=['#ff5acd','#ffd24a','#7ab955','#ff7a2a']; for(let k=0;k<6;k++) addZone(P.x+rand(-200,200),P.y+rand(-200,200),46,{tele:0.75,life:0.5,dps:14,col:fc[k%fc.length]}); return 0.4; }
     case 'FEATHER_FAN':  mAimed(e,11,0.14,135,'#9fe0ff'); return 0.3;
-    case 'RAINBOW_SPIRAL': e.storm=2.4; e.stormN=6; e.stormSpd=120; e.stormStep=0.28; e.stormDir=Math.random()<0.5?1:-1; e.stormCol='#ff5acd'; e.stormCd=0.12; e.stormTwin=true; e.stormRainbow=true; sfx.warn(); return 2.4;
-    // ---- bullet-hell phase moves ----
-    case 'SPIRAL_STORM':  e.storm=2.4; e.stormN=9;  e.stormSpd=150; e.stormStep=0.30; e.stormDir=Math.random()<0.5?1:-1; e.stormCol='#ff5acd'; e.stormCd=0.10; e.stormTwin=false; sfx.warn(); return 2.4;
-    case 'TWIN_STORM':    e.storm=2.6; e.stormN=8;  e.stormSpd=145; e.stormStep=0.26; e.stormDir=1; e.stormCol='#c77dff'; e.stormCd=0.11; e.stormTwin=true; sfx.warn(); return 2.6;
-    case 'RING_VOLLEY':   mRing(e,22,180,'#4aa3df'); mRing(e,18,130,'#7ec8ff'); mRing(e,14,85,'#d2a0ff'); shake=Math.max(shake,5); return 0.4;
+    case 'RAINBOW_SPIRAL': bossHellStorm(e,{dur:2.4,n:6,spd:108,step:0.30,col:'#ff5acd',cd:0.14,twin:true,rainbow:true}); return 2.4;
+    // ---- final-boss fake bullet-hell (unique per boss + phase) ----
+    case 'VACA_GAPS':
+      mRingGap(e,22,90,'#d2a0ff',0.44,null,bossHellDmg(e)); bossHellOrbit(e,16,'#d2a0ff',0.65,28); shake=Math.max(shake,5); sfx.warn(); return 0.65;
+    case 'VACA_ECHO':
+      bossHellEcho(e,{dur:2.2,n:18,spd:90,col:'#b06ff0',gap:0.44}); return 2.2;
+    case 'VACA_MOON':
+      bossHellOrbit(e,20,'#d2a0ff',0.55,24); mRingGap(e,14,82,'#ff5acd',0.46,null,bossHellDmg(e)); shake=Math.max(shake,6); return 0.7;
+    case 'VACA_STORM':
+      bossHellStorm(e,{dur:2.6,n:6,spd:96,step:0.33,col:'#ff5acd',cd:0.17,twin:true,shake:5}); return 2.6;
+    case 'TOUCAN_FEATHER':
+      mAimed(e,9,0.16,118,'#9fe0ff'); mRingGap(e,12,88,'#ff7a2a',0.40,null,bossHellDmg(e)); return 0.28;
+    case 'TOUCAN_ECHO':
+      bossHellEcho(e,{dur:2.0,n:16,spd:100,col:'#ff7a2a',gap:0.43}); return 2.0;
+    case 'TOUCAN_WALL':
+      if(arena){ const side=pick(['left','right']); mWall(side,118,'#ff5acd',P.y+rand(-40,40),118,10,bossHellDmg(e)); }
+      shake=Math.max(shake,5); return 1.0;
+    case 'TOUCAN_RAINBOW':
+      bossHellStorm(e,{dur:2.4,n:6,spd:108,step:0.30,col:'#ff5acd',cd:0.14,twin:true,rainbow:true,shake:5}); return 2.4;
+    case 'COCO_GAPS':
+      mRingGap(e,20,95,'#8d6e63',0.42,null,bossHellDmg(e)); debrisDrop(3,'#a06a4a'); return 0.45;
+    case 'COCO_WALL':
+      if(arena){ mWall(pick(['top','bottom']),108,'#a06a4a',P.x,115,10,bossHellDmg(e));
+        mWall(pick(['left','right']),108,'#8d6e63',P.y,115,10,bossHellDmg(e)); }
+      return 1.1;
+    case 'COCO_STORM':
+      bossHellStorm(e,{dur:2.2,n:5,spd:100,step:0.32,col:'#8d6e63',cd:0.16,twin:(e.vph>=3),shake:5}); return 2.2;
+    case 'COCO_MONSOON':
+      bossHellEcho(e,{dur:2.3,n:14,spd:92,col:'#6d4c41',gap:0.45});
+      for(let k=0;k<3;k++) addZone(P.x+rand(-140,140),P.y+rand(-140,140),48,{tele:0.8,life:0.45,dps:10,col:'#8d6e63'}); return 2.3;
+    case 'ICE_ECHO':
+      bossHellEcho(e,{dur:2.1,n:16,spd:94,col:'#9fd0ff',gap:0.44}); return 2.1;
+    case 'ICE_WALL':
+      if(arena){ const side=pick(['left','right','top','bottom']);
+        const gapAt=(side==='left'||side==='right')?P.y:P.x;
+        mWall(side,108,'#bfe6ff',gapAt,112,10,bossHellDmg(e)); } return 1.0;
+    case 'ICE_STORM':
+      bossHellStorm(e,{dur:2.3,n:5,spd:98,step:0.33,col:'#7ec8ff',cd:0.16,twin:true,shake:5}); return 2.3;
+    case 'ICE_NOVA':
+      mRingGap(e,18,105,'#ff8f2e',0.38,null,bossHellDmg(e)); mRingGap(e,12,72,'#ffb15a',0.44,null,bossHellDmg(e)); shake=Math.max(shake,7); sfx.hit(); return 0.5;
+    case 'CLOWN_CONFETTI':
+      mAimed(e,5,0.22,128,'#ff5ea8'); mRingGap(e,14,90,'#ffd24a',0.42,null,bossHellDmg(e)); return 0.25;
+    case 'CLOWN_WALL':
+      if(arena){ mWall(pick(['left','right']),112,'#ff5ea8',P.y,108,10,bossHellDmg(e)); } return 1.0;
+    case 'CLOWN_CYCLONE':
+      bossHellStorm(e,{dur:2.2,n:5,spd:104,step:0.31,col:'#ff5ea8',cd:0.15,twin:true,rainbow:true,shake:5}); return 2.2;
+    case 'CLOWN_FINALE':
+      mRingGap(e,16,100,'#ff5ea8',0.40,null,bossHellDmg(e)); mRingGap(e,12,72,'#ffd24a',0.44,null,bossHellDmg(e)); shake=Math.max(shake,6); return 0.45;
+    case 'BOB_LEAVES':
+      bossHellEcho(e,{dur:2.2,n:16,spd:92,col:'#5a7a3a',gap:0.44}); return 2.2;
+    case 'BOB_WALL':
+      if(arena){ const side=pick(['top','bottom']); mWall(side,110,'#c87a30',P.x,110,10,bossHellDmg(e)); } return 1.0;
+    case 'BOB_TEMPEST':
+      bossHellStorm(e,{dur:2.4,n:5,spd:100,step:0.32,col:'#3a5a2a',cd:0.16,twin:true,shake:5}); return 2.4;
+    case 'TRALA_GAPS': {
+      const col='#5fe0ff', dm=bossHellDmg(e);
+      mRingGap(e,16,108,col,0.40,null,dm); mRingGap(e,12,78,'#bff0ff',0.44,null,dm); return 0.4; }
+    case 'TRALA_ECHO':
+      bossHellEcho(e,{dur:2.2,n:16,spd:96,col:'#bff0ff',gap:0.43}); return 2.2;
+    case 'TRALA_STORM':
+      bossHellStorm(e,{dur:2.5,n:6,spd:102,step:0.31,col:'#5fe0ff',cd:0.15,twin:true,shake:5}); return 2.5;
+    case 'TRALA_WALL':
+      if(arena){ mWall(pick(['left','right']),115,'#2f8fa0',P.y,105,10,bossHellDmg(e)); } return 1.0;
+    case 'MUD_GAPS': {
+      const col=finalBossTint(), dm=bossHellDmg(e);
+      mRingGap(e,18,100,col,0.42,null,dm); return 0.4; }
+    case 'MUD_ECHO':
+      bossHellEcho(e,{dur:2.2,n:16,spd:94,col:finalBossTint(),gap:0.43}); return 2.2;
+    case 'MUD_STORM':
+      bossHellStorm(e,{dur:2.4,n:5,spd:100,step:0.32,col:finalBossTint(),cd:0.16,twin:true,shake:5}); return 2.4;
+    case 'MUD_TEMPEST':
+      bossHellStorm(e,{dur:2.6,n:6,spd:98,step:0.30,col:finalBossTint(),cd:0.15,twin:true,shake:6}); return 2.6;
+    case 'MUD_WALL':
+      if(arena){ const side=pick(['left','right','top','bottom']);
+        const gapAt=(side==='left'||side==='right')?P.y:P.x;
+        mWall(side,112,finalBossTint(),gapAt,108,10,bossHellDmg(e)); } return 1.0;
+    // ---- bullet-hell phase moves (global — softened, gapped) ----
+    case 'SPIRAL_STORM':  bossHellStorm(e,{dur:2.2,n:6,spd:118,step:0.32,col:'#ff5acd',cd:0.14,shake:4}); return 2.2;
+    case 'TWIN_STORM':    bossHellStorm(e,{dur:2.4,n:5,spd:112,step:0.30,col:'#c77dff',cd:0.15,twin:true,shake:4}); return 2.4;
+    case 'RING_VOLLEY':   mRingGap(e,16,118,'#4aa3df',0.36,null,bossHellDmg(e)); mRingGap(e,12,82,'#7ec8ff',0.40,null,bossHellDmg(e)); shake=Math.max(shake,4); return 0.35;
     case 'AIMED_WALL':    mAimed(e,9,0.12,200,'#e23b3b'); mRing(e,14,120,'#e23b3b'); return 0.3;
     // ---- moderate bullet-hell (mid-bosses, phase 2+): a short sparse rotating spiral ----
-    case 'SPIRAL_LITE':   e.storm=1.4; e.stormN=5; e.stormSpd=130; e.stormStep=0.33; e.stormDir=Math.random()<0.5?1:-1; e.stormCol=e.tellCol||'#ffd24a'; e.stormCd=0.16; e.stormTwin=false; e.stormRainbow=false; sfx.warn(); return 1.4;
-    // ---- heavy bullet-hell (final boss, phase 3 only) ----
-    case 'MEGA_STORM':    e.storm=3.0; e.stormN=12; e.stormSpd=160; e.stormStep=0.22; e.stormDir=Math.random()<0.5?1:-1; e.stormCol='#ff5acd'; e.stormCd=0.09; e.stormTwin=true; e.stormRainbow=true; sfx.warn(); return 3.0;
-    case 'CROSS_STORM':   mRing(e,30,210,'#ff5acd'); mRing(e,24,155,'#c77dff'); mRingGap(e,22,100,'#ff9be0',0.16); shake=Math.max(shake,7); sfx.hit(); return 0.5;
+    case 'SPIRAL_LITE':   bossHellStorm(e,{dur:1.4,n:4,spd:118,step:0.34,col:e.tellCol||'#ffd24a',cd:0.18,shake:3}); return 1.4;
+    // ---- heavy bullet-hell (legacy — now sparse + gapped) ----
+    case 'MEGA_STORM':    bossHellStorm(e,{dur:2.6,n:6,spd:108,step:0.30,col:'#ff5acd',cd:0.14,twin:true,rainbow:true,shake:5}); return 2.6;
+    case 'CROSS_STORM':   mRingGap(e,18,125,'#ff5acd',0.34,null,bossHellDmg(e)); mRingGap(e,14,88,'#c77dff',0.38,null,bossHellDmg(e)); shake=Math.max(shake,5); return 0.4;
     // ---- per-boss signature ranged moves (added with the W2-5 gimmick pass) ----
     case 'BLADE_FAN':     mAimed(e,5,0.18,150,'#e0e0e0'); return 0.2;                                   // bobrito: a non-dash blade fan
-    case 'COCONUT_STORM': e.storm=2.2; e.stormN=7; e.stormSpd=140; e.stormStep=0.27; e.stormDir=Math.random()<0.5?1:-1; e.stormCol='#8d6e63'; e.stormCd=0.12; e.stormTwin=(e.vph>=3); e.stormRainbow=false; sfx.warn(); return 2.2;
+    case 'COCONUT_STORM': bossHellStorm(e,{dur:2.0,n:5,spd:108,step:0.30,col:'#8d6e63',cd:0.14,twin:(e.vph>=3),shake:4}); return 2.0;
     case 'QUAKE_RING':    addZone(e.x,e.y,90,{tele:0.4,life:0.7,dps:18,col:'#8d6e63'}); mRingGap(e,18,120,'#8d6e63',0.30); shake=Math.max(shake,8); sfx.hit(); return 0.4;
     case 'CONFETTI_TOSS': mAimed(e,5,0.20,140,'#ff5ea8'); return 0.2;                                   // trapezino: ranged confetti
     case 'CALLIOPE_RING': mRingGap(e,16,130,'#ffd24a',0.28); mRingGap(e,12,90,'#e8463c',0.32); return 0.3;  // giostra: organ-pipe rings (both gapped — readable)
@@ -4413,7 +4526,7 @@ function madudungFinalScript(){
       enter(e){ e.sCd=0.7; e.tether=7.5; },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=Math.max(0.55,0.9-e.loop*0.1);
         const a=arena; for(let k=0;k<4;k++) addZone(a?a.x+(k+0.5)*(a.w/4):P.x+rand(-200,200), P.y+rand(-90,90), 54, {tele:0.6,life:2.6,dps:12,slow:true,col:'#5a7a3a'});
-        mRingGap(e,14+e.loop*2,120,'#5a7a3a',0.32); } } },
+        mRingGap(e,14+e.loop*2,118,'#5a7a3a',0.32,null,bossHellDmg(e)); } } },
     DPS,
     { name:'SWAMP WALLS', col:'#5a7a3a', dur:8.0, iv:true, vulnMul:0.35,
       enter(e){ e.sCd=0.4; e.sk=0; },
@@ -4424,26 +4537,25 @@ function madudungFinalScript(){
         mWall(side,155+e.loop*15,'#5a7a3a',gapAt,70,13); } } },
     DPS,
     { name:'DEVOUR THE SWAMP', col:'#3a5a2a', dur:5.5, iv:true, hold:'center',
-      enter(e){ e.pull=5.5; e.pullStr=160; burst(e.x,e.y,'#5a7a3a',28,320); shake=Math.max(shake,12);
-        e.storm=5.5; e.stormN=8+e.loop; e.stormSpd=140; e.stormStep=0.28; e.stormDir=1; e.stormCol='#5a7a3a'; e.stormCd=0.12; e.stormTwin=true; e.stormRainbow=false; sfx.warn(); },
+      enter(e){ e.pull=5.5; e.pullStr=130; burst(e.x,e.y,'#5a7a3a',28,320); shake=Math.max(shake,12);
+        bossHellStorm(e,{dur:5.5,n:5+e.loop,spd:100,step:0.30,col:'#5a7a3a',cd:0.15,twin:true,shake:4}); },
       tick(){} },
     DPS,
   ];
   if(wid==='sky') return [
     { name:'STORM FRONT', col:'#9fd0ff', dur:7.5, iv:true, hold:'center',
-      enter(e){ e.storm=7.5; e.stormN=7+e.loop; e.stormSpd=130; e.stormStep=0.27; e.stormDir=Math.random()<0.5?1:-1;
-        e.stormCol='#9fd0ff'; e.stormCd=0.12; e.stormTwin=true; e.stormRainbow=false; e.sCd=1.0; sfx.warn(); },
-      tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.2; mRingGap(e,14+e.loop*2,115,'#bfe6ff',0.30); } } },
+      enter(e){ bossHellStorm(e,{dur:7.5,n:5+e.loop,spd:100,step:0.28,col:'#9fd0ff',cd:0.14,twin:true,shake:4}); e.sCd=1.0; },
+      tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.2; mRingGap(e,14+e.loop*2,112,'#bfe6ff',0.32,null,bossHellDmg(e)); } } },
     DPS,
     { name:'SKY DIVE BARRAGE', col:'#bfe6ff', dur:8.0, iv:true, vulnMul:0.4,
       enter(e){ e.sCd=0.5; e.sk=0; },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=Math.max(1.2,1.7-e.loop*0.15); e.sk++;
         e.dst='wind'; e.dwin=0.32; e.da=Math.atan2(P.y-e.y,P.x-e.x); e.landFx={type:'dive'};
-        mRingGap(e,14+e.loop*2,130,'#9fd0ff',0.30); sfx.warn(); } } },
+        mRingGap(e,14+e.loop*2,118,'#9fd0ff',0.32,null,bossHellDmg(e)); sfx.warn(); } } },
     DPS,
     { name:'MAELSTROM', col:'#7ec8ff', dur:6.0, iv:true, hold:'center',
-      enter(e){ e.pull=6.0; e.pullStr=170; burst(e.x,e.y,'#9fd0ff',28,340); shake=Math.max(shake,12);
-        e.storm=6.0; e.stormN=9+e.loop; e.stormSpd=145; e.stormStep=0.25; e.stormDir=1; e.stormCol='#bfe6ff'; e.stormCd=0.11; e.stormTwin=true; e.stormRainbow=false; sfx.warn(); },
+      enter(e){ e.pull=6.0; e.pullStr=140; burst(e.x,e.y,'#9fd0ff',28,340); shake=Math.max(shake,12);
+        bossHellStorm(e,{dur:6.0,n:5+e.loop,spd:102,step:0.29,col:'#bfe6ff',cd:0.15,twin:true,shake:4}); },
       tick(){} },
     DPS,
   ];
@@ -4453,7 +4565,7 @@ function madudungFinalScript(){
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=Math.max(0.5,0.85-e.loop*0.08);
         const a=arena; const aY=a?a.y:WALL, aH=a?a.h:600;
         for(let k=1;k<=5;k++) addZone(P.x+rand(-40,40), aY+k*(aH/5.5), 48, {tele:0.35+k*0.1,life:0.7,dps:18,col:'#b08fe0'});
-        mRingGap(e,12+e.loop*2,115,'#b08fe0',0.34); } } },
+        mRingGap(e,12+e.loop*2,112,'#b08fe0',0.36,null,bossHellDmg(e)); } } },
     DPS,
     { name:'PRISM WALLS', col:'#9070c0', dur:8.0, iv:true, vulnMul:0.35,
       enter(e){ e.sCd=0.4; e.sk=0; },
@@ -4465,9 +4577,8 @@ function madudungFinalScript(){
         const aim=Math.atan2(P.y-e.y,P.x-e.x); for(let k=-2;k<=2;k++) fireEB(e.x,e.y,aim+k*0.22,145,'#7ec8ff',{split:true,splitT:0.5}); } } },
     DPS,
     { name:'SHARD STORM', col:'#d2a0ff', dur:5.5, iv:true, hold:'center',
-      enter(e){ e.storm=5.5; e.stormN=8+e.loop; e.stormSpd=135; e.stormStep=0.27; e.stormDir=Math.random()<0.5?1:-1;
-        e.stormCol='#b08fe0'; e.stormCd=0.11; e.stormTwin=true; e.stormRainbow=false;
-        burst(e.x,e.y,'#b08fe0',28,300); shake=Math.max(shake,12); sfx.warn(); },
+      enter(e){ bossHellStorm(e,{dur:5.5,n:5+e.loop,spd:100,step:0.29,col:'#b08fe0',cd:0.15,twin:true,shake:4});
+        burst(e.x,e.y,'#b08fe0',28,300); shake=Math.max(shake,12); },
       tick(){} },
     DPS,
   ];
@@ -4480,20 +4591,20 @@ function madudungFinalScript(){
         if(e.gsweep?.dir2!=null){ e.gsweep.ang2+=e.gsweep.dir2*1.5*dt;
           e.gsweep.d2T=(e.gsweep.d2T||0)-dt; if(e.gsweep.d2T<=0){ e.gsweep.d2T=0.16; geyserLine(e.x,e.y,e.gsweep.ang2,'#e0502c',6,52); } }
         e.sCd-=dt; if(e.sCd<=0){ e.sCd=Math.max(0.55,0.9-e.loop*0.1);
-          addZone(P.x,P.y,64,{tele:0.6,life:2.2,dps:16,col:'#e0502c'}); mRingGap(e,14+e.loop*2,120,'#ff7a2a',0.30); } } },
+          addZone(P.x,P.y,64,{tele:0.6,life:2.2,dps:16,col:'#e0502c'}); mRingGap(e,14+e.loop*2,115,'#ff7a2a',0.32,null,bossHellDmg(e)); } } },
     DPS,
     { name:'ERUPTION SEQUENCE', col:'#ff7a2a', dur:8.0, iv:true, vulnMul:0.38,
       enter(e){ e.sCd=0.45; e.sk=0; },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=Math.max(1.1,1.6-e.loop*0.12); e.sk++;
         const a=arena; const n=5;
         for(let k=0;k<n;k++) addZone(a?rand(a.x+40,a.x+a.w-40):P.x+rand(-200,200), a?rand(a.y+40,a.y+a.h-40):P.y+rand(-200,200), 64,{tele:0.65,life:2.4,dps:16,col:'#e0502c'});
-        mRing(e,20,155,'#ff7a2a'); shake=Math.max(shake,7); } } },
+        mRingGap(e,14,108,'#ff7a2a',0.36,null,bossHellDmg(e)); shake=Math.max(shake,7); } } },
     DPS,
     { name:'CATACLYSM', col:'#ff3b10', dur:6.0, iv:true, hold:'center',
       enter(e){ burst(e.x,e.y,'#e0502c',32,380); shake=Math.max(shake,14);
-        e.storm=6.0; e.stormN=10+e.loop; e.stormSpd=155; e.stormStep=0.24; e.stormDir=1; e.stormCol='#ff7a2a'; e.stormCd=0.10; e.stormTwin=true; e.stormRainbow=false; sfx.warn();
+        bossHellStorm(e,{dur:6.0,n:5+e.loop,spd:102,step:0.30,col:'#ff7a2a',cd:0.15,twin:true,shake:4});
         e.sCd=1.2; },
-      tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.4; mRingGap(e,18+e.loop*2,140,'#e0502c',0.22); shake=Math.max(shake,6); } } },
+      tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.4; mRingGap(e,14+e.loop*2,118,'#e0502c',0.34,null,bossHellDmg(e)); shake=Math.max(shake,6); } } },
     DPS,
   ];
   // dirt (default) — original random-pool fight; no script
@@ -4509,19 +4620,16 @@ const FINAL_SCRIPT = {
       enter(e){ e.sCd=0.2; e.sk=0; summonTank(e,'golubiro',3+e.loop,12,5+e.loop); },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=Math.max(1.5,2.3-e.loop*0.2); e.sk++;
         if(e.sk%2===1) summonTank(e,'golubiro',2+e.loop,12,5+e.loop);
-        mRingGap(e,14+e.loop*2,120,'#5fe0ff',0.30); } } },
+        mRingGap(e,14+e.loop*2,120,'#5fe0ff',0.30,null,bossHellDmg(e)); } } },
     { name:'STRIKE NOW!', col:'#7ed957', dur:7.0, iv:false },
-    // 2) INVINCIBLE — bouncing sneaker spiral storm with gap rings to weave through.
     { name:'SNEAKER SPIRAL', col:'#5fe0ff', dur:7.5, iv:true, hold:'center',
-      enter(e){ e.storm=7.5; e.stormN=9+e.loop; e.stormSpd=140; e.stormStep=0.26; e.stormDir=Math.random()<0.5?1:-1;
-        e.stormCol='#5fe0ff'; e.stormCd=0.11; e.stormTwin=true; e.stormRainbow=false; e.sCd=1.0; sfx.warn(); },
-      tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.3; mRingGap(e,16+e.loop*2,125,'#bff0ff',0.28); } } },
+      enter(e){ bossHellStorm(e,{dur:7.5,n:6+e.loop,spd:108,step:0.28,col:'#5fe0ff',cd:0.14,twin:true,shake:4}); e.sCd=1.0; },
+      tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.3; mRingGap(e,14+e.loop*2,118,'#bff0ff',0.32,null,bossHellDmg(e)); } } },
     { name:'STRIKE NOW!', col:'#7ed957', dur:7.0, iv:false },
-    // 3) INVINCIBLE — feeding frenzy: drag the player in, churn a storm, and keep topping up the tank wave.
     { name:'FEEDING FRENZY', col:'#1f6f80', dur:7.0, iv:true, hold:'center',
-      enter(e){ e.pull=7.0; e.pullStr=165; burst(e.x,e.y,'#2f8fa0',30,340); shake=Math.max(shake,13);
-        e.storm=7.0; e.stormN=10+e.loop; e.stormSpd=150; e.stormStep=0.24; e.stormDir=1; e.stormCol='#5fe0ff'; e.stormCd=0.10; e.stormTwin=true; e.stormRainbow=false; e.sCd=1.6; sfx.warn();
-        summonTank(e,'golubiro',2+e.loop,12,6+e.loop); },
+      enter(e){ e.pull=7.0; e.pullStr=120; burst(e.x,e.y,'#2f8fa0',30,340); shake=Math.max(shake,13);
+        bossHellStorm(e,{dur:7.0,n:5+e.loop,spd:102,step:0.30,col:'#5fe0ff',cd:0.15,twin:true,shake:4});
+        e.sCd=1.6; summonTank(e,'golubiro',2+e.loop,12,6+e.loop); },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=2.0; summonTank(e,'golubiro',2,12,6+e.loop); } } },
     { name:'STRIKE NOW!', col:'#7ed957', dur:7.0, iv:false },
   ],
@@ -4531,7 +4639,7 @@ const FINAL_SCRIPT = {
       enter(e){ e.tether=7.5; e.sCd=0.7; e.pull=0; },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=Math.max(0.5,0.85-e.loop*0.08);
         const a=arena; for(let k=0;k<4;k++) addZone(a?a.x+(k+0.5)*(a.w/4):P.x+rand(-180,180), P.y+rand(-80,80), 56, {tele:0.6,life:2.6,dps:12,slow:true,col:'#5a7a3a'});
-        mRingGap(e,14+e.loop*2,118,'#5a7a3a',0.32); } } },
+        mRingGap(e,14+e.loop*2,118,'#5a7a3a',0.32,null,bossHellDmg(e)); } } },
     { name:'SURFACE — STRIKE NOW!', col:'#7ed957', dur:8.0, iv:false },
     { name:'VENTO DEL BOSCO', col:'#3a5a2a', dur:8.0, iv:true, vulnMul:0.38,
       enter(e){ e.sCd=0.45; e.sk=0; },
@@ -4543,8 +4651,8 @@ const FINAL_SCRIPT = {
         summonAdds(e,'golubiro',1,4); } } },
     { name:'SURFACE — STRIKE NOW!', col:'#7ed957', dur:8.0, iv:false },
     { name:'TURBINE FINALE', col:'#3a5a2a', dur:6.0, iv:true, hold:'center',
-      enter(e){ e.pull=6.0; e.pullStr=155; burst(e.x,e.y,'#5a7a3a',28,320); shake=Math.max(shake,12);
-        e.storm=6.0; e.stormN=9+e.loop; e.stormSpd=140; e.stormStep=0.26; e.stormDir=1; e.stormCol='#5a7a3a'; e.stormCd=0.11; e.stormTwin=true; e.stormRainbow=false; sfx.warn(); },
+      enter(e){ e.pull=6.0; e.pullStr=140; burst(e.x,e.y,'#5a7a3a',28,320); shake=Math.max(shake,12);
+        bossHellStorm(e,{dur:6.0,n:5+e.loop,spd:100,step:0.30,col:'#5a7a3a',cd:0.15,twin:true,shake:4}); },
       tick(e,dt){ void dt; } },
     { name:'SURFACE — STRIKE NOW!', col:'#7ed957', dur:8.0, iv:false },
   ],
@@ -4559,7 +4667,7 @@ const FINAL_SCRIPT = {
           e.gsweep.d2T=(e.gsweep.d2T||0)-dt; if(e.gsweep.d2T<=0){ e.gsweep.d2T=0.16; geyserLine(e.x,e.y,e.gsweep.ang2,'#6d4c41',6,52); } }
         e.sCd-=dt; if(e.sCd<=0){ e.sCd=Math.max(0.55,0.9-e.loop*0.1);
           addZone(P.x,P.y,60,{tele:0.7,life:0.5,dps:16,col:'#8d6e63'});      // a coconut lobbed at your feet
-          mRingGap(e,12+e.loop*2,120,'#8d6e63',0.34); } },
+          mRingGap(e,12+e.loop*2,115,'#8d6e63',0.34,null,bossHellDmg(e)); } },
     },
     { name:'AFTERSHOCK — STRIKE NOW!', col:'#7ed957', dur:8.0, iv:false },
     { name:'COCONUT MONSOON', col:'#8d6e63', dur:7.5, iv:true, vulnMul:0.35, hold:'center',
@@ -4568,7 +4676,7 @@ const FINAL_SCRIPT = {
         const band=(arena?arena.y:0)+((e.sk*0.21)%1)*(arena?arena.h:600);   // a drifting row of falling coconuts
         const gx=arena?rand(arena.x+90,arena.x+arena.w-90):P.x;
         zoneLine(true, band, gx, 70, '#8d6e63', 9, 0.8);
-        mRingGap(e,16+e.loop*2,130,'#a06a4a',0.30); } },
+        mRingGap(e,14+e.loop*2,118,'#a06a4a',0.30,null,bossHellDmg(e)); } },
     },
     { name:'AFTERSHOCK — STRIKE NOW!', col:'#7ed957', dur:8.0, iv:false },
     { name:'STAMPEDE GAUNTLET', col:'#6d4c41', dur:7.0, iv:true, vulnMul:0.45,
@@ -4583,8 +4691,7 @@ const FINAL_SCRIPT = {
   // ===== WORLD 4 · ICE ICE BEARLINI — "ZERO ASSOLUTO" : a frost-storm colossus =====
   icebearlini: [
     { name:'BLIZZARD', col:'#9fd0ff', dur:7.5, iv:true, hold:'center',
-      enter(e){ e.storm=7.5; e.stormN=7+e.loop; e.stormSpd=120; e.stormStep=0.26; e.stormDir=Math.random()<0.5?1:-1;
-        e.stormCol='#9fd0ff'; e.stormCd=0.12; e.stormTwin=true; e.stormRainbow=false; e.sCd=1.0; sfx.warn(); },
+      enter(e){ bossHellStorm(e,{dur:7.5,n:5+e.loop,spd:98,step:0.28,col:'#9fd0ff',cd:0.14,twin:true,shake:4}); e.sCd=1.0; },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.2;   // frost drifts settle as slowing patches
         if(arena) for(let k=0;k<2;k++) addZone(rand(arena.x+50,arena.x+arena.w-50),rand(arena.y+50,arena.y+arena.h-50),56,{tele:0.7,life:2.4,dps:8,slow:true,col:'#bfe6ff'}); } },
     },
@@ -4601,8 +4708,8 @@ const FINAL_SCRIPT = {
     { name:'THAW — STRIKE NOW!', col:'#7ed957', dur:8.0, iv:false },
     { name:'ORANGE SUPERNOVA', col:'#ff8f2e', dur:5.5, iv:true, hold:'center',
       enter(e){ e.sk=0; e.sCd=1.0; burst(e.x,e.y,'#ff8f2e',30,360); shake=Math.max(shake,10); },
-      tick(e,dt){ e.sCd-=dt; if(e.sCd<=0 && e.sk<3){ e.sCd=1.4; e.sk++;   // three huge nested orange shockwaves, each with a gap
-        mRing(e,26,200,'#ff8f2e'); mRingGap(e,22,150,'#ffb15a',0.20); mRingGap(e,18,100,'#ff8f2e',0.24);
+      tick(e,dt){ e.sCd-=dt; if(e.sCd<=0 && e.sk<3){ e.sCd=1.4; e.sk++;
+        mRingGap(e,16,115,'#ff8f2e',0.36,null,bossHellDmg(e)); mRingGap(e,12,82,'#ffb15a',0.40,null,bossHellDmg(e));
         shake=Math.max(shake,8); sfx.hit(); } },
     },
     { name:'THAW — STRIKE NOW!', col:'#7ed957', dur:8.0, iv:false },
@@ -4610,9 +4717,8 @@ const FINAL_SCRIPT = {
   // ===== WORLD 5 · IL GRAN PAGLIACCIO — "GRAN FINALE" : the ringmaster's three-act spectacle =====
   granpagliaccio: [
     { name:'CONFETTI CYCLONE', col:'#ff5ea8', dur:7.0, iv:true, hold:'center',
-      enter(e){ e.storm=7.0; e.stormN=6+e.loop; e.stormSpd=120; e.stormStep=0.27; e.stormDir=Math.random()<0.5?1:-1;
-        e.stormCol='#ff5ea8'; e.stormCd=0.13; e.stormTwin=true; e.stormRainbow=false; e.sCd=1.1; sfx.warn(); },
-      tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.1; mRingGap(e,14,110,'#ffd24a',0.32); } },
+      enter(e){ bossHellStorm(e,{dur:7.0,n:5+e.loop,spd:100,step:0.29,col:'#ff5ea8',cd:0.14,twin:true,shake:4}); e.sCd=1.1; },
+      tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.1; mRingGap(e,14,100,'#ffd24a',0.34,null,bossHellDmg(e)); } },
     },
     { name:'INTERMISSION — STRIKE NOW!', col:'#7ed957', dur:8.0, iv:false },
     { name:'BALLOON BARRAGE', col:'#ff5ea8', dur:7.5, iv:true, vulnMul:0.35,
@@ -4629,7 +4735,7 @@ const FINAL_SCRIPT = {
     { name:'THE GRAND FINALE', col:'#ffd24a', dur:6.0, iv:true, hold:'center',
       enter(e){ e.sk=0; e.sCd=0.8; burst(e.x,e.y,'#ffd24a',30,360); shake=Math.max(shake,10); summonAdds(e,'clownino',3,6); },
       tick(e,dt){ e.sCd-=dt; if(e.sCd<=0){ e.sCd=1.0; e.sk++;
-        mRingGap(e,18,160,'#ff5ea8',0.24); mRingGap(e,14,105,'#ffd24a',0.28);
+        mRingGap(e,14,105,'#ff5ea8',0.38,null,bossHellDmg(e)); mRingGap(e,12,78,'#ffd24a',0.42,null,bossHellDmg(e));
         shake=Math.max(shake,6); sfx.hit(); } },
     },
     { name:'INTERMISSION — STRIKE NOW!', col:'#7ed957', dur:8.0, iv:false },
@@ -4690,7 +4796,7 @@ function updateBoss(e,dt){
     shake=Math.max(shake, 3 + (1-e.charging/FINAL_CHARGE)*7);
     if(e.charging<=0){                                     // UNLEASH: big opening salvo, attacks resume
       e.charging=0; burst(e.x,e.y,'#ff5acd',44,440); shake=Math.max(shake,18); sfx.boss();
-      mRing(e,30,210,'#ff5acd'); mRing(e,24,140,'#ff9be0');
+      mRingGap(e,18,125,'#ff5acd',0.32,null,bossHellDmg(e)); mRingGap(e,14,90,'#ff9be0',0.36,null,bossHellDmg(e));
       e.mst='recover'; e.mt=0.5;
     }
     return;   // no movement, no move cycle while charging
@@ -4726,12 +4832,14 @@ function updateBoss(e,dt){
   // sustained bullet-hell storm: a rotating multi-arm spiral (optionally a counter-rotating twin)
   if(e.storm>0){ e.storm-=dt; e.stormT=(e.stormT||0)-dt;
     if(e.stormT<=0){ e.stormT=e.stormCd||0.12; e.stormA=(e.stormA||0)+(e.stormStep||0.28)*(e.stormDir||1);
-      const rainbow = e.stormRainbow && worldIdx===0;          // rainbow spiral is a World 1 thing only
-      let n=e.stormN||10; if(rainbow) n=Math.max(4,Math.round(n*0.5));   // and it fires far fewer bullets
+      const rainbow = e.stormRainbow && worldIdx===0;
+      let n=e.stormN||10;
+      if(rainbow) n=Math.max(4,Math.round(n*0.5));
+      else if(gameMode==='story') n=Math.max(4,Math.round(n*0.85));
       const sp=e.stormSpd||150;
       let col=e.stormCol||'#ff5acd';
-      if(rainbow){ const h=((e.stormA*90)%360+360)%360; col='hsl('+h.toFixed(0)+',88%,62%)'; }   // cycles hue
-      const sOpts = e.stormDmgMul ? { dmgMul: e.stormDmgMul } : null;
+      if(rainbow){ const h=((e.stormA*90)%360+360)%360; col='hsl('+h.toFixed(0)+',88%,62%)'; }
+      const sOpts = { dmgMul: e.stormDmgMul!=null ? e.stormDmgMul : bossHellDmg(e) };
       for(let k=0;k<n;k++) fireEB(e.x,e.y, e.stormA + k*TAU/n, sp, col, sOpts);
       if(e.stormTwin && !rainbow) for(let k=0;k<n;k++) fireEB(e.x,e.y, -e.stormA + k*TAU/n + 0.3, sp, col, sOpts);
     }
