@@ -968,7 +968,6 @@ html.is-native-android, html.is-native-android body {
 .iconbtn { transition:transform .1s var(--ease-spring), box-shadow .1s, filter .12s; }
 .startbtn, .sbuy, .ipbtn, .chip2, .bigbtn { transition:transform .08s var(--ease-spring), box-shadow .08s, filter .14s var(--ease-smooth); }
 .respill { transition:transform .12s var(--ease-spring); }
-#topxpfill { transition:width .28s var(--ease-smooth); }
 @media (prefers-reduced-motion: reduce){ *{ animation-duration:.01ms !important; } }
 
 /* ===== Gem pill ===== */
