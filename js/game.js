@@ -2072,7 +2072,7 @@ const CHAOS_EVENTS=[
   {name:'GRAVITY',      fn:()=>{chaosGravT=3;}},
   {name:'BERSERK',      fn:()=>{chaosBerserkT=7;for(const e of enemies){if(!e.isBoss&&!e.under)e.hp=Math.min(e.maxHp,e.hp+e.maxHp*0.20);}}},
   {name:'DISARM',       fn:()=>{chaosDisarmT=3.5;}},
-  {name:'SWARM',        fn:()=>{ let n=18;while(n-->0&&enemies.length<MAX_ENEMIES-1){const p=ringPos(),f=curFoes[0];enemies.push({spr:f.spr,name:f.name,x:p.x,y:p.y,r:f.r*0.65,hp:f.hp*HP_MULT*0.28,maxHp:f.hp*HP_MULT*0.28,_shooter:false,_hazard:false,_burst:false,dmgBuff:0.5,sp:f.sp*1.8,xp:normalizeSwarmXp(f.xp),score:8,range:0,shoot:null,death:null,aoe:null,aoeCd:3,dash:false,dst:'idle',dcd:2,da:0,dwin:0,ddur:0,shell:false,shellCd:5,iv:0.25,support:null,supCd:3,front:0,kb:0,pullAura:0,trail:null,trailT:0,cast:null,castCd:0,under:false,digT:0,spin:0,t:rand(0,TAU),wob:rand(2,4),shootCd:3,frz:0,isBoss:false,hitT:0,sq:0,face:1,chaosSwarm:true});}}},
+  {name:'SWARM',        fn:()=>{ let n=18;while(n-->0&&enemies.length<MAX_ENEMIES-1){const p=ringPos(),f=curFoes[0];enemies.push({spr:f.spr,name:f.name,x:p.x,y:p.y,r:f.r*0.65,hp:f.hp*HP_MULT*0.28,maxHp:f.hp*HP_MULT*0.28,_shooter:false,_hazard:false,_burst:false,dmgBuff:0.5,sp:f.sp*1.8,xp:normalizeSwarmXp(f.xp),score:8,range:0,shoot:null,death:null,aoe:null,aoeCd:3,dash:false,dst:'idle',dcd:2,da:0,dwin:0,ddur:0,shell:false,shellCd:5,iv:0.25,support:null,supCd:3,kb:0,pullAura:0,trail:null,trailT:0,cast:null,castCd:0,under:false,digT:0,spin:0,t:rand(0,TAU),wob:rand(2,4),shootCd:3,frz:0,isBoss:false,hitT:0,sq:0,face:1,chaosSwarm:true});}}},
   {name:'BOMB RAIN',    fn:()=>{chaosBombRainT=20;chaosBombRainCd=0;}},
 ];
 
@@ -3716,7 +3716,7 @@ function damageEnemy(e,dmg,fx,fy,crit){
     dmg *= e.scriptVulnMul;
   }
   if(e.lead){ damageEnemy(e.lead,dmg,fx,fy,crit); e.hitT=0.12; e.sq=1; return; }  // duo partner routes to the lead's shared HP
-  if(!P.trueDmg && e.front!=null && fx!=null){     // frontal armor: hits from the player-facing arc are softened
+  if(!P.trueDmg && e.front>0 && fx!=null){     // frontal armor: hits from the player-facing arc are softened
     const toSrc=Math.atan2(fy-e.y,fx-e.x), toP=Math.atan2(P.y-e.y,P.x-e.x);
     let d=Math.abs(((toSrc-toP+Math.PI)%TAU+TAU)%TAU-Math.PI);
     if(d<1.2) dmg*=e.front;
