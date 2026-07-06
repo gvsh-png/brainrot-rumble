@@ -2479,7 +2479,6 @@ function gainXp(n){
 
 function openLevelUp(){
   state = ST.LEVELUP;
-  if(typeof CombatTutorials !== 'undefined' && CombatTutorials.onLevelUp) CombatTutorials.onLevelUp();
   sfx.level();
   if(typeof haptic === 'function') haptic('level');
   // candidates = every card with a remaining move whose synergy gate (req) is satisfied
@@ -2567,6 +2566,9 @@ function openLevelUp(){
     wrap.appendChild(d);
   });
   $('levelup').classList.remove('hidden');
+  if(typeof CombatTutorials !== 'undefined' && CombatTutorials.onLevelUp){
+    requestAnimationFrame(()=>CombatTutorials.onLevelUp());
+  }
 }
 
 // ============ DEATH ============
@@ -2620,6 +2622,7 @@ function tryDash(){
     P.dashCd=P.dashMax;
     sfx.dash();
     if(typeof haptic === 'function') haptic('dash');
+    if(typeof CombatTutorials !== 'undefined' && CombatTutorials.finishStep) CombatTutorials.finishStep('combat_dash');
     return;
   }
   if(typeof fireHook==='function') fireHook('onDash');
@@ -2634,6 +2637,7 @@ function tryDash(){
   P.dvx=mx; P.dvy=my; P.dashT=0.18; P.dashCd=P.dashMax; P.inv=Math.max(P.inv,0.25);
   sfx.dash();
   if(typeof haptic === 'function') haptic('dash');
+  if(typeof CombatTutorials !== 'undefined' && CombatTutorials.finishStep) CombatTutorials.finishStep('combat_dash');
 }
 
 // O(1) removal for arrays where order doesn't matter (bullets/projectiles): overwrite slot i with
