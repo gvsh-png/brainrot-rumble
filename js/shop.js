@@ -425,7 +425,15 @@ function cratePrice(key){
 }
 
 // ---- gold display + coin chip ----
-function refreshGoldUI(){ const t=$('goldtxt'); if(t) t.textContent=fmtGold(gold); }
+function refreshGoldUI(){
+  const t=$('goldtxt');
+  if(!t) return;
+  const prev=+(t.dataset.prev||t.textContent.replace(/,/g,'')||0);
+  const next=typeof gold!=='undefined'?gold:0;
+  t.textContent=fmtGold(next);
+  t.dataset.prev=next;
+  if(prev!==next && typeof uiPulse==='function') uiPulse(t.closest('.respill')||t);
+}
 let _coinURL='';
 function coinTag(){ if(!_coinURL && SP['coin']) _coinURL=SP['coin'].toDataURL(); return '<img class="coinico" src="'+_coinURL+'" alt="">'; }
 const _ICURL={};   // cached data-URLs for the house-drawn UI icons

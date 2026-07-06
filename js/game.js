@@ -112,7 +112,16 @@ const _storyP = +(localStorage.getItem('br_unlocked')||0);
 let chalUnlocked = _storyP >= 3
   ? Math.max(0, +(localStorage.getItem('br_ch_unlocked')||0))
   : -1;   // -1 = fully locked (need story world 3 first); cap applied after WORLDS expands
-function setCoinHUD(){ const c=$('coincount'); if(c){ const s=c.querySelector('span'); if(s) s.textContent=fmtNum(worldCoins); } }
+function setCoinHUD(){
+  const c=$('coincount');
+  if(!c) return;
+  const s=c.querySelector('span');
+  if(!s) return;
+  const prev=+(s.dataset.prev||s.textContent.replace(/,/g,'')||0);
+  s.textContent=fmtNum(worldCoins);
+  s.dataset.prev=worldCoins;
+  if(prev!==worldCoins && typeof uiPulse==='function') uiPulse(c,'juice-pulse');
+}
 function setKillHUD(){ const k=$('killtag'); if(k && k.lastElementChild) k.lastElementChild.textContent=kills; }
 function fmtTime(s){ s=Math.max(0,Math.floor(s)); const m=Math.floor(s/60), q=s%60; return (m<10?'0':'')+m+':'+(q<10?'0':'')+q; }
 // re-sync the whole in-game HUD to current state (called on start so nothing shows a stale value)
@@ -5698,10 +5707,30 @@ function render(){
   // --- floating text ---
   cx.textAlign='center';
   for(const t of texts){
-    cx.globalAlpha = Math.min(1, t.life/t.max*2);
-    cx.font = '900 '+t.size+'px sans-serif';
-    cx.lineWidth = t.big?4:3; cx.strokeStyle=OUT; cx.strokeText(t.str,t.x,t.y);
-    cx.fillStyle = t.color; cx.fillText(t.str, t.x, t.y);
+    const alpha = Math.min(1, t.life/t.max*2);
+    const age = 1 - t.life/t.max;
+    const pop = t.big ? 0.82 + 0.18 * (1 - Math.pow(1 - Math.min(1, age * 3), 3)) : 1;
+    const sz = t.size * pop;
+    cx.globalAlpha = alpha;
+    cx.font = '900 '+sz+'px "Baloo 2",sans-serif';
+    if(t.big){
+      cx.save();
+      cx.shadowColor = t.color;
+      cx.shadowBlur = 18 * alpha;
+      cx.fillStyle = t.color;
+      cx.fillText(t.str, t.x, t.y);
+      cx.shadowBlur = 0;
+      cx.lineWidth = 2.5;
+      cx.strokeStyle = 'rgba(10,14,24,.55)';
+      cx.strokeText(t.str, t.x, t.y);
+      cx.restore();
+    } else {
+      cx.lineWidth = 3;
+      cx.strokeStyle = OUT;
+      cx.strokeText(t.str, t.x, t.y);
+      cx.fillStyle = t.color;
+      cx.fillText(t.str, t.x, t.y);
+    }
   }
   cx.globalAlpha=1;
 

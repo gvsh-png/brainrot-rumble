@@ -20,7 +20,14 @@ let gemBalance = (()=>{
 function saveGems() { localStorage.setItem('br_gems',gemBalance); localStorage.setItem('br_gems_sig',_gemHash(gemBalance)); if(window.markDirty) window.markDirty(); }
 function addGems(n) { gemBalance+=Math.floor(n); saveGems(); refreshGemsUI(); }
 function spendGems(n) { if(gemBalance<n) return false; gemBalance-=n; saveGems(); refreshGemsUI(); return true; }
-function refreshGemsUI() { const t=document.getElementById('gemtxt'); if(t) t.textContent=gemBalance; }
+function refreshGemsUI() {
+  const t=document.getElementById('gemtxt');
+  if(!t) return;
+  const prev=+(t.dataset.prev||t.textContent||0);
+  t.textContent=gemBalance;
+  t.dataset.prev=gemBalance;
+  if(prev!==gemBalance && typeof uiPulse==='function') uiPulse(t.closest('.respill')||t);
+}
 
 // ---- Gem icon (cached data-URL) ----
 let _gemIconURL='';

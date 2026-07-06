@@ -92,12 +92,16 @@ function _engageJuice(col, power){
   if(typeof haptic === 'function') haptic(power >= 3 ? 'win' : power >= 2 ? 'level' : 'light');
 }
 
+function uiPulse(el, cls){
+  if(!el) return;
+  cls = cls || 'juice-pulse';
+  el.classList.remove(cls);
+  void el.offsetWidth;
+  el.classList.add(cls);
+}
+
 function _menuResourcePulse(){
-  const pill = document.querySelector('.respill');
-  if(!pill) return;
-  pill.classList.remove('juice-pulse');
-  void pill.offsetWidth;
-  pill.classList.add('juice-pulse');
+  uiPulse(document.querySelector('.respill'));
 }
 
 function grantSwarmXp(n){
