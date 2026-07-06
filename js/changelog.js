@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '2.03';
+const CURRENT_VERSION = '2.04';
 const CHANGELOG = [
+  { v: '2.04', notes: 'Debug APK: new "Skip World 1 (test tutorials)" button in Settings — sets story progress as if you just cleared World 1 and replays the Shop/Bounties/Game Modes unlock guides.' },
   { v: '2.03', notes: 'Ting Ting Ting Bahur bosses no longer have glitchy auto-rig legs (sprite legs removed). Tutorial guides for Daily Shop, Bounties, and Game Modes now mirror the highlighted UI above the overlay instead of blurring it out. Common gear always shows at least +1. Chaos GRAVITY pull stops ~8m from you instead of stacking enemies on top during swarms.' },
   { v: '2.02', notes: 'Skill VFX overhaul: player zones and auras no longer use flat dashed circles — each biome gets unique vector art (frost crystals, ember petals, spore caps, neon brackets, gravity vortices, oil-slick bogs, sunbeams, toxic drips, etc.). Registry auras, trails, burns, and frost fields all use the new renderer.' },
   { v: '2.01', notes: 'Pet recruit now includes milestone pets (once their world is reached) plus uncommon tier in the gacha pool. Debug Unlock All grants every pet and clears stale world-emblem locks. Shop unlock guide shows a bright mirrored Shop tab above the spotlight so the icon and label are visible. Case/crate drops now scale to your selected world tier — no more pulling Omega gear from a World 2 gold crate.' },

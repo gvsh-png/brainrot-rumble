@@ -28,6 +28,34 @@
     document.querySelectorAll('.feature-locked').forEach((el) => el.classList.remove('feature-locked'));
   }
 
+  function skipBeatWorld1() {
+    if (!isDebugApk() || typeof WORLDS === 'undefined') return;
+    const prev = typeof unlockedMax === 'number' ? unlockedMax : +(localStorage.getItem('br_unlocked') || 0);
+    if (prev < 1) {
+      unlockedMax = 1;
+      localStorage.setItem('br_unlocked', '1');
+    }
+    selWorld = Math.min(Math.max(selWorld, 1), unlockedMax);
+    gameMode = 'story';
+    if (typeof clearSuspendedRun === 'function') clearSuspendedRun();
+    if (window.Onboarding && typeof Onboarding.debugReplayWorld1 === 'function') {
+      Onboarding.debugReplayWorld1();
+    }
+    if (typeof quitToMenu === 'function') quitToMenu();
+    if (typeof clearWorldEmblemCache === 'function') clearWorldEmblemCache();
+    if (typeof refreshWorldSel === 'function') refreshWorldSel();
+    if (typeof refreshTopbar === 'function') refreshTopbar();
+    if (typeof triggerUnlockReveal === 'function') triggerUnlockReveal();
+    if (window.Onboarding && typeof Onboarding.onWorldClear === 'function') {
+      Onboarding.onWorldClear(0, 1);
+    } else {
+      unlockAllFeaturesUI();
+    }
+    if (window.markDirty) window.markDirty();
+    if (typeof sfx !== 'undefined' && sfx.pick) sfx.pick();
+    if (typeof bigText === 'function') bigText('DEBUG: WORLD 1 CLEARED', '#ffd24a');
+  }
+
   function unlockAllWorlds() {
     if (!isDebugApk() || typeof WORLDS === 'undefined') return;
     const max = WORLDS.length - 1;
@@ -58,6 +86,11 @@
     }
     if (sec) sec.classList.remove('hidden');
     if (sep) sep.classList.remove('hidden');
+    const skipW1 = document.getElementById('sdrop-debug-skip-w1');
+    if (skipW1 && !skipW1._wired) {
+      skipW1._wired = true;
+      skipW1.addEventListener('click', skipBeatWorld1);
+    }
     const btn = document.getElementById('sdrop-debug-unlock');
     if (btn && !btn._wired) {
       btn._wired = true;
@@ -66,6 +99,7 @@
   }
 
   window.debugUnlockAllWorlds = unlockAllWorlds;
+  window.debugSkipBeatWorld1 = skipBeatWorld1;
   window.initDebugTools = initDebugTools;
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initDebugTools);

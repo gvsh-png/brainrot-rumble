@@ -569,6 +569,17 @@
     }
   }
 
+  function debugReplayWorld1() {
+    const w1Guides = ['shop_unlock', 'shop_intro', 'bounties', 'gamemode_intro'];
+    const w1Anims = ['shop', 'character', 'daily_bounties', 'gamemode'];
+    for (const id of w1Guides) guideDone.delete(id);
+    for (const id of w1Anims) animSeen.delete(id);
+    saveAnim();
+    saveGuide();
+    guideQueue.length = 0;
+    hideGuide();
+  }
+
   function init() {
     loadFlags();
     migrateVeterans();
@@ -597,6 +608,7 @@
     drainGuideQueue,
     tabLockHint,
     abandonActiveGuides,
+    debugReplayWorld1,
   };
 
   if (document.readyState === 'loading') {
