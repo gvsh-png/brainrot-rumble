@@ -311,18 +311,6 @@ function chalDmgMul(){ return gameMode==='challenger' ? 1.3 + worldBand()*0.08 :
 function worldHpBand(){ return typeof extBandMul==='function' ? extBandMul(0.42, 9) : 1 + worldBand()*0.42; }
 // Anti-cheat ceilings scale with equipped gear so legit endgame loadouts don't get kicked to menu.
 function legitStatCeil(){
-  const pctGear = typeof statUsesPercent==='function' && statUsesPercent(worldIdx);
-  if(pctGear){
-    const dPct = typeof equippedGearDmgPct==='function' ? equippedGearDmgPct(worldIdx) : 0;
-    const hPct = typeof equippedGearHpPct==='function' ? equippedGearHpPct(worldIdx) : 0;
-    const gMul = typeof gearMatchDmgMul==='function' ? gearMatchDmgMul(worldIdx) : 1;
-    return {
-      dmg: Math.max(35000, Math.round(30 * (1 + dPct) * gMul * 12)),
-      maxHp: Math.max(10000, Math.round(110 * (1 + hPct) * 8)),
-      speed: 3000,
-      shots: 36
-    };
-  }
   const flatDmg = typeof equippedFlatDmg==='function' ? equippedFlatDmg(worldIdx) : 0;
   const flatHp = typeof equippedHp==='function' ? equippedHp(worldIdx) : 0;
   const gMul = typeof gearWorldDmgMul==='function' ? gearWorldDmgMul(worldIdx) : 1;
@@ -1565,15 +1553,8 @@ function _doStartGame(wi){
   // Character base stats first — so gear builds on top of the character's foundation
   if(typeof clearHooks==='function') clearHooks();
   if(typeof applyCharBase==='function') applyCharBase(P.charId);
-  // Gear applies on top; gearDmgMul lets characters reduce gear's dmg contribution
-  if(typeof statUsesPercent==='function' && statUsesPercent(wi)){
-    const dPct = typeof equippedGearDmgPct==='function' ? equippedGearDmgPct(wi) : 0;
-    const hPct = typeof equippedGearHpPct==='function' ? equippedGearHpPct(wi) : 0;
-    const match = typeof gearMatchDmgMul==='function' ? gearMatchDmgMul(wi) : 1;
-    P.dmg *= (1 + dPct) * match * (P.gearDmgMul||1);
-    P.maxHp = Math.max(1, Math.round(P.maxHp * (1 + hPct)));
-    P.hp = P.maxHp;
-  } else if(typeof equippedFlatDmg==='function'){
+  // Gear applies on top (always flat +dmg/+HP); gearDmgMul lets characters reduce gear's dmg contribution
+  if(typeof equippedFlatDmg==='function'){
     const gearMul = (typeof gearWorldDmgMul==='function' ? gearWorldDmgMul(wi) : 1) * (P.gearDmgMul||1);
     P.dmg += equippedFlatDmg(wi) * gearMul;
     if(typeof equippedHp==='function'){ const h=equippedHp(wi); P.maxHp += h; P.hp = P.maxHp; }

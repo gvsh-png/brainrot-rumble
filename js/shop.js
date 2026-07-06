@@ -50,8 +50,8 @@ function buildTierVals(start, epicVal, maxVal, opts={}){
   return vals;
 }
 const STAT = {
-  dmg:   { label:'damage',        short:'DMG', icon:'coin',   flat:true, vals:buildTierVals(6,120,1800), pctVals:buildTierVals(0.035,0.11,0.38,{flat:false}) },
-  hp:    { label:'max HP',        short:'HP',  icon:'heart',  flat:true, vals:buildTierVals(12,200,1200), pctVals:buildTierVals(0.045,0.14,0.42,{flat:false}) },
+  dmg:   { label:'damage',        short:'DMG', icon:'coin',   flat:true, vals:buildTierVals(6,120,1800) },
+  hp:    { label:'max HP',        short:'HP',  icon:'heart',  flat:true, vals:buildTierVals(12,200,1200) },
   speed: { label:'move speed',    short:'SPD', icon:'heart',  vals:buildTierVals(0.02,0.08,0.28,{flat:false}) },
   range: { label:'attack range',  short:'RNG', icon:'gem',    vals:buildTierVals(0.04,0.16,0.55,{flat:false}) },
   crit:  { label:'crit chance',   short:'CRT', icon:'coin',   vals:buildTierVals(0.01,0.05,0.18,{flat:false}) },
@@ -85,29 +85,19 @@ function itemRar(id){  return id.split('_')[1]; }
 function itemVar(id){  return +id.split('_')[2]; }
 function itemCat(id){  return GEAR_CATS[itemVar(id) % GEAR_CATS.length]; }
 function shopWorldIdx(){ return typeof selWorld!=='undefined' ? selWorld : 0; }
-function statUsesPercent(wi){
-  if(wi == null) wi = (typeof worldIdx === 'number' ? worldIdx : shopWorldIdx());
-  return (wi|0) >= 10;
-}
 function itemBonus(id, worldIdx){
   const s=itemStat(id), r=itemRar(id), st=STAT[s];
-  const wi = worldIdx != null ? worldIdx : shopWorldIdx();
-  if(statUsesPercent(wi) && st.pctVals) return st.pctVals[r];
   return st.vals[r];
 }
 function itemPrice(id){ return RAR[itemRar(id)].price; }
 function itemName(id){ return ITEM_ADJ[itemStat(id)][itemVar(id)] + ' ' + CAT_NOUN[itemCat(id)]; }
 // short "+N" (flat stats) or "+N%" (percent stats) badge used on tiles/slots
 function statIsFlat(stat){ return !!STAT[stat].flat; }
-function statDisplaysFlat(stat, worldIdx){
-  const wi = worldIdx != null ? worldIdx : shopWorldIdx();
-  if(statUsesPercent(wi) && (stat==='dmg' || stat==='hp')) return false;
-  return statIsFlat(stat);
-}
+function statDisplaysFlat(stat){ return statIsFlat(stat); }
 function statIsArmor(stat){ return !!STAT[stat].armor; }
 function itemBonusShort(id, worldIdx){
   const s=itemStat(id), v=itemBonus(id, worldIdx);
-  if(statDisplaysFlat(s, worldIdx)) return (v >= 1000 && typeof fmtPlus==='function' ? fmtPlus(v) : '+'+v);
+  if(statDisplaysFlat(s)) return (v >= 1000 && typeof fmtPlus==='function' ? fmtPlus(v) : '+'+v);
   if(statIsArmor(s)) return '-'+Math.round(v*100)+'%';
   return '+'+Math.round(v*100)+'%';
 }
@@ -285,10 +275,8 @@ function equippedStatBonus(stat, wi){
   return b;
 }
 function equippedStatMult(stat, wi){ return 1 + equippedStatBonus(stat, wi); }   // for percent stats / UI
-function equippedFlatDmg(wi){ return statUsesPercent(wi) ? 0 : equippedStatBonus('dmg', wi); }
-function equippedHp(wi){ return statUsesPercent(wi) ? 0 : equippedStatBonus('hp', wi); }
-function equippedGearDmgPct(wi){ return statUsesPercent(wi) ? equippedStatBonus('dmg', wi) : 0; }
-function equippedGearHpPct(wi){ return statUsesPercent(wi) ? equippedStatBonus('hp', wi) : 0; }
+function equippedFlatDmg(wi){ return equippedStatBonus('dmg', wi); }
+function equippedHp(wi){ return equippedStatBonus('hp', wi); }
 function equippedSpeedMult(){ return equippedStatMult('speed'); }
 function equippedRangeMult(){ return equippedStatMult('range'); }
 function equippedCrit(){ return equippedStatBonus('crit'); }
@@ -320,11 +308,6 @@ function gearWorldDmgMul(worldIdx){
   const quality=1+tier*0.11;
   const match=delta>=0 ? 1+Math.min(3.2, delta*0.22) : Math.max(0.45, 1+delta*0.14);
   return quality*match;
-}
-function gearMatchDmgMul(worldIdx){
-  const delta=equippedGearTierScore()-worldTierIdx(worldIdx);
-  if(delta>=0) return 1+Math.min(0.4, delta*0.07);
-  return Math.max(0.65, 1+delta*0.11);
 }
 function gearBossHpMul(worldIdx){
   const hp=gearEnemyHpMul(worldIdx);
@@ -602,8 +585,8 @@ function renderInventory(){
     '<div class="eqside left">'+eqSlotHTML('cape')+eqSlotHTML('helmet')+eqSlotHTML('chest')+eqSlotHTML('gloves')+'</div>'+
     '<div class="eqmid"><img class="eqchar" src="'+compositeCharURL()+'" alt="">'+
       '<div class="eqstats">'+
-        eqStatChip('ic_dmg', statUsesPercent(shopWorldIdx()) ? '+'+Math.round(equippedGearDmgPct()*100)+'%' : ((typeof fmtPlus==='function' ? fmtPlus(equippedFlatDmg()) : '+'+equippedFlatDmg())))+
-        eqStatChip('ic_hp', statUsesPercent(shopWorldIdx()) ? '+'+Math.round(equippedGearHpPct()*100)+'%' : ((typeof fmtPlus==='function' ? fmtPlus(equippedHp()) : '+'+equippedHp())))+
+        eqStatChip('ic_dmg', (typeof fmtPlus==='function' ? fmtPlus(equippedFlatDmg()) : '+'+equippedFlatDmg()))+
+        eqStatChip('ic_hp', (typeof fmtPlus==='function' ? fmtPlus(equippedHp()) : '+'+equippedHp()))+
         eqStatChip('ic_spd','+'+pct('speed')+'%')+
         eqStatChip('ic_rng','+'+pct('range')+'%')+
         eqStatChip('ic_crit','+'+Math.round(equippedCrit()*100)+'%')+

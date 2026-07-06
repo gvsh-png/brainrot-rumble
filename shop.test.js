@@ -205,14 +205,18 @@ test('gear tier helpers soften enemies when loadout matches world', () => {
   assert.ok(gearedDmg > 2, 'on-tier endgame gear should feel like a big spike');
 });
 
-test('percent gear mode activates from world 11 onward', () => {
+test('gear dmg/hp stay flat on all worlds (percent scaling is cards-only)', () => {
   const { sandbox } = loadShop({ br_gear_reset_v4: '1' });
-  assert.equal(sandbox.statUsesPercent(9), false);
-  assert.equal(sandbox.statUsesPercent(10), true);
-  const flat = sandbox.itemBonus('dmg_common_0', 0);
-  const pct = sandbox.itemBonus('dmg_omniscient_0', 10);
-  assert.ok(flat > 1);
-  assert.ok(pct > 0 && pct < 1);
+  const w1 = sandbox.itemBonus('dmg_common_0', 0);
+  const w11 = sandbox.itemBonus('dmg_common_0', 10);
+  const omniW1 = sandbox.itemBonus('dmg_omniscient_0', 0);
+  const omniW11 = sandbox.itemBonus('dmg_omniscient_0', 10);
+  assert.ok(w1 > 1);
+  assert.equal(w1, w11, 'world index must not change flat gear bonuses');
+  assert.ok(omniW1 > 100);
+  assert.equal(omniW1, omniW11, 'high-tier gear stays flat in late worlds');
+  assert.ok(sandbox.itemBonusShort('dmg_omniscient_0', 10).includes('+'));
+  assert.ok(!sandbox.itemBonusShort('dmg_omniscient_0', 10).includes('%'));
   assert.equal(typeof sandbox.gearBossHpMul, 'function');
   const slots = ['cape','helmet','chest','gloves','belt','pants','ring','shoes'];
   const omniEquip = {};
