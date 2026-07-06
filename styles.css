@@ -32,12 +32,15 @@ img { -webkit-user-drag:none; user-drag:none; pointer-events:none; }
   --r-epic: #b06ff0;
   --r-legendary: #e0a92e;
   --r-mythic: #ff3b5c;
-  --menu-bg-top: #3d6e48;
-  --menu-bg-mid: #c87830;
-  --menu-bg-bot: #7a4218;
+  --menu-bg-top: #252d42;
+  --menu-bg-mid: #161b28;
+  --menu-bg-bot: #0c1018;
+  --menu-elevated: rgba(22, 28, 40, 0.94);
+  --menu-border: rgba(255, 255, 255, 0.08);
 }
 
-html,body { width:100%; height:100%; overflow:hidden; background:#4a7a3a; font-family:'Baloo 2','Segoe UI',system-ui,sans-serif; }
+html,body { width:100%; height:100%; overflow:hidden; background:#0c1018; font-family:'Baloo 2','Segoe UI',system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
 html.is-native-android, html.is-native-android body {
   width:100%; height:100%; min-height:100dvh; padding:0; margin:0;
   /* edge-to-edge canvas; HUD/tabbar use env(safe-area-inset-*) themselves */
@@ -165,18 +168,13 @@ html.is-native-android, html.is-native-android body {
 .changelog-v { font-weight:900; color:var(--accent); font-size:clamp(13px,2.4vmin,16px); }
 .changelog-notes { font-size:clamp(12px,2.2vmin,15px); color:var(--text-muted); font-weight:700; }
 
-/* ===== Main menu — survivor-style shell with warm sunset ===== */
+/* ===== Main menu — premium dark shell (matches tab bar + cards) ===== */
 #menu { flex-direction:column; justify-content:flex-start; gap:0; padding:0; overflow:hidden;
-  background:radial-gradient(140% 90% at 50% -10%, var(--menu-bg-top) 0%, var(--menu-bg-mid) 42%, var(--menu-bg-bot) 100%); }
+  background:radial-gradient(125% 95% at 50% -15%, var(--menu-bg-top) 0%, var(--menu-bg-mid) 48%, var(--menu-bg-bot) 100%); }
 #menu::before { content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
-  background-image:radial-gradient(rgba(255,255,255,0.07) 1.8px, transparent 2px); background-size:24px 24px; opacity:.55; }
+  background-image:radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1.5px); background-size:22px 22px; opacity:.45; }
 #menu::after { content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
-  background:linear-gradient(180deg, rgba(26,35,54,.12) 0%, transparent 28%, rgba(0,0,0,.18) 100%); }
-#menu[data-tab="shop"],
-#menu[data-tab="inventory"],
-#menu[data-tab="character"],
-#menu[data-tab="pets"],
-#menu[data-tab="battle"] { background:radial-gradient(140% 90% at 50% -10%, var(--menu-bg-top) 0%, var(--menu-bg-mid) 42%, var(--menu-bg-bot) 100%); }
+  background:linear-gradient(180deg, rgba(255,255,255,.04) 0%, transparent 22%, rgba(0,0,0,.42) 100%); }
 
 /* TOP RESOURCE BAR */
 #topbar { position:relative; z-index:1; display:flex; align-items:center; gap:clamp(6px,1.4vmin,12px); width:100%;
@@ -184,13 +182,13 @@ html.is-native-android, html.is-native-android body {
   background:linear-gradient(180deg, rgba(26,35,54,.72) 0%, rgba(26,35,54,.38) 100%);
   border-bottom:var(--border-card); box-shadow:0 4px 16px rgba(0,0,0,.22); }
 #topbadge { flex:0 0 auto; min-width:clamp(34px,6vmin,48px); height:clamp(38px,6.6vmin,52px); display:flex; align-items:center; justify-content:center;
-  background:var(--accent); border:var(--border-card); border-radius:9px; color:#fff; font-weight:900; font-size:clamp(16px,3vmin,26px);
-  -webkit-text-stroke:.5px var(--ink); box-shadow:var(--shadow-card); }
+  background:var(--accent); border:var(--border-card); border-radius:9px; color:#fff; font-weight:800; font-size:clamp(16px,3vmin,26px);
+  text-shadow:0 1px 2px rgba(0,0,0,.28); box-shadow:var(--shadow-card); }
 #topxp { flex:0 1 auto; height:clamp(13px,2vmin,18px); background:var(--ink); border:var(--border-card); border-radius:9px; overflow:hidden;
   width:clamp(70px,18vmin,170px); }
 #topxpfill { height:100%; width:30%; background:linear-gradient(#8be24f,#4caf3a); transition:width .2s; }
 .respill { margin-left:auto; display:flex; align-items:center; gap:5px; background:var(--ink); border:var(--border-card); border-radius:16px;
-  padding:3px 7px 3px 8px; color:var(--text); font-weight:900; font-size:clamp(13px,2.3vmin,20px); box-shadow:var(--shadow-card); }
+  padding:3px 7px 3px 8px; color:var(--text); font-weight:800; font-size:clamp(13px,2.3vmin,20px); box-shadow:var(--shadow-card); }
 .respill img { width:1.4em; height:1.4em; }
 .respill .resplus { display:flex; align-items:center; justify-content:center; width:1.15em; height:1.15em; margin-left:2px;
   background:var(--green); border:2px solid var(--ink); border-radius:50%; color:#fff; font-size:.85em; line-height:1; }
@@ -242,11 +240,12 @@ html.is-native-android, html.is-native-android body {
 .petgrid-tab { grid-template-columns:repeat(4,1fr); }
 .petgrid-tab .pettile-cnv { width:72%; height:72%; }
 
-/* yellow ribbon banner — skill-banner style */
-.banner { align-self:center; position:relative; background:linear-gradient(var(--accent),#d88820); color:#fff; -webkit-text-stroke:1px var(--ink);
+/* section headers — clean type, no faux-bold stroke */
+.banner { align-self:center; position:relative; background:linear-gradient(180deg, #f5a832 0%, #d88820 100%); color:#fff;
   border:var(--border-card); border-radius:11px; padding:clamp(6px,1.3vmin,11px) clamp(28px,7vmin,60px); margin:clamp(4px,1vmin,10px) 0;
-  font-weight:900; font-size:clamp(17px,3.4vmin,28px); letter-spacing:.5px; box-shadow:var(--shadow-card); }
-.shopsub { text-align:center; color:var(--text); font-weight:800; font-size:clamp(11px,2vmin,16px); text-shadow:0 1px 0 rgba(0,0,0,.35); margin-top:-2px; }
+  font-weight:800; font-size:clamp(16px,3.2vmin,26px); letter-spacing:.04em; box-shadow:var(--shadow-card);
+  text-shadow:0 1px 2px rgba(0,0,0,.32); }
+.shopsub { text-align:center; color:var(--text-muted); font-weight:700; font-size:clamp(11px,2vmin,16px); margin-top:-2px; }
 
 /* BATTLE tab — mobile-first: header → stage → PLAY → bounties */
 #tab-battle {
@@ -269,12 +268,12 @@ html.is-native-android, html.is-native-android body {
   width:clamp(34px,5.2vmin,44px); height:clamp(34px,5.2vmin,44px); font-weight:900; font-size:clamp(14px,2.4vmin,20px); box-shadow:var(--shadow-card); }
 #worldsel button:disabled { opacity:.4; cursor:default; box-shadow:none; }
 #wname {
-  font-weight:900; color:var(--text); -webkit-text-stroke:1.2px var(--ink); text-shadow:0 3px 0 rgba(0,0,0,.35);
+  font-weight:800; color:var(--text); letter-spacing:.02em;
   font-size:clamp(15px,3.4vmin,28px); text-align:center; line-height:1.08;
   min-height:0; display:flex; align-items:center; justify-content:center;
   width:100%; min-width:0; padding:0 2px;
 }
-.worldsub { color:var(--text-muted); font-weight:800; font-size:clamp(10px,1.9vmin,14px); text-shadow:0 2px 0 rgba(0,0,0,.3);
+.worldsub { color:var(--text-dim); font-weight:600; font-size:clamp(10px,1.9vmin,14px); letter-spacing:.03em;
   margin:3px 0 0; white-space:nowrap; text-align:center; flex-shrink:0; }
 .battle-sidebar {
   display:flex; flex-direction:column; align-items:center; gap:clamp(5px,1vmin,8px);
@@ -282,11 +281,11 @@ html.is-native-android, html.is-native-android body {
 }
 .daily-bounties {
   width:100%; max-width:clamp(280px,92vmin,460px); margin:0; flex-shrink:0;
-  padding:6px 10px; border:2px solid #2a1c10; border-radius:12px;
-  background:linear-gradient(180deg, rgba(22,28,38,0.9), rgba(14,18,26,0.95));
-  box-shadow:0 3px 0 #0a0e14;
+  padding:8px 12px; border:1px solid var(--menu-border); border-radius:14px;
+  background:var(--menu-elevated);
+  box-shadow:0 4px 18px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.05);
 }
-.db-title { font-weight:900; font-size:clamp(10px,1.9vmin,13px); color:#9fe0ff; letter-spacing:.04em; margin-bottom:4px;
+.db-title { font-weight:800; font-size:clamp(10px,1.9vmin,13px); color:#9fe0ff; letter-spacing:.06em; margin-bottom:4px;
   display:flex; align-items:center; justify-content:space-between; gap:8px; }
 .db-sub { font-weight:700; font-size:clamp(8px,1.5vmin,11px); color:var(--text-muted); letter-spacing:0; white-space:nowrap; }
 .db-row {
@@ -315,9 +314,9 @@ html.is-native-android, html.is-native-android body {
 .run-resume { width:100%; max-width:clamp(280px,92vmin,460px); }
 .run-resume-box {
   display:flex; flex-direction:column; align-items:stretch; gap:6px;
-  padding:8px 10px; border:2px solid #2a1c10; border-radius:14px;
-  background:linear-gradient(180deg, rgba(22,28,38,0.94), rgba(14,18,26,0.98));
-  box-shadow:0 4px 0 #0a0e14, inset 0 1px 0 rgba(255,255,255,0.06);
+  padding:8px 12px; border:1px solid var(--menu-border); border-radius:14px;
+  background:var(--menu-elevated);
+  box-shadow:0 4px 18px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.05);
 }
 .run-resume-head { text-align:center; line-height:1.25; }
 .run-resume-title { font-weight:800; font-size:clamp(10px,1.9vmin,13px); color:#9fe0ff; letter-spacing:0.04em; }
@@ -326,20 +325,22 @@ html.is-native-android, html.is-native-android body {
 .run-resume .bigbtn { width:100%; font-size:clamp(12px,2.4vmin,16px); padding:9px 6px; box-shadow:0 4px 0 #3f8a36; }
 .run-resume .bigbtn.quit { background:#d9694a; box-shadow:0 4px 0 #a0412c; }
 .run-resume .bigbtn.quit:active { box-shadow:0 1px 0 #a0412c; }
-.gamemodebtn { width:clamp(140px,36vmin,240px); padding:clamp(5px,1.2vmin,8px) 0; border:3px solid #2a1c10; border-radius:12px;
-  background:linear-gradient(#9a6be0,#7040c0); color:#fff; -webkit-text-stroke:1px #2a1c10; font-weight:900;
-  font-size:clamp(12px,2.6vmin,18px); letter-spacing:1px; cursor:pointer; box-shadow:0 4px 0 #4a2090; }
-.gamemodebtn:active { transform:translateY(3px); box-shadow:0 2px 0 #4a2090; }
-.startbtn { width:100%; max-width:clamp(280px,92vmin,460px); padding:clamp(14px,3.2vmin,20px) 0; border:4px solid #2a1c10; border-radius:18px;
-  background:linear-gradient(#ffd24a,#f3a721); color:#fff; -webkit-text-stroke:1.4px #2a1c10; font-weight:900;
-  font-size:clamp(24px,5.6vmin,44px); letter-spacing:1.5px; cursor:pointer; box-shadow:0 7px 0 #b87a1a; }
-.startbtn:active { transform:translateY(4px); box-shadow:0 3px 0 #b87a1a; }
+.gamemodebtn { width:clamp(140px,36vmin,240px); padding:clamp(5px,1.2vmin,8px) 0; border:3px solid var(--ink); border-radius:12px;
+  background:linear-gradient(180deg,#a87ae8,#6e48c8); color:#fff; font-weight:800;
+  font-size:clamp(12px,2.6vmin,18px); letter-spacing:.06em; cursor:pointer; box-shadow:0 4px 0 #3d2878, 0 6px 16px rgba(0,0,0,.28);
+  text-shadow:0 1px 2px rgba(0,0,0,.28); }
+.gamemodebtn:active { transform:translateY(3px); box-shadow:0 2px 0 #3d2878; }
+.startbtn { width:100%; max-width:clamp(280px,92vmin,460px); padding:clamp(14px,3.2vmin,20px) 0; border:3px solid var(--ink); border-radius:18px;
+  background:linear-gradient(180deg,#ffe066 0%,#f0a820 100%); color:#fff; font-weight:800;
+  font-size:clamp(24px,5.6vmin,44px); letter-spacing:.06em; cursor:pointer;
+  box-shadow:0 6px 0 #9a6a14, 0 10px 28px rgba(0,0,0,.32); text-shadow:0 2px 0 rgba(0,0,0,.22); }
+.startbtn:active { transform:translateY(4px); box-shadow:0 2px 0 #9a6a14; }
 #startbtn.hidden { display:none !important; }
 #run-resume:not(.hidden) ~ .gamemodebtn,
 #run-resume:not(.hidden) ~ .hint { display:none !important; }
 .respill.juice-pulse { animation:goldPulse .55s ease-out; }
 @keyframes goldPulse { 0%{ transform:scale(1); filter:brightness(1); } 40%{ transform:scale(1.06); filter:brightness(1.35); } 100%{ transform:scale(1); filter:brightness(1); } }
-#menu .hint { color:var(--text-muted); font-weight:800; font-size:clamp(10px,1.8vmin,14px); text-shadow:0 1px 0 rgba(0,0,0,.35); text-align:center; margin:0; }
+#menu .hint { color:var(--text-dim); font-weight:600; font-size:clamp(10px,1.8vmin,14px); text-align:center; margin:0; letter-spacing:.02em; }
 
 /* ===== Gamemode popup ===== */
 #gamemode-popup { z-index:35; background:rgba(16,22,18,.82); }
@@ -620,13 +621,14 @@ html.is-native-android, html.is-native-android body {
   background:var(--ink); border-top:var(--border-card); padding:0 0 max(0px,env(safe-area-inset-bottom));
   box-shadow:0 -6px 20px rgba(0,0,0,.28); }
 .tabbtn { flex:1; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:3px;
-  background:var(--slate); border:none; border-right:2px solid rgba(0,0,0,.28); color:var(--text-dim); font-weight:900; cursor:pointer;
+  background:var(--slate); border:none; border-right:2px solid rgba(0,0,0,.28); color:var(--text-dim); font-weight:700; cursor:pointer;
   padding:clamp(8px,1.8vmin,14px) 2px clamp(10px,2vmin,16px); font-size:clamp(11px,2vmin,15px); }
 .tabbtn:last-child { border-right:none; }
 .tabbtn .tabico { width:clamp(24px,4.4vmin,32px); height:clamp(24px,4.4vmin,32px); filter:grayscale(.35) brightness(.95); }
-.tabbtn.active { background:linear-gradient(var(--gold),#d88820); color:#fff; -webkit-text-stroke:.4px var(--ink);
+.tabbtn.active { background:linear-gradient(180deg, var(--gold),#d88820); color:#fff;
   padding-top:calc(clamp(8px,1.8vmin,14px) + clamp(12px,2.4vmin,18px)); border-radius:16px 16px 0 0;
-  border:var(--border-card); border-bottom:none; box-shadow:0 -4px 12px rgba(0,0,0,.28); z-index:3; }
+  border:var(--border-card); border-bottom:none; box-shadow:0 -4px 12px rgba(0,0,0,.28); z-index:3;
+  text-shadow:0 1px 2px rgba(0,0,0,.32); font-weight:800; }
 .tabbtn.active .tabico { width:clamp(28px,5.2vmin,40px); height:clamp(28px,5.2vmin,40px); filter:none; }
 .tabbtn.active .tablbl { font-size:clamp(13px,2.4vmin,18px); }
 /* "new items" badge */
@@ -934,7 +936,6 @@ html.is-native-android, html.is-native-android body {
 @media (prefers-reduced-motion: reduce){ *{ animation-duration:.01ms !important; } }
 
 /* ===== Gem pill ===== */
-#menu[data-tab="character"] { background:radial-gradient(125% 80% at 50% 8%, #ffbe55 0%, #f3892e 55%, #db6c1c 100%); }
 .gemico-el { color:#b06ff0; font-size:1.1em; line-height:1; }
 
 /* ===== Character tab ===== */
@@ -974,7 +975,7 @@ html.is-native-android, html.is-native-android body {
 /* ===== Pet section in Equipment tab ===== */
 .petsechdr { display:flex; align-items:center; justify-content:space-between; width:100%; }
 .petsec .banner { margin:0; }
-.petslotrow { display:flex; align-items:center; gap:clamp(10px,2vmin,16px); padding:clamp(8px,1.6vmin,12px); background:rgba(255,255,255,.18); border-radius:14px; border:3px solid rgba(58,45,34,.22); }
+.petslotrow { display:flex; align-items:center; gap:clamp(10px,2vmin,16px); padding:clamp(8px,1.6vmin,12px); background:rgba(43,53,80,.45); border-radius:14px; border:2px solid var(--menu-border); }
 .petslotlbl { color:#fff; font-weight:900; font-size:clamp(12px,2vmin,16px); text-shadow:0 1px 0 rgba(0,0,0,.4); flex:1; }
 .petslot { width:clamp(60px,11vmin,80px); height:clamp(60px,11vmin,80px); border-radius:14px; border:3px solid #2a3550;
   background:linear-gradient(#5a6b86,#46566f); display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 3px 0 rgba(0,0,0,.3); }
@@ -1269,7 +1270,7 @@ html.is-native-android, html.is-native-android body {
   .tabbtn .tablbl { font-size:11px; letter-spacing:.4px; }
   .tabbtn.active {
     border-radius:14px 0 0 14px;
-    border:3px solid #3a2d22 !important;
+    border:3px solid var(--ink) !important;
     border-right:none !important;
     margin-right:-2px; z-index:3;
   }
@@ -1432,7 +1433,7 @@ html.is-native-android, html.is-native-android body {
 .chip.on { background:var(--blue); color:#fff; }
 .chip2 { background:var(--slate-mid); border:var(--border-card); color:var(--text); box-shadow:var(--shadow-card); }
 .sortlbl, .fusehint, .fusemeta, .invhint { color:var(--text-muted); }
-.secttl { color:var(--text); text-shadow:0 2px 0 rgba(0,0,0,.35); }
+.secttl { color:var(--text); font-weight:800; letter-spacing:.02em; }
 
 /* Pick rows & item popup */
 .pickrow { background:var(--slate-mid); border:var(--border-card); color:var(--text); box-shadow:var(--shadow-card); }
@@ -1470,7 +1471,7 @@ html.is-native-android, html.is-native-android body {
 .go-extra { margin-top:12px; text-align:center; line-height:1.6; }
 .go-line { font-size:clamp(13px,2.5vmin,18px); font-weight:800; color:#9fe0ff; }
 .go-rank { margin-top:10px; font-size:clamp(13px,2.5vmin,18px); font-weight:900; color:#b06ff0; }
-#loading { background:radial-gradient(120% 80% at 50% 20%, #3d6e48 0%, #1a2336 55%, #0e1320 100%); }
+#loading { background:radial-gradient(120% 80% at 50% 15%, #252d42 0%, #161b28 52%, #0c1018 100%); }
 #worldload { background:rgba(16,22,18,.94) !important; }
 .loadtxt { color:var(--text-muted); }
 
@@ -1490,6 +1491,32 @@ html.is-native-android, html.is-native-android body {
 
 /* Remove old per-tab duplicate bg rule */
 #menu[data-tab="character"] { background:inherit; }
+
+/* Premium menu typography — drop heavy strokes on shell UI */
+#menu #wname,
+#menu .worldsub,
+#menu .db-title,
+#menu .db-label,
+#menu .db-reward,
+#menu .run-resume-title,
+#menu .secttl,
+#menu .eqstat,
+#menu .sortlbl,
+#menu .fusehint,
+#menu .fusemeta,
+#menu .invhint,
+#menu .shopsub,
+#menu .hint { -webkit-text-stroke:0; text-shadow:none; }
+#menu .startbtn,
+#menu .gamemodebtn,
+#menu .banner { -webkit-text-stroke:0; }
+#menu #wname { font-weight:800; }
+#menu .db-label { font-weight:700; }
+#menu .db-reward { font-weight:800; }
+#menu .eqstat { font-weight:800; }
+#menu .offtag { border-color:var(--ink); }
+#menu .eqslot .eqlv { background:var(--ink); border-color:var(--slate-light); color:var(--text); }
+#menu .itile .ilv { background:var(--ink); }
 
 /* Tablet landscape — between phone and PC */
 @media (min-width:600px) and (max-width:859px) {
