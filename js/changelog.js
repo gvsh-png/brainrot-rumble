@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '2.05';
+const CURRENT_VERSION = '2.06';
 const CHANGELOG = [
+  { v: '2.06', notes: 'Playtest fixes: Android back button pauses during combat, Boss Rush revive now asks before spending tokens/gems, cloud save syncs achievements/Swarm Rank/daily bounties/rush stats, Achievements screen in Settings, in-run combat tutorials (move, dash, level-up, lucky blocks, bosses), Practice opens customize directly with validation messages, shop gem errors use toasts instead of alerts, privacy policy page added.' },
   { v: '2.05', notes: 'Boss Rush no longer spawns lucky blocks during fights — defeated bosses now scatter heal hearts instead (2 per kill, 3 on every 5th milestone boss), matching the sustain lucky blocks used to provide.' },
   { v: '2.04', notes: 'Debug APK: new "Skip World 1 (test tutorials)" button in Settings — sets story progress as if you just cleared World 1 and replays the Shop/Bounties/Game Modes unlock guides.' },
   { v: '2.03', notes: 'Ting Ting Ting Bahur bosses no longer have glitchy auto-rig legs (sprite legs removed). Tutorial guides for Daily Shop, Bounties, and Game Modes now mirror the highlighted UI above the overlay instead of blurring it out. Common gear always shows at least +1. Chaos GRAVITY pull stops ~8m from you instead of stacking enemies on top during swarms.' },

@@ -20,8 +20,19 @@ function playAvailable(){
   return typeof PlayBridge !== 'undefined' && PlayBridge.isAvailable && PlayBridge.isAvailable();
 }
 
+function _dailyBountyKey(){
+  const d = new Date();
+  return 'br_daily_' + d.getUTCFullYear() + String(d.getUTCMonth() + 1).padStart(2, '0') + String(d.getUTCDate()).padStart(2, '0');
+}
+
 // ---- profile <-> the live localStorage working keys ----
 function currentBlob(){
+  const dailyKey = _dailyBountyKey();
+  let dailyData = null;
+  try{
+    const raw = localStorage.getItem(dailyKey);
+    if(raw) dailyData = JSON.parse(raw);
+  }catch(e){}
   return {
     gold:       +(localStorage.getItem('br_gold')||0),
     unlocked:   +(localStorage.getItem('br_unlocked')||0),
@@ -35,6 +46,20 @@ function currentBlob(){
     petPity:    +(localStorage.getItem('br_pet_pity')||0),
     activeChar: localStorage.getItem('br_active_char')||'gianni',
     activePet:  localStorage.getItem('br_active_pet')||null,
+    swarmRank:  JSON.parse(localStorage.getItem('br_swarm_rank')||'{}'),
+    engageStats: JSON.parse(localStorage.getItem('br_engage_stats')||'{}'),
+    achievements: JSON.parse(localStorage.getItem('br_achievements')||'[]'),
+    rushBest:   +(localStorage.getItem('br_rush_best')||0),
+    rushReviveToken: +(localStorage.getItem('br_rush_revive_token')||0),
+    rushBandage: +(localStorage.getItem('br_rush_bandage')||0),
+    runBests:   JSON.parse(localStorage.getItem('br_run_bests')||'{}'),
+    dailyBounty: dailyData ? { key: dailyKey, data: dailyData } : null,
+    onboardVer: localStorage.getItem('br_onboard_ver'),
+    guideDone:  JSON.parse(localStorage.getItem('br_guide_done')||'[]'),
+    featAnim:   JSON.parse(localStorage.getItem('br_feat_anim')||'[]'),
+    combatGuide: JSON.parse(localStorage.getItem('br_combat_guide')||'[]'),
+    charSeen:   JSON.parse(localStorage.getItem('br_char_seen')||'[]'),
+    petSeen:    JSON.parse(localStorage.getItem('br_pet_seen')||'[]'),
   };
 }
 function applyProfile(b){
@@ -59,6 +84,20 @@ function applyProfile(b){
   if(typeof activeCharId!=='undefined') activeCharId = ac;
   if(b.activePet){ localStorage.setItem('br_active_pet', b.activePet); if(typeof activePetId!=='undefined') activePetId=b.activePet; }
   else { localStorage.removeItem('br_active_pet'); if(typeof activePetId!=='undefined') activePetId=null; }
+  if(b.swarmRank && typeof b.swarmRank === 'object') localStorage.setItem('br_swarm_rank', JSON.stringify(b.swarmRank));
+  if(b.engageStats && typeof b.engageStats === 'object') localStorage.setItem('br_engage_stats', JSON.stringify(b.engageStats));
+  if(Array.isArray(b.achievements)) localStorage.setItem('br_achievements', JSON.stringify(b.achievements));
+  if(b.rushBest != null) localStorage.setItem('br_rush_best', String(Math.max(0, Math.floor(b.rushBest))));
+  if(b.rushReviveToken != null) localStorage.setItem('br_rush_revive_token', String(Math.max(0, Math.floor(b.rushReviveToken))));
+  if(b.rushBandage != null) localStorage.setItem('br_rush_bandage', String(Math.max(0, Math.floor(b.rushBandage))));
+  if(b.runBests && typeof b.runBests === 'object') localStorage.setItem('br_run_bests', JSON.stringify(b.runBests));
+  if(b.dailyBounty && b.dailyBounty.key && b.dailyBounty.data) localStorage.setItem(b.dailyBounty.key, JSON.stringify(b.dailyBounty.data));
+  if(b.onboardVer) localStorage.setItem('br_onboard_ver', b.onboardVer);
+  if(Array.isArray(b.guideDone)) localStorage.setItem('br_guide_done', JSON.stringify(b.guideDone));
+  if(Array.isArray(b.featAnim)) localStorage.setItem('br_feat_anim', JSON.stringify(b.featAnim));
+  if(Array.isArray(b.combatGuide)) localStorage.setItem('br_combat_guide', JSON.stringify(b.combatGuide));
+  if(Array.isArray(b.charSeen)) localStorage.setItem('br_char_seen', JSON.stringify(b.charSeen));
+  if(Array.isArray(b.petSeen)) localStorage.setItem('br_pet_seen', JSON.stringify(b.petSeen));
   rehydrate();
 }
 function rehydrate(){
@@ -100,6 +139,8 @@ function rehydrate(){
       gearSeen  = new Set(JSON.parse(localStorage.getItem('br_gear_seen')||'[]'));
     }
   }catch(e){ console.warn('rehydrate failed',e); }
+  if(typeof loadEngagement === 'function') loadEngagement();
+  if(typeof refreshDailyBountiesUI === 'function') refreshDailyBountiesUI();
   if(typeof refreshTopbar==='function')    refreshTopbar();
   if(typeof refreshWorldSel==='function')  refreshWorldSel();
   if(typeof refreshMenuChar==='function')  refreshMenuChar();
@@ -178,6 +219,10 @@ async function doPlayLogin(){
 }
 
 function doSignOut(){
+  if(authMode==='play'){
+    try{ localStorage.setItem('br_save_guest', JSON.stringify(currentBlob())); }catch(e){}
+    flushSave();
+  }
   authMode=null; playPlayer=null; loadedPlayId=null;
   showLogin(); updateAcctUI();
 }
@@ -206,8 +251,8 @@ function configureLoginUI(){
   const sub = document.querySelector('.loginsub');
   const note = document.querySelector('.loginnote');
   if(playAvailable()){
-    if(sub) sub.textContent = 'Sign in with Google Play to save progress across Android devices.';
-    if(note) note.textContent = 'Guest progress stays on this device only and cannot be moved to Play Games later.';
+    if(sub) sub.textContent = 'Sign in with Google Play to sync gold, worlds, gear, gems, pets, achievements, and Boss Rush progress across Android devices.';
+    if(note) note.textContent = 'Guest progress stays on this device only. Continue-run saves and audio settings stay local.';
     if(playBtn) playBtn.classList.remove('hidden');
   } else {
     if(sub) sub.textContent = 'Play in your browser — progress is saved on this device.';
@@ -246,8 +291,8 @@ async function tryAutoPlaySignIn(){
   (async ()=>{
     const signedIn = await tryAutoPlaySignIn();
     if(!signedIn){
-      showLogin();
       if(!playAvailable()) enterGuest();
+      else showLogin();
     }
     updateAcctUI();
   })();

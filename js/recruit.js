@@ -28,6 +28,17 @@ function refreshGemsUI() {
   t.dataset.prev=gemBalance;
   if(prev!==gemBalance && typeof uiPulse==='function') uiPulse(t.closest('.respill')||t);
 }
+function showRecruitToast(msg, col){
+  let el = document.getElementById('shop-toast');
+  if(!el) return;
+  el.textContent = msg;
+  el.style.borderColor = col || '#e54d4d';
+  el.classList.remove('hidden', 'ach-pop');
+  void el.offsetWidth;
+  el.classList.add('ach-pop');
+  clearTimeout(el._shopT);
+  el._shopT = setTimeout(()=>{ el.classList.add('hidden'); }, 2600);
+}
 
 // ---- Gem icon (cached data-URL) ----
 let _gemIconURL='';
@@ -123,8 +134,8 @@ let charShopDailyIdx=0;
 function buyCharacter(id) {
   const char=CHARACTERS.find(c=>c.id===id); if(!char) return;
   const price=charGemPrice(char);
-  if(isCharOwned(id)){ alert('Already owned'); return; }
-  if(!spendGems(price)){ alert('Not enough gems!'); return; }
+  if(isCharOwned(id)){ showRecruitToast('Already owned', '#b0b8c8'); return; }
+  if(!spendGems(price)){ showRecruitToast('Not enough gems!', '#e54d4d'); return; }
   grantChar(id);
   if(typeof renderShop==='function') renderShop();
   if(typeof sfx!=='undefined') sfx.evolve();
@@ -300,7 +311,7 @@ function rollGemCrateItem(floorRar){
 
 function openGemCrate(key){
   const cr = GEM_CRATES[key]; if(!cr) return null;
-  if(!spendGems(cr.cost)){ alert('Not enough gems!'); return null; }
+  if(!spendGems(cr.cost)){ showRecruitToast('Not enough gems!', '#e54d4d'); return null; }
   const won = rollGemCrateItem(cr.floor);
   if(!won){ addGems(cr.cost); return null; }
   const dup = (typeof hasItemId==='function' && hasItemId(won));
@@ -318,7 +329,7 @@ function openGemCrate(key){
 }
 
 function buyGoldBundle(gems, goldAmt){
-  if(!spendGems(gems)){ alert('Not enough gems!'); return false; }
+  if(!spendGems(gems)){ showRecruitToast('Not enough gems!', '#e54d4d'); return false; }
   if(typeof gold!=='undefined'){
     gold += goldAmt;
     if(typeof saveGold==='function') saveGold();

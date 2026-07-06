@@ -394,4 +394,41 @@ function showRunDebrief(reason){
   return result;
 }
 
+function renderAchievementsPanel(){
+  const list = typeof $ === 'function' ? $('achievements-list') : document.getElementById('achievements-list');
+  if(!list) return;
+  const ctx = {
+    runs: engageStats.runs,
+    bestWave: engageStats.bestWave,
+    bestSurvive: engageStats.bestSurvive,
+    totalBosses: engageStats.totalBosses,
+    totalSynergies: engageStats.totalSynergies,
+    bountiesDone: engageStats.bountiesDone,
+    swarmRank,
+    rushBest: getRushBest(),
+    rushRunBosses: 0,
+    runJackpots: 0,
+  };
+  const unlocked = ACHIEVEMENTS.filter(a => unlockedAch.has(a.id)).length;
+  let html = '<div class="ach-summary">' + unlocked + ' / ' + ACHIEVEMENTS.length + ' unlocked</div>';
+  for(const a of ACHIEVEMENTS){
+    const done = unlockedAch.has(a.id);
+    html += '<div class="ach-row' + (done ? ' done' : '') + '">' +
+      '<div class="ach-row-title">' + (done ? '★ ' : '○ ') + a.name + '</div>' +
+      '<div class="ach-row-desc">' + a.desc + '</div></div>';
+  }
+  list.innerHTML = html;
+}
+
+function openAchievementsPanel(){
+  renderAchievementsPanel();
+  const drop = typeof $ === 'function' ? $('achievementsdrop') : document.getElementById('achievementsdrop');
+  const settings = typeof $ === 'function' ? $('settingsdrop') : document.getElementById('settingsdrop');
+  if(settings) settings.classList.add('hidden');
+  if(drop) drop.classList.remove('hidden');
+}
+
+window.renderAchievementsPanel = renderAchievementsPanel;
+window.openAchievementsPanel = openAchievementsPanel;
+
 loadEngagement();

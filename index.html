@@ -84,6 +84,7 @@
         <div class="sdrop-head">Account</div>
         <div class="sdrop-name" id="sdrop-username">Guest</div>
         <button id="sdrop-acct" class="sdrop-btn" type="button">Sign In</button>
+        <div class="sdrop-hint" id="sdrop-cloud-hint">Cloud save syncs gold, worlds, gear, gems, pets, achievements, and Boss Rush stats. Continue-run saves stay on this device.</div>
       </div>
       <div class="sdrop-sep"></div>
       <div class="sdrop-section">
@@ -116,15 +117,17 @@
           <button id="sdrop-haptic" class="sdrop-toggle" type="button">Haptic Feedback: On</button>
         </div>
       </div>
-      <div class="sdrop-sep"></div>
+      <div class="sdrop-sep hidden" id="debug-tools-sep"></div>
       <div class="sdrop-section hidden" id="debug-tools-section">
         <div class="sdrop-head">Debug (APK only)</div>
         <button id="sdrop-debug-skip-w1" class="sdrop-btn" type="button">Skip World 1 (test tutorials)</button>
         <button id="sdrop-debug-unlock" class="sdrop-btn" type="button">Unlock All Worlds + Best Gear</button>
       </div>
-      <div class="sdrop-sep hidden" id="debug-tools-sep"></div>
+      <div class="sdrop-sep"></div>
       <div class="sdrop-section">
+        <button id="sdrop-achievements" class="sdrop-btn" type="button">Achievements</button>
         <button id="sdrop-changelog" class="sdrop-btn" type="button">Update Log</button>
+        <a id="sdrop-privacy" class="sdrop-btn sdrop-link" href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>
       </div>
     </div>
   </div>
@@ -135,6 +138,15 @@
       <div class="sdrop-title">UPDATE LOG</div>
       <button class="sdrop-close" id="changelog-close" type="button" aria-label="Close">✕</button>
       <div id="changelog-list" class="changelog-list"></div>
+    </div>
+  </div>
+
+  <!-- Achievements modal -->
+  <div id="achievementsdrop" class="hidden">
+    <div class="sdrop-inner" style="width:clamp(300px,92vw,640px);max-height:90vh;overflow-y:auto">
+      <div class="sdrop-title">ACHIEVEMENTS</div>
+      <button class="sdrop-close" id="achievements-close" type="button" aria-label="Close">✕</button>
+      <div id="achievements-list" class="achievements-list"></div>
     </div>
   </div>
 
@@ -247,6 +259,18 @@
 </div>
 
 <div id="ach-toast" class="hidden"></div>
+<div id="shop-toast" class="hidden"></div>
+
+<!-- Boss Rush revive confirmation -->
+<div id="rush-revive-popup" class="overlay hidden" style="z-index:45">
+  <div class="panel">
+    <div class="title" style="color:#b06ff0;font-size:clamp(22px,4.5vmin,36px)">RUSH REVIVE</div>
+    <p class="loginsub" id="rush-revive-msg">Use a revive token or spend 8 gems to continue?</p>
+    <button class="bigbtn green" id="rush-revive-token" type="button">Use Revive Token</button>
+    <button class="bigbtn" id="rush-revive-gems" type="button">Spend 8 ◆</button>
+    <button class="bigbtn quit" id="rush-revive-quit" type="button">Give Up</button>
+  </div>
+</div>
 
 <div id="guide-overlay" class="hidden" aria-hidden="true">
   <div class="guide-dim"></div>
@@ -347,6 +371,7 @@
     <div class="hint" id="pcfg-mapnote" style="margin:0"></div>
     <button class="sdrop-btn" id="pcfg-enemies-btn" type="button">Select Enemies (<span id="pcfg-enemy-count">0</span>)</button>
     <button class="sdrop-btn" id="pcfg-bosses-btn" type="button">Select Bosses (<span id="pcfg-boss-count">0</span>)</button>
+    <div class="hint pcfg-error" id="pcfg-error"></div>
     <button class="bigbtn green" id="pcfg-confirm" type="button">CONFIRM &amp; START</button>
   </div>
 </div>
@@ -381,6 +406,7 @@
 <script src="js/recruit.js"></script>
 <script src="js/engagement.js"></script>
 <script src="js/onboarding.js"></script>
+<script src="js/combat-tutorials.js"></script>
 
 <!-- Game scripts: classic (non-module) so they share globals and run from file:// too.
      Load order matters: core defines shared helpers/state used by the rest. -->

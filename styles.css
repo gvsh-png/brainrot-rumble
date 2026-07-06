@@ -176,6 +176,36 @@ html.is-native-android, html.is-native-android body {
 .changelog-v { font-weight:900; color:var(--accent); font-size:clamp(13px,2.4vmin,16px); }
 .changelog-notes { font-size:clamp(12px,2.2vmin,15px); color:var(--text-muted); font-weight:700; }
 
+#achievementsdrop {
+  position:fixed; inset:0; z-index:46;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--glass);
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+}
+.achievements-list { display:flex; flex-direction:column; gap:clamp(8px,1.6vmin,12px); max-height:60vh; overflow-y:auto; }
+.ach-summary { font-weight:800; color:var(--accent); font-size:clamp(13px,2.4vmin,16px); margin-bottom:4px; }
+.ach-row { border:var(--border-card); border-radius:var(--radius); background:var(--slate-mid); padding:10px 12px; opacity:.72; }
+.ach-row.done { opacity:1; border-color:rgba(245,197,66,.45); }
+.ach-row-title { font-weight:900; font-size:clamp(13px,2.4vmin,16px); color:#e8edf5; }
+.ach-row-desc { font-size:clamp(11px,2.1vmin,14px); color:var(--text-muted); margin-top:2px; }
+.sdrop-hint { font-size:clamp(11px,2vmin,13px); color:var(--text-muted); font-weight:700; line-height:1.35; margin-top:8px; }
+.sdrop-link { display:block; text-align:center; text-decoration:none; color:inherit; }
+.pcfg-error { color:#ff8a7a; font-weight:800; min-height:1.2em; margin:6px 0 2px; }
+#shop-toast {
+  position:fixed; bottom:max(72px, calc(env(safe-area-inset-bottom) + 56px)); left:50%; transform:translateX(-50%);
+  z-index:26; background:linear-gradient(180deg,#1e2838,#121820);
+  border:3px solid #e54d4d; border-radius:14px; padding:10px 18px;
+  box-shadow:0 6px 0 #6a2020; min-width:min(88vw, 320px); text-align:center;
+  font-weight:800; font-size:clamp(13px,2.6vmin,17px); color:#ffd0c8;
+}
+#shop-toast.ach-pop { animation:achSlide .35s ease-out; }
+#guide-overlay.combat-guide { z-index:190; }
+#guide-overlay.combat-guide .guide-card {
+  background:linear-gradient(180deg,#1a2230,#101620);
+  border:3px solid #4aa3df;
+  box-shadow:0 6px 0 #1e3a55;
+}
+
 /* ===== Main menu — premium dark shell (matches tab bar + cards) ===== */
 #menu { flex-direction:column; justify-content:flex-start; gap:0; padding:0; overflow:hidden;
   background:radial-gradient(125% 95% at 50% -15%, var(--menu-bg-top) 0%, var(--menu-bg-mid) 48%, var(--menu-bg-bot) 100%); }

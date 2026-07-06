@@ -65,11 +65,44 @@ function consumeRushReviveToken(){
   return true;
 }
 function tryRushRevive(){
-  if(!rushIsActive() || rushReviveUsed || state !== ST.PLAY) return false;
+  return false;   // replaced by offerRushRevive() confirmation popup
+}
+let rushRevivePromptOpen = false;
+function offerRushRevive(){
+  if(!rushIsActive() || rushReviveUsed || rushRevivePromptOpen || state !== ST.PLAY) return false;
+  const hasToken = getRushReviveTokens() > 0;
+  const hasGems = typeof gemBalance !== 'undefined' && gemBalance >= 8;
+  if(!hasToken && !hasGems) return false;
+  rushRevivePromptOpen = true;
+  const pop = $('rush-revive-popup');
+  const msg = $('rush-revive-msg');
+  const tokenBtn = $('rush-revive-token');
+  const gemBtn = $('rush-revive-gems');
+  if(msg){
+    msg.textContent = hasToken
+      ? ('Use a revive token (' + getRushReviveTokens() + ' left) or spend 8 gems to continue this run.')
+      : 'Spend 8 gems to revive and keep your Boss Rush run going?';
+  }
+  if(tokenBtn) tokenBtn.classList.toggle('hidden', !hasToken);
+  if(gemBtn) gemBtn.classList.toggle('hidden', !hasGems);
+  if(pop) pop.classList.remove('hidden');
+  if(typeof sfx !== 'undefined' && sfx.level) sfx.level();
+  return true;
+}
+function closeRushRevivePrompt(){
+  rushRevivePromptOpen = false;
+  const pop = $('rush-revive-popup');
+  if(pop) pop.classList.add('hidden');
+}
+function applyRushRevive(useGems){
+  closeRushRevivePrompt();
   let paid = false;
-  if(getRushReviveTokens() > 0) paid = consumeRushReviveToken();
-  else if(typeof spendGems === 'function') paid = spendGems(8);
-  if(!paid) return false;
+  if(useGems){
+    if(typeof spendGems === 'function') paid = spendGems(8);
+  } else {
+    paid = consumeRushReviveToken();
+  }
+  if(!paid){ gameOver(); return; }
   rushReviveUsed = true;
   P.hp = Math.max(1, Math.round(P.maxHp * 0.45));
   P.inv = 2.2;
@@ -78,7 +111,6 @@ function tryRushRevive(){
   burst(P.x, P.y, '#b06ff0', 24, 320);
   if(typeof sfx !== 'undefined' && sfx.win) sfx.win();
   if(typeof haptic === 'function') haptic('win');
-  return true;
 }
 function rushIsActive(){ return gameMode === 'bossrush'; }
 function rushUnlocked(){ return unlockedMax >= RUSH_UNLOCK_STORY; }
@@ -215,6 +247,7 @@ function spawnBossLucky(n, heal){   // heal = fixed HP each block drops when pop
   }
 }
 function spawnLuckyBatch(n=2){           // up to n blocks, capped at n
+  let spawned = 0;
   for(let k=0;k<n;k++){
     if(luckies.length>=n) break;
     let x,y,tries=0;
@@ -225,7 +258,9 @@ function spawnLuckyBatch(n=2){           // up to n blocks, capped at n
     if(typeof fireHook==='function') fireHook('onLuckySpawn', lb);
     if(!lb.heavy && Math.random()<0.01) lb.heavy=true;
     luckies.push(lb);
+    spawned++;
   }
+  if(spawned > 0 && typeof CombatTutorials !== 'undefined' && CombatTutorials.onLuckySpawn) CombatTutorials.onLuckySpawn();
 }
 function damageLucky(lb,dmg,fx,fy,crit){
   lb.hp -= dmg; lb.hitT=0.12; lb.sq=1; sfx.hit();
@@ -1763,6 +1798,10 @@ function _doStartGame(wi){
   { const ci=$('coincount'); if(ci){ const img=ci.querySelector('img'); if(img && !img.getAttribute('src')) img.src=SP['coin'].toDataURL(); } }
   refreshHUD();   // reset level badge / kills / timer / coins so nothing shows last run's value
   state=ST.PLAY;
+  if(typeof CombatTutorials !== 'undefined'){
+    CombatTutorials.resetRun();
+    CombatTutorials.onRunStart();
+  }
   $('menu').classList.add('hidden');
   $('gameover').classList.add('hidden');
   $('bossbar').classList.add('hidden');
@@ -1879,6 +1918,7 @@ function startBossArena(){
   luckies=[];
   bossPending = ARENA_LEAD;
   const bw=$('bosswarn'); bw.textContent='BOSS INCOMING'; bw.classList.remove('hidden');
+  if(typeof CombatTutorials !== 'undefined' && CombatTutorials.onBossIncoming) CombatTutorials.onBossIncoming();
   sfx.warn();
 }
 
@@ -2439,6 +2479,7 @@ function gainXp(n){
 
 function openLevelUp(){
   state = ST.LEVELUP;
+  if(typeof CombatTutorials !== 'undefined' && CombatTutorials.onLevelUp) CombatTutorials.onLevelUp();
   sfx.level();
   if(typeof haptic === 'function') haptic('level');
   // candidates = every card with a remaining move whose synergy gate (req) is satisfied
@@ -5325,6 +5366,7 @@ function hurtPlayer(dmg, src){
     return;
   }
   P.hp -= dmg*(P.shieldDR||1)*(P.armor||1)*worldDmgMul(); P.inv = 0.8; P.hitT = 0.25;
+  if(P.hp > 0 && typeof CombatTutorials !== 'undefined' && CombatTutorials.onDamaged) CombatTutorials.onDamaged();
   if(typeof worldSkillOnHurt==='function') worldSkillOnHurt();
   shake = Math.max(shake,10); hitFlash = 1; hitstop=Math.max(hitstop,0.04);
   sfx.hurt(); burst(P.x,P.y,'#e54d4d',12,200);
@@ -5347,7 +5389,7 @@ function hurtPlayer(dmg, src){
       ebullets=[]; burst(P.x,P.y,'#4aa3df',20,280); sfx.win();
       bigText('SECOND WIND','#4aa3df'); return;
     }
-    if(rushIsActive() && typeof tryRushRevive === 'function' && tryRushRevive()) return;
+    if(rushIsActive() && typeof offerRushRevive === 'function' && offerRushRevive()) return;
     gameOver();
   }
 }
@@ -6451,6 +6493,18 @@ wireGfxUI();
   if(closeBtn) closeBtn.addEventListener('click', ()=>drop.classList.add('hidden'));
   drop.addEventListener('click', e=>{ if(e.target===drop) drop.classList.add('hidden'); });
 })();
+// Achievements modal
+(function(){
+  const openBtn=$('sdrop-achievements'), drop=$('achievementsdrop'), closeBtn=$('achievements-close');
+  if(!openBtn||!drop) return;
+  openBtn.addEventListener('click', ()=>{
+    if(typeof renderAchievementsPanel==='function') renderAchievementsPanel();
+    $('settingsdrop').classList.add('hidden');
+    drop.classList.remove('hidden');
+  });
+  if(closeBtn) closeBtn.addEventListener('click', ()=>drop.classList.add('hidden'));
+  drop.addEventListener('click', e=>{ if(e.target===drop) drop.classList.add('hidden'); });
+})();
 const _dm=$('sdrop-music'); if(_dm) _dm.addEventListener('click',()=>setMusicMuted(!muted));
 const _ds=$('sdrop-sfx'); if(_ds) _ds.addEventListener('click',()=>setSfxMuted(!sfxMuted));
 const _dds=$('sdrop-deathshake'); if(_dds) _dds.addEventListener('click',()=>setDeathShake(!deathShakeOn));
@@ -6671,7 +6725,9 @@ $('introskip').addEventListener('click', ()=>{
   function closeConfirm(){ if(confirmPop) confirmPop.classList.add('hidden'); }
   const okBtn=$('practice-confirm-ok');
   if(okBtn) okBtn.addEventListener('click', ()=>{
-    gameMode='practice'; refreshWorldSel(); closeConfirm(); sfx.pick();
+    gameMode='practice'; refreshWorldSel(); closeConfirm();
+    if(typeof openPracticeSetup === 'function') openPracticeSetup();
+    sfx.pick();
   });
   const cancelBtn=$('practice-confirm-cancel');
   if(cancelBtn) cancelBtn.addEventListener('click', closeConfirm);
@@ -6778,7 +6834,14 @@ $('introskip').addEventListener('click', ()=>{
 
   const confirmBtn=$('pcfg-confirm');
   if(confirmBtn) confirmBtn.addEventListener('click', ()=>{
-    if(practiceCfg._foeSet.size===0 || practiceCfg._bossSet.size===0){ shake=Math.max(shake,6); sfx.pick(); return; }
+    const errEl = $('pcfg-error');
+    if(practiceCfg._foeSet.size===0 || practiceCfg._bossSet.size===0){
+      if(errEl) errEl.textContent = practiceCfg._foeSet.size===0 && practiceCfg._bossSet.size===0
+        ? 'Pick at least one enemy and one boss to start.'
+        : practiceCfg._foeSet.size===0 ? 'Pick at least one enemy.' : 'Pick at least one boss.';
+      shake=Math.max(shake,6); sfx.pick(); return;
+    }
+    if(errEl) errEl.textContent = '';
     practiceCfg.foes=[...practiceCfg._foeSet];
     practiceCfg.bosses=[...practiceCfg._bossSet];
     TRAINING_WORLD.foes=practiceCfg.foes;
@@ -6797,6 +6860,16 @@ $('wnext').addEventListener('click', ()=>{
 refreshWorldSel();
 refreshRunResumeUI();
 if(typeof refreshDailyBountiesUI === 'function') refreshDailyBountiesUI();
+(function initRushRevivePopup(){
+  const pop = $('rush-revive-popup');
+  const tokenBtn = $('rush-revive-token');
+  const gemBtn = $('rush-revive-gems');
+  const quitBtn = $('rush-revive-quit');
+  if(tokenBtn) tokenBtn.addEventListener('click', ()=>{ applyRushRevive(false); });
+  if(gemBtn) gemBtn.addEventListener('click', ()=>{ applyRushRevive(true); });
+  if(quitBtn) quitBtn.addEventListener('click', ()=>{ closeRushRevivePrompt(); gameOver(); });
+  if(pop) pop.addEventListener('click', e=>{ if(e.target===pop){ closeRushRevivePrompt(); gameOver(); } });
+})();
 $('retrybtn').addEventListener('click', startGame);
 $('wc-continue').addEventListener('click', ()=>{
   $('world-cleared').classList.add('hidden');

@@ -52,7 +52,8 @@
 
     App.addListener('backButton', ({ canGoBack })=>{
       const login = document.getElementById('login');
-      const inGame = typeof state !== 'undefined' && state === 'play';
+      const inGame = typeof state !== 'undefined' && typeof ST !== 'undefined' &&
+        (state === ST.PLAY || state === ST.LEVELUP);
       const paused = document.getElementById('pause') && !document.getElementById('pause').classList.contains('hidden');
       const settings = document.getElementById('settingsdrop') && !document.getElementById('settingsdrop').classList.contains('hidden');
 
@@ -86,7 +87,7 @@
   // Keep screen awake during play (Screen Wake Lock API; falls back silently).
   let wakeLock = null;
   async function syncWakeLock(){
-    const playing = typeof state !== 'undefined' && state === 'play';
+    const playing = typeof state !== 'undefined' && typeof ST !== 'undefined' && state === ST.PLAY;
     try {
       if(playing && navigator.wakeLock && !wakeLock){
         wakeLock = await navigator.wakeLock.request('screen');
