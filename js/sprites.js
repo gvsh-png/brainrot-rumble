@@ -194,6 +194,21 @@ makeSprite('gear_shoes', 128, (g,u)=>{
   sh(g,'#b7bdc6',2.4*u,(g)=>{ g.rect(-15*u,37*u,13*u,3*u); });            // L sole
   sh(g,'#b7bdc6',2.4*u,(g)=>{ g.rect(2*u,37*u,13*u,3*u); });             // R sole
 });
+makeSprite('gear_gloves', 128, (g,u)=>{
+  sh(g,GEARBASE,2.8*u,(g)=>{ g.roundRect(-22*u,-4*u,10*u,14*u,4*u); });
+  sh(g,GEARBASE,2.8*u,(g)=>{ g.roundRect(12*u,-4*u,10*u,14*u,4*u); });
+});
+makeSprite('gear_belt', 128, (g,u)=>{
+  sh(g,'#b7bdc6',3*u,(g)=>{ g.roundRect(-16*u,10*u,32*u,8*u,3*u); });
+  dot(g,0,14*u,3*u,'#eef1f5');
+});
+makeSprite('gear_cape', 128, (g,u)=>{
+  sh(g,GEARBASE,3*u,(g)=>{ g.moveTo(-20*u,-18*u); g.quadraticCurveTo(0,-8*u,20*u,-18*u); g.lineTo(24*u,18*u); g.quadraticCurveTo(0,28*u,-24*u,18*u); g.closePath(); });
+});
+makeSprite('gear_ring', 128, (g,u)=>{
+  sh(g,GEARBASE,2.6*u,(g)=>{ g.ellipse(14*u,10*u,6*u,6*u,0,0,TAU); });
+  dot(g,14*u,10*u,2*u,'#eef1f5');
+});
 
 // ============================================================
 // BOSSES (iconic)
@@ -224,11 +239,8 @@ makeSprite('crocodilo', 120, (g,u)=>{
   eyes(g,u,26*u,-12*u,5*u,3.4*u);
 });
 
-// ---- Ting Ting Ting Bahur: wooden mallet creature with a bat ----
+// ---- Ting Ting Ting Bahur: wooden mallet creature with a bat (legless — floats on rhythm)
 makeSprite('sahur', 130, (g,u)=>{
-  // legs
-  sh(g,'#7a5230',3*u,(g)=>{ g.roundRect(-12*u,26*u,8*u,16*u,3*u); });
-  sh(g,'#7a5230',3*u,(g)=>{ g.roundRect(4*u,26*u,8*u,16*u,3*u); });
   // wooden mallet body
   sh(g,'#a9763e',3.6*u,(g)=>{ g.roundRect(-16*u,-10*u,32*u,38*u,8*u); });
   sh(g,'#8a5d2c',2*u,(g)=>{ g.moveTo(-10*u,-6*u); g.lineTo(-10*u,24*u); });
@@ -1069,6 +1081,40 @@ makeSprite('ic_hp', 64, (g,u)=>{   // heart with a white cross = bonus max HP
   });
   g.fillStyle='#fff'; g.fillRect(-2.6*u,-7*u,5.2*u,15*u); g.fillRect(-8*u,-1.4*u,16*u,5.2*u);
 });
+makeSprite('ic_crit', 64, (g,u)=>{
+  sh(g,'#ffd24a',3*u,(g)=>{ g.moveTo(0,-24*u); g.lineTo(7*u,-8*u); g.lineTo(24*u,-6*u); g.lineTo(12*u,6*u); g.lineTo(16*u,24*u); g.lineTo(0,14*u); g.lineTo(-16*u,24*u); g.lineTo(-12*u,6*u); g.lineTo(-24*u,-6*u); g.lineTo(-7*u,-8*u); g.closePath(); });
+  dot(g,0,0,5*u,'#e0392e');
+});
+makeSprite('ic_armor', 64, (g,u)=>{
+  sh(g,'#7a8aa0',3*u,(g)=>{ g.roundRect(-20*u,-18*u,40*u,36*u,6*u); });
+  sh(g,'#9fb0c8',0,(g)=>{ g.roundRect(-14*u,-12*u,28*u,24*u,4*u); });
+  g.strokeStyle=OUT; g.lineWidth=2.6*u; g.beginPath(); g.moveTo(-14*u,-2*u); g.lineTo(14*u,-2*u); g.stroke();
+});
+makeSprite('ic_rate', 64, (g,u)=>{
+  sh(g,'#4aa3df',2.8*u,(g)=>{ g.moveTo(-18*u,0); g.lineTo(0,-16*u); g.lineTo(18*u,0); g.lineTo(0,16*u); g.closePath(); });
+  dot(g,0,0,4*u,'#ffd24a');
+});
+makeSprite('ic_mag', 64, (g,u)=>{
+  sh(g,'#5fbf52',3*u,(g)=>{ g.arc(0,0,18*u,0,TAU); });
+  sh(g,'#fff',0,(g)=>{ g.arc(0,0,8*u,0,TAU); });
+  dot(g,0,0,3*u,'#e0392e');
+});
+makeSprite('ic_regen', 64, (g,u)=>{
+  sh(g,'#e23b5a',2.6*u,(g)=>{ g.arc(0,0,16*u,0,TAU); });
+  g.strokeStyle='#fff'; g.lineWidth=3*u; g.beginPath(); g.arc(0,0,10*u,-Math.PI/2,Math.PI/2); g.stroke();
+});
+makeSprite('ic_gold', 64, (g,u)=>{
+  sh(g,'#f5c542',3.4*u,(g)=>{ g.arc(0,0,20*u,0,TAU); });
+  sh(g,'#ffe39a',0,(g)=>{ g.arc(0,0,13*u,0,TAU); });
+  g.strokeStyle='#caa12f'; g.lineWidth=2.4*u; g.beginPath(); g.arc(0,0,9*u,0,TAU); g.stroke();
+});
+makeSprite('ic_vamp', 64, (g,u)=>{
+  sh(g,'#8b1a28',2.8*u,(g)=>{ g.moveTo(0,-14*u); g.lineTo(10*u,14*u); g.lineTo(-10*u,14*u); g.closePath(); });
+  sh(g,'#e23b5a',0,(g)=>{ g.roundRect(-3*u,4*u,6*u,12*u,2*u); });
+});
+makeSprite('ic_pierce', 64, (g,u)=>{
+  sh(g,'#d7dde6',2.8*u,(g)=>{ g.moveTo(-20*u,8*u); g.lineTo(20*u,-8*u); g.lineTo(16*u,-2*u); g.lineTo(-16*u,14*u); g.closePath(); });
+});
 makeSprite('ic_crate', 64, (g,u)=>{
   sh(g,'#b98248',3.6*u,(g)=>{ g.rect(-25*u,-20*u,50*u,44*u); });
   g.strokeStyle='#8a5d2c'; g.lineWidth=3*u;
@@ -1833,7 +1879,6 @@ function autoRig(name, cfg) {
     bicus:     ['#f0a23a', 18, 10, 4, 4],
     ambalabu:  ['#5a9e3f', 24, 12, 7, 5],
     dindin:    ['#9a7a52', 24, 12, 9, 5],
-    tatasahur: ['#caa96a', 22, 12, 8, 5],
     saturnita: ['#e6e0d4', 22, 11, 7, 5],
     madudung:  ['#6b5a48', 26, 15,10, 6],
     garamaraman:['#3a2a26',24, 13, 9, 5],
@@ -1864,7 +1909,6 @@ function autoRig(name, cfg) {
     forzutoorsino: ['#8d5a32', 22, 13, 9, 5],
     maestrofoccino:['#7d8893', 24, 12, 6, 4],
     // ── Bosses ──
-    sahur:          ['#caa96a', 26, 13, 9, 5],
     vaca:           ['#e6e0d4', 26, 14, 8, 5],
     gorillo:        ['#4a4a52', 28, 15, 9, 5],
     bobritto:       ['#8a5f38', 26, 14, 7, 5],
