@@ -81,12 +81,8 @@ function rushCatalog(){
   _rushCatalog = { regular, finals };
   return _rushCatalog;
 }
-function rushWorldCap(tier){
-  if(tier <= 0) return 2;
-  if(tier <= 1) return 4;
-  if(tier <= 2) return 7;
-  if(tier <= 3) return 10;
-  return WORLDS.length - 1;
+function rushUnlockedWorldCap(){
+  return Math.min(typeof unlockedMax==='number' ? unlockedMax : 0, WORLDS.length - 1);
 }
 function pickRushWeighted(pool){
   if(!pool.length) return null;
@@ -100,11 +96,13 @@ function pickRushWeighted(pool){
 }
 function pickRushBossDef(idx){
   const cat = rushCatalog();
+  const wc = rushUnlockedWorldCap();
   const tier = Math.floor(idx / 5);
-  const wc = rushWorldCap(tier);
   const isMilestone = (idx % 5) === 4;
-  let pool = (isMilestone ? cat.finals : cat.regular).filter(e => e.wi <= wc);
-  if(!pool.length) pool = isMilestone ? cat.finals : cat.regular;
+  const src = isMilestone ? cat.finals : cat.regular;
+  let pool = src.filter(e => e.wi <= wc);
+  if(!pool.length) pool = src.filter(e => e.wi === 0);
+  if(!pool.length) pool = src.slice(0, 4);
   const hellBoost = 1 + tier * 0.4;
   const weighted = pool.map(e => ({ def:e.def, weight:e.weight * (e.hell ? hellBoost : 1) }));
   return pickRushWeighted(weighted) || pool[0].def;
@@ -1133,7 +1131,7 @@ function refreshWorldSel(){
   const ws=$('worldsub');
   if(ws){
     if(gameMode==='practice') ws.textContent = 'sandbox · no rewards';
-    else if(gameMode==='bossrush') ws.textContent = 'grasslands gauntlet · earn ◆ gems';
+    else if(gameMode==='bossrush') ws.textContent = 'grasslands · bosses from worlds 1–'+(unlockedMax+1);
     else ws.textContent = 'survive the swarm';
   }
   $('wprev').disabled = selWorld<=0 || gameMode==='practice' || gameMode==='bossrush';
