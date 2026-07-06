@@ -24,7 +24,7 @@ let chaosShrinkT=0,chaosDisarmT=0,chaosBerserkT=0,chaosBombRainT=0,chaosBombRain
 let _lastSec=-1;    // throttles the survival-timer DOM update to once per second
 const MMH = window.MINIMAP_HELPERS;
 // ===== CHALLENGER MODE STATE =====
-let gameMode = 'story';     // 'story' | 'challenger' | 'practice'
+let gameMode = 'story';     // 'story' | 'challenger' | 'practice' | 'bossrush'
 let chalElapsed = 0;        // challenger timer — pauses during boss fights
 let chalBossIdx = 0;        // index of next boss milestone (0-3 → 5/10/15/20 min)
 let chalBossActive = false; // true while a challenger boss is alive
@@ -44,6 +44,70 @@ function timerMode(){ return gameMode==='challenger' || (gameMode==='practice' &
 function infiniteMapMode(){ return gameMode==='challenger' || (gameMode==='practice' && practiceCfg.infiniteMap); }
 function nextBossTimeSec(){ return gameMode==='practice' ? practiceCfg.bossIntervalSec*(chalBossIdx+1) : (curChalBossTimes()[chalBossIdx]||300); }
 function hasMoreMilestones(){ return gameMode==='practice' ? true : chalBossIdx<curChalBossTimes().length; }
+
+// ===== BOSS RUSH MODE =====
+// Unlocks when story world 5 is reachable (cleared through world 4). Endless boss gauntlet:
+// character + pet only — no gear, no level-up cards. Flat W1 boss HP for every fight.
+const RUSH_UNLOCK_STORY = 4;   // br_unlocked >= 4 → world 5 on the carousel
+const RUSH_HP_MULT = 0.62;     // same scale as story wave-5 bosses in world 1
+const RUSH_BASE_HP = 150;      // Tralalero base — every rush boss uses this pool
+let rushBossIdx = 0;           // 0-based index of the boss currently spawning
+let rushBossesBeaten = 0;      // cleared this run (score / game-over stat)
+let rushGapT = 0;              // short breathe between chained boss arenas
+function rushUnlocked(){ return _storyP >= RUSH_UNLOCK_STORY; }
+function rushIsActive(){ return gameMode === 'bossrush'; }
+let _rushCatalog = null;
+function rushCatalog(){
+  if(_rushCatalog) return _rushCatalog;
+  const seen = new Set();
+  const regular = [], finals = [];
+  const hellSpr = new Set(['vaca','toucan','cocofanto','ice_bearlini','gran_pagliaccio','bobritto','tralala2','madudung',
+    'tralalero','crocodilo','sahur','tatasahur','hotspot','saturnita','orcalero','gorillo','trippi','eccocavallo','tracotucotulu']);
+  for(let wi=0; wi<WORLDS.length; wi++){
+    const list = WORLDS[wi].bosses;
+    if(!list) continue;
+    for(let i=0; i<list.length; i++){
+      const b = list[i];
+      const key = (b.moveKey||b.spr) + '|' + b.name;
+      if(seen.has(key)) continue;
+      seen.add(key);
+      const slotFinal = i === list.length-1 || !!b.final;
+      const entry = { def:b, wi, hell:hellSpr.has(b.moveKey||b.spr), weight:1 };
+      if(slotFinal) finals.push(entry);
+      else regular.push(entry);
+    }
+  }
+  _rushCatalog = { regular, finals };
+  return _rushCatalog;
+}
+function rushWorldCap(tier){
+  if(tier <= 0) return 2;
+  if(tier <= 1) return 4;
+  if(tier <= 2) return 7;
+  if(tier <= 3) return 10;
+  return WORLDS.length - 1;
+}
+function pickRushWeighted(pool){
+  if(!pool.length) return null;
+  const tot = pool.reduce((s,e)=>s+e.weight, 0);
+  let r = Math.random() * tot;
+  for(const e of pool){
+    r -= e.weight;
+    if(r <= 0) return e.def;
+  }
+  return pool[pool.length-1].def;
+}
+function pickRushBossDef(idx){
+  const cat = rushCatalog();
+  const tier = Math.floor(idx / 5);
+  const wc = rushWorldCap(tier);
+  const isMilestone = (idx % 5) === 4;
+  let pool = (isMilestone ? cat.finals : cat.regular).filter(e => e.wi <= wc);
+  if(!pool.length) pool = isMilestone ? cat.finals : cat.regular;
+  const hellBoost = 1 + tier * 0.4;
+  const weighted = pool.map(e => ({ def:e.def, weight:e.weight * (e.hell ? hellBoost : 1) }));
+  return pickRushWeighted(weighted) || pool[0].def;
+}
 // Challenger needs story world 3 cleared; its own progression is independent after that
 const _storyP = +(localStorage.getItem('br_unlocked')||0);
 let chalUnlocked = _storyP >= 3
@@ -109,7 +173,7 @@ let bossLuckyT = 0;                  // countdown to the next boss-fight lucky b
 function spawnBossLucky(n, heal){   // heal = fixed HP each block drops when popped (25 final, 15 emergency)
   const ax0 = arena ? arena.x+60 : WALL+80, ax1 = arena ? arena.x+arena.w-60 : WORLD.w-WALL-80;
   const ay0 = arena ? arena.y+60 : WALL+80, ay1 = arena ? arena.y+arena.h-60 : WORLD.h-WALL-80;
-  const hp = 4*HP_MULT*(1+(wave-1)*0.07);   // softer than world blocks so they're breakable mid-fight
+  const hp = rushIsActive() ? 4*HP_MULT : 4*HP_MULT*(1+(wave-1)*0.07);   // softer than world blocks so they're breakable mid-fight
   for(let k=0;k<n;k++){
     if(luckies.length>=6) break;
     let x,y,tries=0;
@@ -1064,9 +1128,14 @@ function setStageEmblem(i){
 }
 function refreshWorldSel(){
   $('wname').textContent = worldLabel(selWorld);
-  const ws=$('worldsub'); if(ws) ws.textContent = gameMode==='practice' ? 'sandbox · no rewards' : 'survive the swarm';
-  $('wprev').disabled = selWorld<=0 || gameMode==='practice';
-  $('wnext').disabled = gameMode==='practice' || selWorld>=(gameMode==='challenger' ? chalUnlocked : unlockedMax);
+  const ws=$('worldsub');
+  if(ws){
+    if(gameMode==='practice') ws.textContent = 'sandbox · no rewards';
+    else if(gameMode==='bossrush') ws.textContent = 'boss gauntlet · character & pet only';
+    else ws.textContent = 'survive the swarm';
+  }
+  $('wprev').disabled = selWorld<=0 || gameMode==='practice' || gameMode==='bossrush';
+  $('wnext').disabled = gameMode==='practice' || gameMode==='bossrush' || selWorld>=(gameMode==='challenger' ? chalUnlocked : unlockedMax);
   setStageEmblem(selWorld);
   const shopPane=$('tab-shop');
   if(shopPane && !shopPane.classList.contains('hidden') && typeof renderShop==='function') renderShop();
@@ -1552,30 +1621,34 @@ function _doStartGame(wi){
   // Character base stats first — so gear builds on top of the character's foundation
   if(typeof clearHooks==='function') clearHooks();
   if(typeof applyCharBase==='function') applyCharBase(P.charId);
-  // Gear applies on top (always flat +dmg/+HP); gearDmgMul lets characters reduce gear's dmg contribution
-  if(typeof equippedFlatDmg==='function'){
-    const gearMul = (typeof gearWorldDmgMul==='function' ? gearWorldDmgMul(wi) : 1) * (P.gearDmgMul||1);
-    P.dmg += equippedFlatDmg(wi) * gearMul;
-    if(typeof equippedHp==='function'){ const h=equippedHp(wi); P.maxHp += h; P.hp = P.maxHp; }
+  if(gameMode === 'bossrush'){
+    P.noCards = true;
+  } else {
+    // Gear applies on top (always flat +dmg/+HP); gearDmgMul lets characters reduce gear's dmg contribution
+    if(typeof equippedFlatDmg==='function'){
+      const gearMul = (typeof gearWorldDmgMul==='function' ? gearWorldDmgMul(wi) : 1) * (P.gearDmgMul||1);
+      P.dmg += equippedFlatDmg(wi) * gearMul;
+      if(typeof equippedHp==='function'){ const h=equippedHp(wi); P.maxHp += h; P.hp = P.maxHp; }
+    }
+    if(typeof equippedSpeedMult==='function') P.speed *= equippedSpeedMult();
+    if(typeof equippedRangeMult==='function') P.range *= equippedRangeMult();
+    if(typeof equippedCrit==='function') P.crit = Math.min(0.8, P.crit + equippedCrit());
+    if(typeof equippedArmorMult==='function') P.armor *= equippedArmorMult();
+    if(typeof equippedRateMult==='function') P.fireRate /= equippedRateMult();
+    if(typeof equippedMagnetMult==='function') P.magnet *= equippedMagnetMult();
+    if(typeof equippedRegen==='function'){
+      const rv=equippedRegen(wi);
+      if(typeof gearStatUsesPercent==='function' && gearStatUsesPercent('regen', wi)) P.regen += Math.max(0.5, P.maxHp * rv);
+      else P.regen += rv;
+    }
+    if(typeof equippedGoldMult==='function'){ const g=equippedGoldMult(); P.goldMul *= g; P.xpMul *= g; }
+    if(typeof equippedVamp==='function'){
+      const vv=equippedVamp(wi);
+      if(typeof gearStatUsesPercent==='function' && gearStatUsesPercent('vamp', wi)) P.vamp += Math.max(1, Math.round(P.maxHp * vv));
+      else P.vamp += vv;
+    }
+    if(typeof equippedPierce==='function') P.pierce += equippedPierce();
   }
-  if(typeof equippedSpeedMult==='function') P.speed *= equippedSpeedMult();
-  if(typeof equippedRangeMult==='function') P.range *= equippedRangeMult();
-  if(typeof equippedCrit==='function') P.crit = Math.min(0.8, P.crit + equippedCrit());
-  if(typeof equippedArmorMult==='function') P.armor *= equippedArmorMult();
-  if(typeof equippedRateMult==='function') P.fireRate /= equippedRateMult();
-  if(typeof equippedMagnetMult==='function') P.magnet *= equippedMagnetMult();
-  if(typeof equippedRegen==='function'){
-    const rv=equippedRegen(wi);
-    if(typeof gearStatUsesPercent==='function' && gearStatUsesPercent('regen', wi)) P.regen += Math.max(0.5, P.maxHp * rv);
-    else P.regen += rv;
-  }
-  if(typeof equippedGoldMult==='function'){ const g=equippedGoldMult(); P.goldMul *= g; P.xpMul *= g; }
-  if(typeof equippedVamp==='function'){
-    const vv=equippedVamp(wi);
-    if(typeof gearStatUsesPercent==='function' && gearStatUsesPercent('vamp', wi)) P.vamp += Math.max(1, Math.round(P.maxHp * vv));
-    else P.vamp += vv;
-  }
-  if(typeof equippedPierce==='function') P.pierce += equippedPierce();
   if(typeof registerActiveChar==='function') registerActiveChar();
   if(typeof registerActivePet==='function') registerActivePet();
   if(!infiniteMapMode() && typeof WorldMapLayout!=='undefined' && WorldMapLayout.findSafeSpawn){
@@ -1593,6 +1666,7 @@ function _doStartGame(wi){
   luckyTimer=rand(10,18);
   worldCoins=0;
   chalElapsed=0; chalBossIdx=0; chalBossActive=false; chalLuckyT=5;
+  rushBossIdx=0; rushBossesBeaten=0; rushGapT=0;
   { const ci=$('coincount'); if(ci){ const img=ci.querySelector('img'); if(img && !img.getAttribute('src')) img.src=SP['coin'].toDataURL(); } }
   refreshHUD();   // reset level badge / kills / timer / coins so nothing shows last run's value
   state=ST.PLAY;
@@ -1603,7 +1677,18 @@ function _doStartGame(wi){
   $('zoomctl').classList.remove('hidden');
   $('dashbtn').textContent = P.engineerPlace ? 'Place turret.' : 'DASH';
   if(IS_TOUCH) $('dashbtn').classList.remove('hidden');   // mobile-only on-screen dash
-  if(timerMode()) startChallengerSpawn(); else startWave();
+  if(rushIsActive()) startBossRush();
+  else if(timerMode()) startChallengerSpawn(); else startWave();
+}
+
+function startBossRush(){
+  betweenWaves=false;
+  waveEnemiesLeft=0;
+  wave=5;
+  $('wavetag').textContent='BOSS 1';
+  sfx.wave();
+  bigText('BOSS RUSH','#ff7a40');
+  startBossArena();
 }
 
 function startWave(){
@@ -1720,28 +1805,45 @@ function ringPos(){ // spawn point on a ring around player, clamped to world + c
 }
 
 function spawnBoss(){
-  const milestoneIdx = ((Math.floor(wave/5)-1) % curBosses.length + curBosses.length) % curBosses.length;
-  // Challenger World 3: middle boss is cut, so milestone 0/1/2 map to boss species 0/2/3 instead of 0/1/2.
-  const bossIdx = chalIsShort() ? (CHAL_BOSS_MAP_CHAL[milestoneIdx] ?? milestoneIdx) : milestoneIdx;
-  const def = gameMode==='practice'
-    ? curBosses[Math.floor(Math.random()*curBosses.length)]
-    : curBosses[bossIdx];
-  const chalMul = gameMode==='challenger' ? 3.5 : 1;
-  const bossGearHp = (typeof gearBossHpMul==='function' ? gearBossHpMul(worldIdx) : 1);
-  const bandMul = 1 + (worldHpBand() - 1) * 0.32;
-  const waveMul = 1 + Math.max(0, wave - 5) * 0.07;
-  const storyScale = gameMode==='challenger' ? 1 : 0.62;
-  const mult = waveMul * (curWorld().hpMul||1) * bandMul * chalMul * storyScale * bossGearHp;
+  let def, bossIdx, isFinal;
+  if(rushIsActive()){
+    const raw = pickRushBossDef(rushBossIdx);
+    const isMilestone = (rushBossIdx % 5) === 4;
+    def = isMilestone ? raw : Object.assign({}, raw, { final:false });
+    bossIdx = isMilestone ? 99 : rushBossIdx % 4;
+    isFinal = isMilestone;
+    const rushNum = rushBossIdx + 1;
+    $('wavetag').textContent = 'BOSS ' + rushNum + (isMilestone ? ' · FINAL' : '');
+  } else {
+    const milestoneIdx = ((Math.floor(wave/5)-1) % curBosses.length + curBosses.length) % curBosses.length;
+    bossIdx = chalIsShort() ? (CHAL_BOSS_MAP_CHAL[milestoneIdx] ?? milestoneIdx) : milestoneIdx;
+    def = gameMode==='practice'
+      ? curBosses[Math.floor(Math.random()*curBosses.length)]
+      : curBosses[bossIdx];
+    isFinal = bossIdx === curBosses.length-1 || def.final===true;
+  }
   const p = arena ? { x:arena.x+arena.w/2, y:arena.y+arena.h*0.28 } : ringPos();
-  const bar1 = def.hp*HP_MULT*mult, bar2 = (def.hp2||0)*HP_MULT*mult;
-  const baseTotal = bar1+bar2;
-  // each world's last boss = its FINAL boss: a beefed phase 3 whose HP alone tops phases 1+2 combined.
-  // def.final also flags a boss as final even when it isn't the literal last list entry (e.g. Tralalero 2.0,
-  // which sits mid-list but is the wave-20 fight in its worlds).
-  const isFinal = bossIdx === curBosses.length-1 || def.final===true;
-  const p3Scale = bossGearHp < 0.22 ? 0.45 : bossGearHp < 0.35 ? 0.62 : 0.85;
-  const p3pool = isFinal ? baseTotal * p3Scale : 0;     // geared runs: shorter final phase pool
-  const total  = baseTotal + p3pool;
+  let bar1, bar2, baseTotal, p3pool, total;
+  if(rushIsActive()){
+    bar1 = RUSH_BASE_HP * HP_MULT * RUSH_HP_MULT;
+    bar2 = 0;
+    baseTotal = bar1;
+    p3pool = isFinal ? baseTotal * 0.85 : 0;
+    total = baseTotal + p3pool;
+  } else {
+    const chalMul = gameMode==='challenger' ? 3.5 : 1;
+    const bossGearHp = (typeof gearBossHpMul==='function' ? gearBossHpMul(worldIdx) : 1);
+    const bandMul = 1 + (worldHpBand() - 1) * 0.32;
+    const waveMul = 1 + Math.max(0, wave - 5) * 0.07;
+    const storyScale = gameMode==='challenger' ? 1 : 0.62;
+    const mult = waveMul * (curWorld().hpMul||1) * bandMul * chalMul * storyScale * bossGearHp;
+    bar1 = def.hp*HP_MULT*mult;
+    bar2 = (def.hp2||0)*HP_MULT*mult;
+    baseTotal = bar1+bar2;
+    const p3Scale = bossGearHp < 0.22 ? 0.45 : bossGearHp < 0.35 ? 0.62 : 0.85;
+    p3pool = isFinal ? baseTotal * p3Scale : 0;
+    total = baseTotal + p3pool;
+  }
   boss = {
     spr:def.spr, name:def.name, pattern:def.pattern, mk:def.moveKey||def.spr,
     phased:def.phased, bars:isFinal?1:(def.bars||1), bar1, bar2,
@@ -1770,8 +1872,8 @@ function spawnBoss(){
     };
     enemies.push(mate); boss.mate=mate;
   }
-  bossLuckyT = 20;                              // first periodic lucky batch ~20s into the fight
-  if(isFinal) spawnBossLucky(1);               // final bosses: a lucky block at the start of phase 1
+  bossLuckyT = rushIsActive() ? 16 : 20;
+  if(rushIsActive() || isFinal) spawnBossLucky(1);
   // Challenger: much more aggressive — faster attacks, higher speed, hits harder
   if(gameMode==='challenger'){
     boss.gT  = (boss.gT  || 1.5) * 0.32;
@@ -1784,7 +1886,7 @@ function spawnBoss(){
     }
   }
   sfx.boss();
-  playMusic(isFinal ? 'final_'+boss.spr : 'boss'+(((Math.floor(wave/5)-1)%3+3)%3));
+  playMusic(isFinal ? 'final_'+boss.spr : 'boss'+(((rushIsActive() ? rushBossIdx : Math.floor(wave/5)-1)%3+3)%3));
   $('bossname').textContent = boss.name;
   $('bossfill').style.width = '100%';
   $('bossfill').style.background = '';   // reset to the default red (a prior final boss may have left it magenta)
@@ -2231,7 +2333,7 @@ function gameOver(){
   sfx.die();
   if(typeof haptic === 'function') haptic('heavy');
   shake = 22; hitstop = 0.12;
-  $('fwave').textContent = timerMode() ? 'time '+fmtTime(chalElapsed) : 'wave '+wave;
+  $('fwave').textContent = rushIsActive() ? rushBossesBeaten+' bosses' : (timerMode() ? 'time '+fmtTime(chalElapsed) : 'wave '+wave);
   $('fcoins').textContent = fmtNum(worldCoins);
   $('fkills').textContent = kills;
   if(typeof showRunDebrief === 'function') showRunDebrief('over');
@@ -2392,6 +2494,10 @@ function update(dt){
     if(boss && boss.hp > boss.maxHp) boss.hp = boss.maxHp;   // reject console-up of boss HP
   }
   if(bossPending>0){ bossPending-=dt; if(bossPending<=0){ bossPending=0; spawnBoss(); } }
+  if(rushGapT>0 && rushIsActive() && !boss && bossPending<=0){
+    rushGapT -= dt;
+    if(rushGapT<=0){ rushGapT=0; startBossArena(); }
+  }
 
   // --- player move ---
   let mx=joy.dx, my=joy.dy;
@@ -2989,7 +3095,7 @@ function update(dt){
     P.inv = Math.max(P.inv||0, runSpawnGrace);
   }
   spawnTimer -= dt;
-  if(!betweenWaves && waveEnemiesLeft>0 && spawnTimer<=0){
+  if(!betweenWaves && waveEnemiesLeft>0 && spawnTimer<=0 && !rushIsActive()){
     // Challenger's first stretch (before its 1st boss) spawns 30% faster, same early-game buff as story waves 1-9
     const chalEarlyMul = (gameMode==='challenger' && chalBossIdx===0) ? 1.3 : 1;
     const graceMul = runSpawnGrace>0 ? 1.65 : 1;
@@ -3242,7 +3348,22 @@ function update(dt){
           bullets.push({x:e.x,y:e.y,vx:Math.cos(a)*420,vy:Math.sin(a)*420,r:6,pierce:1,hit:new Set(),dist:300,dmgMul:0.5}); }
         burst(e.x,e.y,'#bfe6ff',8,180);
       }
-      if(e.isBoss && timerMode()){
+      if(e.isBoss && rushIsActive()){
+        boss=null; arena=null;
+        $('bossbar').classList.add('hidden');
+        ebullets=[]; zones=[];
+        enemies=enemies.filter(o=>o.isBoss);
+        playMusic(curTheme.music); sfx.win();
+        rushBossesBeaten++;
+        bigText('BOSS '+rushBossesBeaten+' DOWN','#4aa3df');
+        for(let g=0; g<8; g++) dropOrb(e.x, e.y, 3, 120, 300);
+        for(let g=0; g<2; g++){ const a=rand(0,TAU), s=rand(120,300); gems.push({x:e.x,y:e.y,coin:true,t:rand(0,6),vx:Math.cos(a)*s,vy:Math.sin(a)*s}); }
+        if(!P.hasMagnetPet){ const a=rand(0,TAU), s=rand(60,120); gems.push({x:e.x,y:e.y,magnet:true,t:0,vx:Math.cos(a)*s,vy:Math.sin(a)*s}); }
+        rushBossIdx++;
+        rushGapT = 1.35;
+        waveEnemiesLeft = 0;
+        betweenWaves = false;
+      } else if(e.isBoss && timerMode()){
         // Challenger/practice-timer-based boss kill
         boss=null; arena=null;
         $('bossbar').classList.add('hidden');
@@ -3307,10 +3428,10 @@ function update(dt){
 
   // advance after the cleared-gap. In-update countdown (NOT a wall-clock setTimeout) so it
   // pauses with the game and can never be dropped by a pause/blur firing during the gap.
-  if(betweenWaves && waveGapT>0 && !timerMode()){ waveGapT-=dt; if(waveGapT<=0){ waveGapT=0; wave++; startWave(); } }
+  if(betweenWaves && waveGapT>0 && !timerMode() && !rushIsActive()){ waveGapT-=dt; if(waveGapT<=0){ waveGapT=0; wave++; startWave(); } }
 
-  // wave cleared? (not while the boss is still incoming; skip in timer-mode — enemies spawn endlessly)
-  if(!betweenWaves && bossPending<=0 && waveEnemiesLeft===0 && enemies.length===0 && !timerMode()){
+  // wave cleared? (not while the boss is still incoming; skip in timer-mode / boss-rush)
+  if(!betweenWaves && bossPending<=0 && waveEnemiesLeft===0 && enemies.length===0 && !timerMode() && !rushIsActive()){
     betweenWaves=true; waveGapT=1.3;
     bigText('WAVE CLEARED','#5fbf52');
     if(typeof fireHook==='function') fireHook('waveEnd');
@@ -3364,6 +3485,9 @@ function update(dt){
   } else if(boss && boss.finalPhase && state===ST.PLAY){
     bossLuckyT -= dt;
     if(bossLuckyT<=0){ bossLuckyT = 20; spawnBossLucky(2); }
+  } else if(boss && rushIsActive() && state===ST.PLAY){
+    bossLuckyT -= dt;
+    if(bossLuckyT<=0){ bossLuckyT = 18; spawnBossLucky(1); }
   } else if(boss && state===ST.PLAY){
     if(P.hp/P.maxHp < 0.25 && luckies.length===0) spawnBossLucky(2, 15);
   }
@@ -3441,6 +3565,8 @@ function update(dt){
         const wt=$('wavetag'); if(wt) wt.textContent='BOSS IN '+(rm>0?rm+':'+(rs<10?'0':'')+rs:rs+'s');
       } else if(timerMode() && chalBossActive){
         const wt=$('wavetag'); if(wt) wt.textContent='BOSS FIGHT';
+      } else if(rushIsActive() && boss){
+        const wt=$('wavetag'); if(wt) wt.textContent='BOSS '+(rushBossIdx+1)+((rushBossIdx%5)===4?' · FINAL':'');
       }
     }
   }
@@ -6165,6 +6291,13 @@ $('introskip').addEventListener('click', ()=>{
       const lb=$('gmpop-lockbadge');
       if(lb) lb.textContent=locked?'LOCKED — clear Story World 3 first':'';
     }
+    const rushBtn=$('gm-bossrush');
+    if(rushBtn){
+      const locked=!rushUnlocked();
+      rushBtn.classList.toggle('gmpop-locked', locked);
+      const lb=$('gmpop-rushlock');
+      if(lb) lb.textContent=locked?'LOCKED — reach Story World 5':'';
+    }
     if(pop) pop.classList.remove('hidden');
   }
   function closePop(){ if(pop) pop.classList.add('hidden'); }
@@ -6189,6 +6322,13 @@ $('introskip').addEventListener('click', ()=>{
   if(practiceBtn) practiceBtn.addEventListener('click', ()=>{
     closePop(); sfx.pick();
     const cp=$('practice-confirm-popup'); if(cp) cp.classList.remove('hidden');
+  });
+  const rushBtn=$('gm-bossrush');
+  if(rushBtn) rushBtn.addEventListener('click', ()=>{
+    if(!rushUnlocked()){ sfx.pick(); return; }
+    gameMode='bossrush';
+    refreshWorldSel();
+    closePop(); sfx.pick();
   });
 })();
 

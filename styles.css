@@ -388,6 +388,12 @@ html.is-native-android, html.is-native-android body {
 .gmpop-practice:active { box-shadow:0 2px 0 #1c6a60; }
 .gmpop-practice .gmpop-mbadge { color:#2a9a8c; }
 .gmpop-practice .gmpop-mdesc { color:rgba(220,255,250,.88); -webkit-text-stroke:.3px rgba(14,60,52,.3); }
+.gmpop-bossrush { background:linear-gradient(#ff7a40,#c83818); box-shadow:0 6px 0 #8a2410; }
+.gmpop-bossrush:active { box-shadow:0 2px 0 #8a2410; }
+.gmpop-bossrush .gmpop-mbadge { color:#c83818; }
+.gmpop-bossrush .gmpop-mdesc { color:rgba(255,235,220,.9); -webkit-text-stroke:.3px rgba(80,24,8,.3); }
+.gmpop-bossrush.gmpop-locked { opacity:.55; cursor:not-allowed !important; }
+.gmpop-bossrush.gmpop-locked:active { transform:none !important; box-shadow:0 6px 0 #8a2410 !important; }
 
 /* ===== Practice mode popups (reuse .sdrop-inner shell) ===== */
 #practice-confirm-popup, #practice-setup-popup, #practice-enemy-popup, #practice-boss-popup {

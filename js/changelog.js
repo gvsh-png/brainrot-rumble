@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.85';
+const CURRENT_VERSION = '1.86';
 const CHANGELOG = [
+  { v: '1.86', notes: 'New Boss Rush gamemode (unlocks at Story World 5): endless back-to-back boss fights — no fodder waves, no gear, no level-up cards. Only your character and pet matter. Every boss uses flat World 1 HP regardless of origin; every 5th fight is a final boss with phase-3 patterns. Lucky blocks spawn during every fight for sustain. Boss pool widens and favors bullet-hell patterns the deeper you go.' },
   { v: '1.85', notes: 'Premium menu polish: replaced the warm brown/orange shell with a dark slate gradient that matches the tab bar and cards. Cleaned up menu typography — removed heavy faux-bold text strokes on world titles, bounties, shop headers, and equipment stats so custom text reads sharper. Daily bounties, resume box, and pet slots use the same elevated dark card style.' },
   { v: '1.84', notes: 'Percent scaling narrowed: dmg/HP stay flat everywhere (gear + Vitality/Thick Skin cards). Regen and vamp use % from world 11 onward — level-up cards and shop gear labels show +N%/s and +N%/kill on late worlds.' },
   { v: '1.83', notes: 'Gear dmg/HP stay flat (+N) in every world — shop labels no longer switch to % on worlds 11+. Percent scaling on late worlds applies only to level-up card abilities (Vitality, Regen, Vamp, etc.), not equipment.' },

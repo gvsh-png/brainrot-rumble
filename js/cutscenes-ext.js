@@ -665,7 +665,7 @@ const WorldCine = (function () {
   }
 
   function beforeStart(worldIndex, mode, onReady) {
-    if (mode === 'practice') { onReady(); return; }
+    if (mode === 'practice' || mode === 'bossrush') { onReady(); return; }
     if (mode === 'challenger') {
       if (wasSeen('chal_in_' + worldIndex)) { onReady(); return; }
       start('chal_in', worldIndex, onReady, true);
