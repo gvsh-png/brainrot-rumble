@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.75';
+const CURRENT_VERSION = '1.76';
 const CHANGELOG = [
+  { v: '1.76', notes: 'World 1 boss tutorial pass: wave 5 Tralalero, wave 10 Bombardiro, and wave 15 Ting Ting now throw fake bullet-hell patterns — rainbow spirals, gapped ring walls, orbiting bombs, drum echoes — huge and flashy but slow, wide gaps, and low damage so they look hard but play easy.' },
   { v: '1.75', notes: 'Battle tab fix: big PLAY button is back on top (no more buried under bounties). Removed Swarm Rank hub and the second XP bar in the topbar. Engagement feedback is now particles, shake, haptics, and SFX — no milestone/bounty/synergy text popups.' },
   { v: '1.74', notes: 'Removed the kill combo system (MULTI-KILL tiers, combo bar, combo bounties/achievements, and combo debrief stats). Daily bounties, Swarm Rank, milestones, and the rest of the retention features stay.' },
   { v: '1.73', notes: 'Battle tab layout fix: world preview is the hero again (guaranteed min height), daily bounties are a compact strip below the stage, and Continue/New Run buttons sit side-by-side so nothing crushes the world emblem.' },

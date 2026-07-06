@@ -1679,6 +1679,10 @@ function spawnBoss(){
     rollSpray:0, warpT:0, wd:null, gsweep:null, carpet:0, cbT:0, tether:0
   };
   if(boss.gimmick==='flank') boss.front=0.5;   // Pit Armor: front hits softened, so you must flank
+  if(worldIdx===0 && gameMode==='story' && bossIdx<3){
+    const gmap = { tralalero:'w1shoe', crocodilo:'w1bomb', sahur:'w1drum' };
+    if(gmap[def.spr]) boss.gimmick = gmap[def.spr];
+  }
   enemies.push(boss);
   if(def.duo){   // final-boss partner: own body + move cycle, shares the lead's HP pool
     const mate = {
@@ -3424,13 +3428,18 @@ function fireEB(x,y,a,sp,color,opts){
 function mRing(e,n,spd,col){ const off=rand(0,TAU); for(let i=0;i<n;i++) fireEB(e.x,e.y,off+i*TAU/n,spd,col); muzzleFlash(e.x,e.y,col); }
 function mAimed(e,n,spread,spd,col){ const aim=Math.atan2(P.y-e.y,P.x-e.x); for(let i=0;i<n;i++) fireEB(e.x,e.y,aim+(i-(n-1)/2)*spread,spd,col); muzzleFlash(e.x,e.y,col); }
 // a ring with a wide MISSING arc (a "safe hole") — looks dense but you just walk through the gap. gapFrac = fraction of the circle left open.
-function mRingGap(e,n,spd,col,gapFrac,gapAt){
+function mRingGap(e,n,spd,col,gapFrac,gapAt,dmgMul){
   const off=rand(0,TAU), gs=(gapAt==null?rand(0,TAU):gapAt), gw=TAU*(gapFrac||0.28);
+  const ebOpts = dmgMul!=null ? { dmgMul } : null;
   for(let i=0;i<n;i++){ const a=off+i*TAU/n;
     const d=Math.abs(((a-gs+Math.PI)%TAU+TAU)%TAU-Math.PI);   // angular distance to gap center
     if(d<gw/2) continue;
-    fireEB(e.x,e.y,a,spd,col); }
+    fireEB(e.x,e.y,a,spd,col, ebOpts); }
   muzzleFlash(e.x,e.y,col);
+}
+
+function w1EarlyBossHell(e){
+  return worldIdx===0 && gameMode==='story' && (e.spr==='tralalero' || e.spr==='crocodilo' || e.spr==='sahur');
 }
 
 // ---- World 2 shared hazard helpers (used by dirt enemies AND bosses) ----
@@ -3440,16 +3449,17 @@ function geyserLine(x,y,a,col,n=5,step=46){
 }
 // a full WALL of bullets sweeping across the arena from one edge, with a single moving gap to slip through.
 // the gap is the telegraph: you see the hole coming and walk into it. (scripted-finale bullet-hell pattern)
-function mWall(side, spd, col, gapAt, gapW, n){
+function mWall(side, spd, col, gapAt, gapW, n, dmgMul){
   if(!arena) return; const a=arena;
+  const dm = dmgMul!=null ? dmgMul : 1;
   if(side==='left'||side==='right'){
     const x=side==='left'?a.x+12:a.x+a.w-12, vx=side==='left'?spd:-spd;
     const sn=Math.max(6,Math.round(n*a.h/ARENA_SIZE));
-    for(let i=0;i<sn;i++){ const y=a.y+(i+0.5)*a.h/sn; if(Math.abs(y-gapAt)<gapW) continue; ebullets.push({x,y,vx,vy:0,r:7,color:col}); }
+    for(let i=0;i<sn;i++){ const y=a.y+(i+0.5)*a.h/sn; if(Math.abs(y-gapAt)<gapW) continue; ebullets.push({x,y,vx,vy:0,r:7,color:col,dmgMul:dm}); }
   } else {
     const y=side==='top'?a.y+12:a.y+a.h-12, vy=side==='top'?spd:-spd;
     const sn=Math.max(6,Math.round(n*a.w/ARENA_SIZE));
-    for(let i=0;i<sn;i++){ const x=a.x+(i+0.5)*a.w/sn; if(Math.abs(x-gapAt)<gapW) continue; ebullets.push({x,y,vx:0,vy,r:7,color:col}); }
+    for(let i=0;i<sn;i++){ const x=a.x+(i+0.5)*a.w/sn; if(Math.abs(x-gapAt)<gapW) continue; ebullets.push({x,y,vx:0,vy,r:7,color:col,dmgMul:dm}); }
   }
   sfx.warn();
 }
@@ -3511,10 +3521,16 @@ function spawnSplit(e){
 // move pool for the current boss / Vaca phase
 function bossMoves(e){
   switch(e.mk||e.spr){
-    // ---- World 1 ----
-    case 'tralalero': return ['dash','spiral','aimed3'];
-    case 'crocodilo': return ['carpet','ring16'];
-    case 'sahur':     return ['slam','aimed5','dblslam'];
+    // ---- World 1 (Grasslands waves 5/10/15) — fake bullet-hell: huge patterns, wide gaps, low dmg ----
+    case 'tralalero':
+      if(worldIdx===0 && gameMode==='story') return ['W1_SHARK_SPIRAL','W1_SHARK_GAPS','W1_SHARK_WALL','W1_SHARK_DASH'];
+      return ['dash','spiral','aimed3'];
+    case 'crocodilo':
+      if(worldIdx===0 && gameMode==='story') return ['W1_BOMB_ORBIT','W1_BOMB_CROSS','W1_BOMB_RING','W1_BOMB_WALL'];
+      return ['carpet','ring16'];
+    case 'sahur':
+      if(worldIdx===0 && gameMode==='story') return ['W1_DRUM_ECHO','W1_DRUM_STORM','W1_DRUM_SLAM','W1_DRUM_WALL'];
+      return ['slam','aimed5','dblslam'];
     case 'gorillo':
       if(e.vph>=3) return ['roll','SPIRAL_STORM','seedsmash','RING_VOLLEY','ring12'];
       if(e.vph>=2) return ['roll','seedsmash','ring12','RING_VOLLEY'];
@@ -3827,7 +3843,11 @@ const MOVE_COL = { dash:'#e54d4d', spiral:'#e54d4d', aimed3:'#e23b3b', aimed5:'#
   EXT_LANCE:'#b06ff0', EXT_SPORE_FAN:'#7ab955', EXT_ORBIT_BURST:'#9fd0ff', EXT_BEAM_SWEEP:'#e0503f',
   EXT_PHASE_SLAM:'#a9763e', EXT_VORTEX_PULL:'#d2a0ff', EXT_COLLAPSE:'#c77dff', EXT_HIVE_SPAWN:'#6a4a9a',
   EXT_SWARM_BURST:'#9a7ad8', EXT_FROST_FAN:'#9fd0ff', EXT_VOID_RAIN:'#6c5ce7', EXT_SHOCK_GRID:'#ff7675',
-  EXT_FINAL_CATACLYSM:'#ff5acd' };
+  EXT_FINAL_CATACLYSM:'#ff5acd',
+  // World 1 tutorial bosses (fake bullet-hell)
+  W1_SHARK_SPIRAL:'#5fe0ff', W1_SHARK_GAPS:'#bff0ff', W1_SHARK_WALL:'#5fe0ff', W1_SHARK_DASH:'#5fe0ff',
+  W1_BOMB_ORBIT:'#ff7a2a', W1_BOMB_CROSS:'#ff7a2a', W1_BOMB_RING:'#ffd24a', W1_BOMB_WALL:'#ff7a2a',
+  W1_DRUM_ECHO:'#ffe08a', W1_DRUM_STORM:'#ffe08a', W1_DRUM_SLAM:'#c9923f', W1_DRUM_WALL:'#ffd24a' };
 function pickMove(e){
   let pool=bossMoves(e);
   // bullet-hell injection: a LOT more for final-boss phase 3, a moderate bit for mid-bosses past phase 1
@@ -3859,6 +3879,51 @@ function execMove(e){
     case 'warp':   // Trippi: blink near player, then disorienting double-spiral
       e.warpT=0.45; burst(e.x,e.y,'#c77dff',18,240);   // departure tell at old position
       return 0.9;
+    // ---- World 1 fake bullet-hell (waves 5 / 10 / 15) — looks scary, plays easy ----
+    case 'W1_SHARK_SPIRAL':
+      e.storm=2.8; e.stormN=7; e.stormSpd=98; e.stormStep=0.34; e.stormDir=Math.random()<0.5?1:-1;
+      e.stormCol='#5fe0ff'; e.stormCd=0.18; e.stormTwin=true; e.stormRainbow=true; e.stormDmgMul=0.32;
+      sfx.warn(); shake=Math.max(shake,5); return 2.8;
+    case 'W1_SHARK_GAPS':
+      e.echo={ t:2.2, ivT:0, n:20, spd:92, col:'#bff0ff', gap:0.44, at:rand(0,TAU), dmgMul:0.32 };
+      sfx.warn(); return 2.2;
+    case 'W1_SHARK_WALL':
+      if(arena){ const side=pick(['left','right','top','bottom']);
+        const gapAt=(side==='left'||side==='right')?P.y:P.x;
+        mWall(side, 82, '#5fe0ff', gapAt, 125, 10, 0.32); }
+      shake=Math.max(shake,5); return 1.0;
+    case 'W1_SHARK_DASH':
+      e.dst='wind'; e.dwin=0.55; e.da=Math.atan2(P.y-e.y,P.x-e.x);
+      e.landFx={type:'pounce'}; sfx.warn(); return 0.9;
+    case 'W1_BOMB_ORBIT':
+      { const N=24, off=rand(0,TAU);
+        for(let k=0;k<N;k++) fireEB(e.x,e.y,0,0,'#ff7a2a',{dmgMul:0.32,orbit:{cx:e.x,cy:e.y,ang:off+k*TAU/N,rad:52,angV:0.85,radV:38}});
+        muzzleFlash(e.x,e.y,'#ff7a2a'); shake=Math.max(shake,6); sfx.warn(); return 0.55; }
+    case 'W1_BOMB_CROSS':
+      { const a=Math.atan2(P.y-e.y,P.x-e.x);
+        for(let q=0;q<4;q++) mRingGap(e,14,88,'#ff7a2a',0.42,a+q*Math.PI/2,0.32);
+        shake=Math.max(shake,6); return 0.65; }
+    case 'W1_BOMB_RING':
+      mRingGap(e,26,92,'#ffd24a',0.40); mRingGap(e,18,68,'#ff7a2a',0.44); shake=Math.max(shake,6); sfx.warn(); return 0.55;
+    case 'W1_BOMB_WALL':
+      if(arena){ mWall(pick(['left','right']), 78, '#ff7a2a', P.y+rand(-50,50), 135, 12, 0.32);
+        mWall(pick(['top','bottom']), 78, '#ffd24a', P.x+rand(-50,50), 135, 12, 0.32); }
+      return 1.1;
+    case 'W1_DRUM_ECHO':
+      e.echo={ t:2.4, ivT:0, n:22, spd:88, col:'#ffe08a', gap:0.46, at:rand(0,TAU), dmgMul:0.32 };
+      sfx.warn(); return 2.4;
+    case 'W1_DRUM_STORM':
+      e.storm=2.4; e.stormN=6; e.stormSpd=94; e.stormStep=0.37; e.stormDir=Math.random()<0.5?1:-1;
+      e.stormCol='#ffe08a'; e.stormCd=0.18; e.stormTwin=false; e.stormRainbow=false; e.stormDmgMul=0.32;
+      e.pull=0.55; e.pullStr=40; sfx.warn(); return 2.4;
+    case 'W1_DRUM_SLAM':
+      addZone(P.x,P.y,90,{tele:0.8,life:0.55,dps:10,col:'#c9923f'});
+      mRingGap(e,20,85,'#ffe08a',0.42); shake=Math.max(shake,8); sfx.hit(); return 0.75;
+    case 'W1_DRUM_WALL':
+      if(arena){ const gapAt=P.x;
+        mWall('top', 72, '#ffe08a', gapAt, 145, 11, 0.32);
+        mWall('bottom', 72, '#ffd24a', gapAt, 145, 11, 0.32); }
+      return 1.0;
     // ---- World 2 moves ----
     case 'BURROW_SLAM':   addZone(P.x,P.y,84,{tele:0.7,life:0.6,dps:22,col:'#7a5a30'}); shake=Math.max(shake,6); return 0.4;
     case 'BURROW_DOUBLE': addZone(P.x,P.y,76,{tele:0.6,life:0.6,dps:22,col:'#7a5a30'}); addZone(P.x+rand(-120,120),P.y+rand(-120,120),70,{tele:0.95,life:0.6,dps:20,col:'#7a5a30'}); shake=Math.max(shake,7); return 0.6;
@@ -4097,7 +4162,8 @@ const GIMMICK = {
   // W4 GELATO GLACIER
   tiramisubmarini:'submerge', frigocamello:'coldaura', magotiramisu:'blinkconjure', icebearlini:'avalanche',
   // W5 CIRCO BRAINROTTO
-  trapezino:'swing', giostra:'carousel', mangiafuoco:'juggle', granpagliaccio:'showtime',
+  trapezino:'swing', giostra:'carousel', mangiafuoco:'juggle',   granpagliaccio:'showtime',
+  w1shoe:'w1shoe', w1bomb:'w1bomb', w1drum:'w1drum',
 };
 // a persistent, telegraphed mechanic that gives each boss an identity beyond its move list.
 // runs every frame alongside the move cycle; escalates with e.vph. kept forgiving (slow, wide gaps).
@@ -4188,6 +4254,18 @@ function updateGimmick(e,dt){
     case 'showtime':                                    // ringmaster blinks + keeps a rotating cast of clowns (final)
       e.gT-=dt; if(e.gT<=0 && e.mst==='recover' && !(e.warpT>0) && !(e.stun>0)){ e.gT = ph>=3?3.0:4.0; e.warpT=0.45; burst(e.x,e.y,'#ff5ea8',16,240); }
       e.gT2-=dt; if(e.gT2<=0){ e.gT2 = ph>=3?4.5:6.5; summonAdds(e,'clownino',2,ph>=3?6:4); }
+      break;
+    // World 1 early bosses — light ongoing fake bullet-hell (wide gaps, low dmg)
+    case 'w1shoe':
+      e.gT-=dt; if(e.gT<=0){ e.gT=2.0; mRingGap(e,16,100,'#5fe0ff',0.40, null, 0.30); }
+      break;
+    case 'w1bomb':
+      e.gT-=dt; if(e.gT<=0){ e.gT=2.6;
+        const off=rand(0,TAU);
+        fireEB(e.x,e.y,0,0,'#ff7a2a',{dmgMul:0.28,orbit:{cx:e.x,cy:e.y,ang:off,rad:78,angV:1.0,radV:22}}); }
+      break;
+    case 'w1drum':
+      e.gT-=dt; if(e.gT<=0){ e.gT=1.9; mRingGap(e,14,86,'#ffe08a',0.42, null, 0.30); }
       break;
   }
 }
@@ -4557,13 +4635,14 @@ function updateBoss(e,dt){
       const sp=e.stormSpd||150;
       let col=e.stormCol||'#ff5acd';
       if(rainbow){ const h=((e.stormA*90)%360+360)%360; col='hsl('+h.toFixed(0)+',88%,62%)'; }   // cycles hue
-      for(let k=0;k<n;k++) fireEB(e.x,e.y, e.stormA + k*TAU/n, sp, col);
-      if(e.stormTwin && !rainbow) for(let k=0;k<n;k++) fireEB(e.x,e.y, -e.stormA + k*TAU/n + 0.3, sp, col);
+      const sOpts = e.stormDmgMul ? { dmgMul: e.stormDmgMul } : null;
+      for(let k=0;k<n;k++) fireEB(e.x,e.y, e.stormA + k*TAU/n, sp, col, sOpts);
+      if(e.stormTwin && !rainbow) for(let k=0;k<n;k++) fireEB(e.x,e.y, -e.stormA + k*TAU/n + 0.3, sp, col, sOpts);
     }
   }
   // ECHO_RINGS (Ecco Cavallo): slow expanding rings, each with a wide gap that drifts — busy-looking, easy to step through
   if(e.echo){ e.echo.t-=dt; e.echo.ivT-=dt;
-    if(e.echo.ivT<=0){ e.echo.ivT=0.42; mRingGap(e,e.echo.n,e.echo.spd,e.echo.col,e.echo.gap,e.echo.at); e.echo.at+=0.6; }
+    if(e.echo.ivT<=0){ e.echo.ivT=0.42; mRingGap(e,e.echo.n,e.echo.spd,e.echo.col,e.echo.gap,e.echo.at,e.echo.dmgMul); e.echo.at+=0.55; }
     if(e.echo.t<=0) e.echo=null;
   }
   // Gorillo rolling-melon: while dashing from a 'roll', spray seeds sideways + drop trail
@@ -4633,7 +4712,8 @@ function updateBoss(e,dt){
     if(e.mst==='recover'){ e.mst='wind'; e.mt=BOSS_WIND; e.mv=pickMove(e); e.tellCol=MOVE_COL[e.mv]||'#fff'; sfx.warn(); }
     else if(e.mst==='wind'){ e.mst='fire'; e.mt=execMove(e); }
     else { let rec=(e.spr==='vaca'&&e.vph>=3?0.7:1.1);
-      if(!e.finalPhase && !e.partner) rec*=1.6;   // non-final bosses still pause between attacks, but stay lively (not sluggish)
+      if(w1EarlyBossHell(e)) rec=0.6;
+      else if(!e.finalPhase && !e.partner) rec*=1.6;   // non-final bosses still pause between attacks, but stay lively (not sluggish)
       e.mst='recover'; e.mt=rec*enr; }
   }
   }
