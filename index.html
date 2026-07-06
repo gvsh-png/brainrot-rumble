@@ -5,12 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#8fd24f">
+<meta name="theme-color" content="#161b28">
 <meta name="description" content="Brainrot bullet-hell survivor — dodge the swarm, dash to survive.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>BRAINROT SWARM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -24,7 +27,7 @@
   </div>
 </div>
 
-<div id="worldload" class="overlay hidden" style="z-index:30;background:rgba(30,18,10,0.92)">
+<div id="worldload" class="overlay hidden" style="z-index:30">
   <div class="loadwrap">
     <div class="loadspin"></div>
     <div class="loadtxt" id="worldloadtxt">entering world…</div>
@@ -66,7 +69,7 @@
 <div id="menu" class="overlay" data-tab="battle">
   <!-- TOP RESOURCE BAR -->
   <div id="topbar">
-    <div id="topbadge"><span id="topLvl">1</span></div>
+    <div id="topbadge" title="Swarm Rank"><span id="topLvl">1</span><span id="topRankLbl" class="toprank">Hatchling</span></div>
     <div id="topxp"><div id="topxpfill"></div></div>
     <div class="respill"><img id="goldicon" draggable="false" alt=""><span id="goldtxt">0</span><span class="pill-sep">|</span><span class="gemico-el">◆</span><span id="gemtxt">0</span><b class="resplus">+</b></div>
     <button id="settingsbtn" class="iconbtn" type="button" aria-label="Settings">☰</button>
@@ -110,12 +113,13 @@
         <div class="sdrop-head">Gameplay</div>
         <div class="sdrop-row">
           <button id="sdrop-deathshake" class="sdrop-toggle" type="button">Death Shake: On</button>
+          <button id="sdrop-haptic" class="sdrop-toggle" type="button">Haptic Feedback: On</button>
         </div>
       </div>
       <div class="sdrop-sep"></div>
       <div class="sdrop-section hidden" id="debug-tools-section">
         <div class="sdrop-head">Debug (APK only)</div>
-        <button id="sdrop-debug-unlock" class="sdrop-btn" type="button">Unlock All Worlds</button>
+        <button id="sdrop-debug-unlock" class="sdrop-btn" type="button">Unlock All Worlds + Best Gear</button>
       </div>
       <div class="sdrop-sep hidden" id="debug-tools-sep"></div>
       <div class="sdrop-section">
@@ -136,20 +140,40 @@
   <div id="tabview">
     <!-- BATTLE -->
     <div id="tab-battle" class="tabpanel">
-      <div id="worldsel">
-        <button id="wprev" type="button" aria-label="Previous world">◀</button>
-        <span id="wname">WORLD 1 · GRASSLANDS</span>
-        <button id="wnext" type="button" aria-label="Next world">▶</button>
+      <div class="world-header">
+        <div id="worldsel">
+          <button id="wprev" type="button" aria-label="Previous world">◀</button>
+          <span id="wname">WORLD 1 · GRASSLANDS</span>
+          <button id="wnext" type="button" aria-label="Next world">▶</button>
+        </div>
+        <div class="worldsub" id="worldsub">survive the swarm</div>
       </div>
-      <div class="worldsub" id="worldsub">survive the swarm</div>
       <div id="stage">
         <div id="charplat"></div>
         <img id="charimg" draggable="false" alt="">
       </div>
-      <div id="menubot">
-        <button class="gamemodebtn" id="gamemodebtn" type="button"><span class="gmlbl">GAMEMODE</span></button>
-        <button class="startbtn" id="startbtn"><span class="startlbl">START</span></button>
-        <div class="hint">drag to move • auto-fire • survive the waves</div>
+      <div class="battle-sidebar">
+        <div id="menubot">
+          <button class="startbtn" id="startbtn" type="button"><span class="startlbl">PLAY</span></button>
+          <div id="run-resume" class="run-resume hidden">
+            <div class="run-resume-box">
+              <div class="run-resume-head">
+                <div class="run-resume-title">RUN IN PROGRESS</div>
+                <div class="run-resume-meta" id="run-resume-meta">World 1 · Wave 3</div>
+              </div>
+              <div class="run-resume-actions">
+                <button class="bigbtn green" id="run-continue-btn" type="button">CONTINUE</button>
+                <button class="bigbtn quit" id="run-abandon-btn" type="button">NEW RUN</button>
+              </div>
+            </div>
+          </div>
+          <button class="gamemodebtn" id="gamemodebtn" type="button"><span class="gmlbl">GAMEMODE</span></button>
+          <div class="hint">drag to move • auto-fire • survive the waves</div>
+        </div>
+        <div id="daily-bounties" class="daily-bounties">
+          <div class="db-title">DAILY BOUNTIES <span class="db-sub">UTC midnight</span></div>
+          <div id="daily-bounty-list"></div>
+        </div>
       </div>
     </div>
 
@@ -181,7 +205,7 @@
   <div id="tabbar">
     <button class="tabbtn" type="button" data-tab="shop"><img class="tabico" data-ic="ic_shop" alt=""><span class="tablbl">Shop</span><span class="tabbadge hidden" id="shopbadge">!</span></button>
     <button class="tabbtn" type="button" data-tab="pets"><img class="tabico" data-ic="ic_pet" alt=""><span class="tablbl">Pets</span><span class="tabbadge hidden" id="petbadge">0</span></button>
-    <button class="tabbtn center active" type="button" data-tab="battle"><img class="tabico" data-ic="ic_battle" alt=""><span class="tablbl">Battle</span></button>
+    <button class="tabbtn center active" type="button" data-tab="battle"><img class="tabico" data-ic="ic_battle" alt=""><span class="tablbl">Battle</span><span class="tabbadge hidden" id="bountybadge">!</span></button>
     <button class="tabbtn" type="button" data-tab="character"><img class="tabico" data-ic="ic_char" alt=""><span class="tablbl">Character</span><span class="tabbadge hidden" id="charbadge">0</span></button>
     <button class="tabbtn" type="button" data-tab="inventory"><img class="tabico" data-ic="ic_bag" alt=""><span class="tablbl">Equipment</span><span class="tabbadge hidden" id="invbadge">0</span></button>
   </div>
@@ -208,26 +232,41 @@
 </div>
 
 <div id="gameover" class="overlay hidden">
-  <div class="panel">
-    <div class="title" style="color:#4aa3df">GAME<br>OVER</div>
-    <div class="stats">
+  <div class="panel go-panel">
+    <div class="title go-title">GAME<br>OVER</div>
+    <div class="stats" id="go-stats">
       reached <b id="fwave">wave 1</b><br>
-      coins collected <b id="fcoins">0</b><br>
+      <span id="go-stat-lbl">coins collected</span> <b id="fcoins">0</b><br>
       enemies cleared <b id="fkills">0</b>
     </div>
+    <div id="go-debrief" class="go-extra hidden"></div>
+    <div id="go-rush-best" class="go-rank hidden"></div>
     <button class="bigbtn green" id="retrybtn">PLAY AGAIN</button>
   </div>
 </div>
 
-<div id="world-cleared" class="overlay hidden" style="z-index:20;background:rgba(24,14,6,0.88)">
-  <div class="panel" style="display:flex;flex-direction:column;align-items:center;gap:clamp(12px,2.4vmin,22px)">
-    <div class="title" style="color:#ffd24a" id="wc-title">WORLD 1 CLEARED!</div>
-    <div id="wc-stats" style="font-size:clamp(16px,3.2vmin,26px);font-weight:800;color:#3a2d22;line-height:2">
-      <span><img id="wc-coinico" draggable="false" alt="" style="width:1.1em;height:1.1em;vertical-align:-0.15em"> <b id="wc-coins">0</b> coins</span><br>
+<div id="ach-toast" class="hidden"></div>
+
+<div id="guide-overlay" class="hidden" aria-hidden="true">
+  <div class="guide-dim"></div>
+  <div class="guide-ring"></div>
+  <div class="guide-finger hidden" aria-hidden="true">👆</div>
+  <div class="guide-card">
+    <div class="guide-title"></div>
+    <div class="guide-text"></div>
+    <button type="button" class="guide-next bigbtn green">Got it</button>
+  </div>
+</div>
+
+<div id="world-cleared" class="overlay hidden" style="z-index:20">
+  <div class="panel wc-panel">
+    <div class="title wc-title" id="wc-title">WORLD 1 CLEARED!</div>
+    <div id="wc-stats" class="wc-stats">
+      <span><img id="wc-coinico" draggable="false" alt="" class="wc-ico"> <b id="wc-coins">0</b> coins</span><br>
       <span id="wc-gem-row"><span class="gemico-el">◆</span> <b id="wc-gems">+5</b> gems</span>
     </div>
-    <div id="wc-unlock" class="hidden" style="font-size:clamp(13px,2.6vmin,20px);font-weight:800;color:#7030a0;background:#f3eaff;border:3px solid #7030a0;border-radius:12px;padding:8px 18px">
-      <img id="wc-starico" draggable="false" alt="" style="width:1em;height:1em;vertical-align:-0.1em"> New character unlocked: <b id="wc-char-name"></b>
+    <div id="wc-unlock" class="wc-unlock hidden">
+      <img id="wc-starico" draggable="false" alt="" class="wc-ico"> New character unlocked: <b id="wc-char-name"></b>
     </div>
     <button class="bigbtn green" id="wc-continue">CONTINUE</button>
   </div>
@@ -276,6 +315,12 @@
       <div class="gmpop-mname">PRACTICE</div>
       <div class="gmpop-mbadge">SANDBOX</div>
       <div class="gmpop-mdesc">Fully customizable training. No rewards.</div>
+    </button>
+    <button class="gmpop-mode gmpop-bossrush" id="gm-bossrush" type="button">
+      <div class="gmpop-mlock" id="gmpop-rushlock"></div>
+      <div class="gmpop-mname">BOSS RUSH</div>
+      <div class="gmpop-mbadge">GAUNTLET</div>
+      <div class="gmpop-mdesc">World 1 grass arena — bosses from every world you've unlocked. No gear, no cards. Every 5th is a final. Earn ◆ gems.</div>
     </button>
   </div>
 </div>
@@ -333,22 +378,30 @@
 <script src="js/characters.js"></script>
 <script src="js/pets.js"></script>
 <script src="js/recruit.js"></script>
+<script src="js/engagement.js"></script>
+<script src="js/onboarding.js"></script>
 
 <!-- Game scripts: classic (non-module) so they share globals and run from file:// too.
      Load order matters: core defines shared helpers/state used by the rest. -->
 <script src="js/world-gen.js"></script>
 <script src="js/world-map-layout.js"></script>
+<script src="js/world-skills-extra.js"></script>
 <script src="js/world-skills.js"></script>
+<script src="js/world-skill-fx.js"></script>
 <script src="js/characters-ext.js"></script>
+<script src="js/characters-shop-ext.js"></script>
 <script src="js/pets-ext.js"></script>
 <script src="js/core.js"></script>
 <script src="js/audio.js"></script>
+<script src="js/haptics.js"></script>
 <script src="js/sprites.js"></script>
 <script src="js/sprites-ext.js"></script>
 <script src="js/sprites-world-gen.js"></script>
+<script src="js/world-icons.js"></script>
 <script src="js/minimap.js"></script>
 <script src="js/input.js"></script>
 <script src="js/game.js"></script>
+<script src="js/run-save.js"></script>
 <script src="js/boss-ext.js"></script>
 <script src="js/storyline.js"></script>
 <script src="js/cutscenes-ext.js"></script>

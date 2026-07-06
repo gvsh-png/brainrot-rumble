@@ -22,11 +22,11 @@
     const h = challenger ? span : Math.max(1, world && world.h || 1);
     const ox = challenger ? (player.x - span/2) : 0;
     const oy = challenger ? (player.y - span/2) : 0;
-    // uniform scale so minimap rectangle matches world aspect ratio (capped at 4:1 each way)
-    const aspect = Math.min(4, Math.max(0.25, w / h));
-    const scale = aspect >= 1 ? size / w : size / h;
+    const scale = size / Math.max(w, h);
     const mw = Math.round(w * scale);
     const mh = Math.round(h * scale);
+    const padX = (size - mw) / 2;
+    const padY = (size - mh) / 2;
     return {
       challenger,
       span,
@@ -37,16 +37,18 @@
       size,
       mw,
       mh,
+      padX,
+      padY,
       sx: scale,
       sy: scale,
     };
   }
 
   function projectPoint(view, x, y){
-    const px = (x - view.ox) * view.sx;
-    const py = (y - view.oy) * view.sy;
-    const visible = px>=0 && py>=0 && px<=view.mw && py<=view.mh;
-    const dx = px - view.mw/2, dy = py - view.mh/2;
+    const px = (x - view.ox) * view.sx + (view.padX || 0);
+    const py = (y - view.oy) * view.sy + (view.padY || 0);
+    const visible = px>=0 && py>=0 && px<=view.size && py<=view.size;
+    const dx = px - view.size/2, dy = py - view.size/2;
     return { x:px, y:py, visible, dist:Math.hypot(dx,dy) };
   }
 
