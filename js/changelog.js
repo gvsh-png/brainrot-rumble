@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.88';
+const CURRENT_VERSION = '1.89';
 const CHANGELOG = [
+  { v: '1.89', notes: 'Equipment armor overlay fix: gear now bobs and leans with your character (same walk/body animation as the sprite). Show Armor toggle in Equipment now actually hides armor for every character — Gianni no longer ignores the setting.' },
   { v: '1.88', notes: 'Boss Rush boss pool now pulls from every world you have unlocked in Story — the arena stays World 1 Grasslands, but a player at World 47 can face bosses from all cleared worlds from fight one (still flat HP, gem rewards unchanged).' },
   { v: '1.87', notes: 'Boss Rush fixes & gem economy: debug Unlock All now opens Boss Rush (was stuck on stale story flag). Rush always plays on World 1 Grasslands theme. Boss kills award gems (1 per boss, 3 on every 5th final) instead of coins. New Gem Boutique in the shop — gem gear crates, gold exchange bundles, and a 3× pet recruit deal.' },
   { v: '1.86', notes: 'New Boss Rush gamemode (unlocks at Story World 5): endless back-to-back boss fights — no fodder waves, no gear, no level-up cards. Only your character and pet matter. Every boss uses flat World 1 HP regardless of origin; every 5th fight is a final boss with phase-3 patterns. Lucky blocks spawn during every fight for sustain. Boss pool widens and favors bullet-hell patterns the deeper you go.' },

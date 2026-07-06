@@ -383,19 +383,22 @@ function gearIconURL(id){
 }
 
 // ---- draw equipped gear over the in-game player (called from game.js draw loop) ----
-function drawPlayerGear(x,y,size,rot,flip){
+function drawPlayerGear(x,y,size,bob,flip,anim){
+  anim = anim || (typeof _playerAnim==='function' ? _playerAnim() : {});
+  cx.save();
+  cx.translate(x,y);
+  if(flip) cx.scale(-1,1);
+  const screenLean = (anim.faceX||0) * 0.16 * (anim.walkAmt||0);
+  cx.rotate((bob||0) + (flip ? -screenLean : screenLean));
+  if(typeof _charBodyY==='function') cx.translate(0, _charBodyY(anim, size));
   for(const c of GEAR_CATS){
     const uid=gearEquip[c], id=uid&&gearInstanceItem(uid); if(!id) continue;
     const img=SP['gear_'+c]; if(!img) continue;
     const spr=(typeof tintedSprite==='function'&&tintedSprite('gear_'+c,RAR[itemRar(id)].color))||img;
     const dsz=img._nom?size*img.width/img._nom:size;
-    cx.save();
-    cx.translate(x,y);
-    if(flip) cx.scale(-1,1);   // flip before rotate — matches drawCharacter order
-    if(rot) cx.rotate(rot);
     cx.drawImage(spr,-dsz/2,-dsz/2,dsz,dsz);
-    cx.restore();
   }
+  cx.restore();
 }
 // ---- composite the player sprite + equipped gear into a data-URL (menu + equipment screens) ----
 function compositeCharURL(){

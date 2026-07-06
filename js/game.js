@@ -5657,10 +5657,7 @@ function render(){
       else drawSprite('player', P.x, P.y, P.r*2.6, bob, 0, 0, flip);
       cx.globalAlpha=1;
       if(typeof drawPlayerGear==='function' && gearShouldShow(P.charId)){
-        // match drawCharacter's full rotation: bob + screenLean (lean toward movement direction)
-        const _a = typeof _playerAnim==='function' ? _playerAnim() : {};
-        const _lean = (_a.faceX||0)*0.16*(_a.walkAmt||0);
-        drawPlayerGear(P.x, P.y, P.r*2.6, bob+(flip?-_lean:_lean), flip);
+        drawPlayerGear(P.x, P.y, P.r*2.6, bob, flip);
       }
     }
     // Phoenix burn aura
