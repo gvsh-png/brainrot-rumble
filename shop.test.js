@@ -205,18 +205,25 @@ test('gear tier helpers soften enemies when loadout matches world', () => {
   assert.ok(gearedDmg > 2, 'on-tier endgame gear should feel like a big spike');
 });
 
-test('gear dmg/hp stay flat on all worlds (percent scaling is cards-only)', () => {
+test('gear dmg/hp stay flat; regen/vamp use % from world 11', () => {
   const { sandbox } = loadShop({ br_gear_reset_v4: '1' });
   const w1 = sandbox.itemBonus('dmg_common_0', 0);
   const w11 = sandbox.itemBonus('dmg_common_0', 10);
   const omniW1 = sandbox.itemBonus('dmg_omniscient_0', 0);
   const omniW11 = sandbox.itemBonus('dmg_omniscient_0', 10);
   assert.ok(w1 > 1);
-  assert.equal(w1, w11, 'world index must not change flat gear bonuses');
-  assert.ok(omniW1 > 100);
-  assert.equal(omniW1, omniW11, 'high-tier gear stays flat in late worlds');
-  assert.ok(sandbox.itemBonusShort('dmg_omniscient_0', 10).includes('+'));
+  assert.equal(w1, w11, 'world index must not change flat dmg gear');
+  assert.equal(omniW1, omniW11, 'high-tier dmg gear stays flat in late worlds');
   assert.ok(!sandbox.itemBonusShort('dmg_omniscient_0', 10).includes('%'));
+  assert.ok(sandbox.gearStatUsesPercent('regen', 9) === false);
+  assert.ok(sandbox.gearStatUsesPercent('regen', 10) === true);
+  assert.ok(sandbox.gearStatUsesPercent('vamp', 10) === true);
+  assert.ok(!sandbox.gearStatUsesPercent('dmg', 10));
+  const regenFlat = sandbox.itemBonus('regen_common_0', 0);
+  const regenPct = sandbox.itemBonus('regen_omniscient_0', 10);
+  assert.ok(regenFlat >= 1);
+  assert.ok(regenPct > 0 && regenPct < 1);
+  assert.ok(sandbox.itemBonusShort('regen_omniscient_0', 10).includes('%'));
   assert.equal(typeof sandbox.gearBossHpMul, 'function');
   const slots = ['cape','helmet','chest','gloves','belt','pants','ring','shoes'];
   const omniEquip = {};

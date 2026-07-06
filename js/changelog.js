@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.83';
+const CURRENT_VERSION = '1.84';
 const CHANGELOG = [
+  { v: '1.84', notes: 'Percent scaling narrowed: dmg/HP stay flat everywhere (gear + Vitality/Thick Skin cards). Regen and vamp use % from world 11 onward — level-up cards and shop gear labels show +N%/s and +N%/kill on late worlds.' },
   { v: '1.83', notes: 'Gear dmg/HP stay flat (+N) in every world — shop labels no longer switch to % on worlds 11+. Percent scaling on late worlds applies only to level-up card abilities (Vitality, Regen, Vamp, etc.), not equipment.' },
   { v: '1.82', notes: 'Final boss bullet-hell pass: every world finale now has unique fake-hell attacks per phase — rainbow spirals, gapped ring walls, orbiting patterns, and moving wall gaps that look intense but stay slow, sparse, and low-damage so you can dodge. Removed global MEGA_STORM / RING_VOLLEY injection; extended-world finals (W12–50) get 13 archetype-specific hell patterns.' },
   { v: '1.80', notes: 'Swarm enemy XP is now flat in every world — fodder drops the same small blue / medium green orbs as World 1. No more large yellow boss orbs or lucky-block gold orbs from regular swarm kills (those stay boss/lucky-block only).' },

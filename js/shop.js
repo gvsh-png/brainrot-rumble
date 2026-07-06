@@ -58,9 +58,9 @@ const STAT = {
   armor: { label:'damage resist', short:'ARM', icon:'turtle', armor:true, vals:buildTierVals(0.015,0.055,0.16,{flat:false}) },
   rate:  { label:'attack speed',  short:'RAT', icon:'gem',    vals:buildTierVals(0.02,0.08,0.30,{flat:false}) },
   magnet:{ label:'pickup radius', short:'MAG', icon:'gem',    vals:buildTierVals(0.04,0.16,0.50,{flat:false}) },
-  regen: { label:'HP regen',      short:'RGN', icon:'heart',  flat:true, vals:buildTierVals(1,3,12) },
+  regen: { label:'HP regen',      short:'RGN', icon:'heart',  flat:true, vals:buildTierVals(1,3,12), pctVals:buildTierVals(0.0012,0.004,0.022,{flat:false}) },
   gold:  { label:'gold & XP',     short:'GLD', icon:'coin',   vals:buildTierVals(0.03,0.12,0.40,{flat:false}) },
-  vamp:  { label:'heal per kill', short:'VMP', icon:'heart',  flat:true, vals:buildTierVals(1,4,14) },
+  vamp:  { label:'heal per kill', short:'VMP', icon:'heart',  flat:true, vals:buildTierVals(1,4,14), pctVals:buildTierVals(0.008,0.018,0.065,{flat:false}) },
   pierce:{ label:'bullet pierce', short:'PRC', icon:'coin',   flat:true, vals:buildTierVals(0,1,4,{minVal:0}) },
 };
 const STAT_ORDER = ['dmg','hp','speed','range','crit','armor','rate','magnet','regen','gold','vamp','pierce'];
@@ -85,19 +85,29 @@ function itemRar(id){  return id.split('_')[1]; }
 function itemVar(id){  return +id.split('_')[2]; }
 function itemCat(id){  return GEAR_CATS[itemVar(id) % GEAR_CATS.length]; }
 function shopWorldIdx(){ return typeof selWorld!=='undefined' ? selWorld : 0; }
+// W11+: gear regen/vamp use % of max HP (dmg/hp gear stay flat everywhere).
+function gearStatUsesPercent(stat, wi){
+  if(wi == null) wi = (typeof worldIdx === 'number' ? worldIdx : shopWorldIdx());
+  return (wi|0) >= 10 && (stat === 'regen' || stat === 'vamp');
+}
 function itemBonus(id, worldIdx){
   const s=itemStat(id), r=itemRar(id), st=STAT[s];
+  const wi = worldIdx != null ? worldIdx : shopWorldIdx();
+  if(gearStatUsesPercent(s, wi) && st.pctVals) return st.pctVals[r];
   return st.vals[r];
 }
 function itemPrice(id){ return RAR[itemRar(id)].price; }
 function itemName(id){ return ITEM_ADJ[itemStat(id)][itemVar(id)] + ' ' + CAT_NOUN[itemCat(id)]; }
 // short "+N" (flat stats) or "+N%" (percent stats) badge used on tiles/slots
 function statIsFlat(stat){ return !!STAT[stat].flat; }
-function statDisplaysFlat(stat){ return statIsFlat(stat); }
+function statDisplaysFlat(stat, worldIdx){
+  if(gearStatUsesPercent(stat, worldIdx)) return false;
+  return statIsFlat(stat);
+}
 function statIsArmor(stat){ return !!STAT[stat].armor; }
 function itemBonusShort(id, worldIdx){
   const s=itemStat(id), v=itemBonus(id, worldIdx);
-  if(statDisplaysFlat(s)) return (v >= 1000 && typeof fmtPlus==='function' ? fmtPlus(v) : '+'+v);
+  if(statDisplaysFlat(s, worldIdx)) return (v >= 1000 && typeof fmtPlus==='function' ? fmtPlus(v) : '+'+v);
   if(statIsArmor(s)) return '-'+Math.round(v*100)+'%';
   return '+'+Math.round(v*100)+'%';
 }
@@ -286,9 +296,9 @@ function equippedArmorMult(){
 }
 function equippedRateMult(){ return equippedStatMult('rate'); }
 function equippedMagnetMult(){ return equippedStatMult('magnet'); }
-function equippedRegen(){ return equippedStatBonus('regen'); }
+function equippedRegen(wi){ return equippedStatBonus('regen', wi); }
 function equippedGoldMult(){ return equippedStatMult('gold'); }
-function equippedVamp(){ return equippedStatBonus('vamp'); }
+function equippedVamp(wi){ return equippedStatBonus('vamp', wi); }
 function equippedPierce(){ return equippedStatBonus('pierce'); }
 
 // Average equipped rarity tier (0 = Common … 38 = Omniscient). Empty slots don't count.
@@ -593,9 +603,9 @@ function renderInventory(){
         eqStatChip('ic_armor','-'+Math.round((1-equippedArmorMult())*100)+'%')+
         eqStatChip('ic_rate','+'+pct('rate')+'%')+
         eqStatChip('ic_mag','+'+pct('magnet')+'%')+
-        eqStatChip('ic_regen', (typeof fmtPlus==='function' ? fmtPlus(equippedRegen()) : '+'+equippedRegen())+'/s')+
+        eqStatChip('ic_regen', (gearStatUsesPercent('regen', shopWorldIdx()) ? '+'+Math.round(equippedRegen()*100)+'%' : ((typeof fmtPlus==='function' ? fmtPlus(equippedRegen()) : '+'+equippedRegen())))+'/s')+
         eqStatChip('ic_gold','+'+pct('gold')+'%')+
-        eqStatChip('ic_vamp', (typeof fmtPlus==='function' ? fmtPlus(equippedVamp()) : '+'+equippedVamp())+'/kill')+
+        eqStatChip('ic_vamp', (gearStatUsesPercent('vamp', shopWorldIdx()) ? '+'+Math.round(equippedVamp()*100)+'%' : ((typeof fmtPlus==='function' ? fmtPlus(equippedVamp()) : '+'+equippedVamp())))+'/kill')+
         eqStatChip('ic_pierce', (typeof fmtPlus==='function' ? fmtPlus(equippedPierce()) : '+'+equippedPierce()))+
       '</div></div>'+
     '<div class="eqside right">'+eqSlotHTML('belt')+eqSlotHTML('pants')+eqSlotHTML('ring')+eqSlotHTML('shoes')+'</div>';

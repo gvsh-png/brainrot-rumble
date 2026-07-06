@@ -285,11 +285,10 @@ function foeIsHazard(d){ return !!d.aoe || (d.cast && (d.cast.kind==='geyser'||d
 function foeIsBurst(d){ return !!d.shoot && (d.shoot.type==='ring' || (d.shoot.n||1)>=3); }
 function foeIsSpecial(d){ return foeIsHazard(d) || foeIsBurst(d); }
 function worldBand(){ return curWorld().band||0; }       // 0-indexed difficulty band (drives macro scaling)
-// W11+ (index 10): flat HP/dmg bonuses from cards become percentage-based.
+// W11+ (index 10): card regen/vamp scale as % of max HP; HP bonuses stay flat.
 function usesPercentStats(){ return worldIdx >= 10; }
 function bumpMaxHp(flat, pct){
-  if(usesPercentStats()) P.maxHp = Math.max(1, Math.round(P.maxHp * (1 + (pct != null ? pct : flat / 420))));
-  else P.maxHp += flat;
+  P.maxHp += flat;
 }
 function bumpRegen(flat, pct){
   if(usesPercentStats()) P.regen += Math.max(0.5, P.maxHp * (pct != null ? pct : 0.002));
@@ -1108,7 +1107,7 @@ const UPGRADES = [
   { id:'gold',   name:'Treasure Hunter', icon:'coin',     rarity:'uncommon',cap:5,steps:[{desc:'+20% gold & +12% XP.',  f:()=>{P.goldMul*=1.2;P.xpMul*=1.12;}}] },
   { id:'steady', name:'Steady Hands',    icon:'gem',      rarity:'uncommon',cap:5,steps:[{desc:'-15% bullet spread & +6% damage.',f:()=>{P.spread*=0.85;P.dmg*=1.06;}}] },
   { id:'frenzy', name:'Killing Frenzy',  icon:'tiger',    rarity:'rare',   cap:5, steps:[{desc:'each kill: +0.2% damage & fire rate, up to 100 stacks. Fades when you stop killing.',f:()=>{P.frenzyGain+=1;P.frenzyMax=Math.max(P.frenzyMax,100);}}] },
-  { id:'glass',  name:'Glass Cannon',    icon:'cappuccino',rarity:'epic',  cap:3, steps:[{desc:'+35% damage, but -15 max HP.',f:()=>{P.dmg*=1.35;if(!P.glassSafe){ if(usesPercentStats()){ P.maxHp=Math.max(1,Math.round(P.maxHp*0.965)); } else { P.maxHp=Math.max(20,P.maxHp-15); } P.hp=Math.min(P.hp,P.maxHp);}}}] },
+  { id:'glass',  name:'Glass Cannon',    icon:'cappuccino',rarity:'epic',  cap:3, steps:[{desc:'+35% damage, but -15 max HP.',f:()=>{P.dmg*=1.35;if(!P.glassSafe){ P.maxHp=Math.max(20,P.maxHp-15); P.hp=Math.min(P.hp,P.maxHp);}}}] },
 
   // 🔮 abilities — 4 levels, then EVOLVE
   { id:'multi', name:'Splinter Shot', icon:'gembig', rarity:'rare',
@@ -1565,9 +1564,17 @@ function _doStartGame(wi){
   if(typeof equippedArmorMult==='function') P.armor *= equippedArmorMult();
   if(typeof equippedRateMult==='function') P.fireRate /= equippedRateMult();
   if(typeof equippedMagnetMult==='function') P.magnet *= equippedMagnetMult();
-  if(typeof equippedRegen==='function') P.regen += equippedRegen();
+  if(typeof equippedRegen==='function'){
+    const rv=equippedRegen(wi);
+    if(typeof gearStatUsesPercent==='function' && gearStatUsesPercent('regen', wi)) P.regen += Math.max(0.5, P.maxHp * rv);
+    else P.regen += rv;
+  }
   if(typeof equippedGoldMult==='function'){ const g=equippedGoldMult(); P.goldMul *= g; P.xpMul *= g; }
-  if(typeof equippedVamp==='function') P.vamp += equippedVamp();
+  if(typeof equippedVamp==='function'){
+    const vv=equippedVamp(wi);
+    if(typeof gearStatUsesPercent==='function' && gearStatUsesPercent('vamp', wi)) P.vamp += Math.max(1, Math.round(P.maxHp * vv));
+    else P.vamp += vv;
+  }
   if(typeof equippedPierce==='function') P.pierce += equippedPierce();
   if(typeof registerActiveChar==='function') registerActiveChar();
   if(typeof registerActivePet==='function') registerActivePet();
