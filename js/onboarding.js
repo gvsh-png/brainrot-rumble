@@ -39,6 +39,7 @@
   let guideQueue = [];
   let resizeObs = null;
   let elevatedEl = null;
+  let guideMirror = null;
 
   function storyProgress() {
     if (typeof unlockedMax === 'number') return unlockedMax;
@@ -244,19 +245,29 @@
     return typeof $ === 'function' ? $('guide-overlay') : document.getElementById('guide-overlay');
   }
 
+  function clearGuideMirror() {
+    if (guideMirror) {
+      guideMirror.remove();
+      guideMirror = null;
+    }
+    const ov = getOverlay();
+    if (ov) ov.classList.remove('guide-tab-target');
+  }
+
   function clearElevatedTarget() {
     if (elevatedEl) {
-      elevatedEl.classList.remove('guide-target-elevated');
+      elevatedEl.classList.remove('guide-target-elevated', 'guide-spotlight-tab');
       elevatedEl = null;
     }
     document.body.classList.remove('guide-elevate-tabbar');
+    clearGuideMirror();
   }
 
   function hideGuide() {
     const ov = getOverlay();
     if (!ov) return;
     ov.classList.add('hidden');
-    ov.classList.remove('active', 'guide-passthrough', 'guide-block-mode');
+    ov.classList.remove('active', 'guide-passthrough', 'guide-block-mode', 'guide-tab-target');
     guideActive = false;
     clearElevatedTarget();
     if (resizeObs) {
@@ -310,7 +321,33 @@
         finger.style.transform = '';
       }
     }
+    if (guideMirror) {
+      guideMirror.style.left = r.left + 'px';
+      guideMirror.style.top = r.top + 'px';
+      guideMirror.style.width = r.width + 'px';
+      guideMirror.style.height = r.height + 'px';
+    }
     guideActive._target = el;
+  }
+
+  function ensureGuideMirror(el, ov) {
+    if (!el.closest('#tabbar')) {
+      clearGuideMirror();
+      return;
+    }
+    ov.classList.add('guide-tab-target');
+    if (!guideMirror) {
+      guideMirror = document.createElement('div');
+      guideMirror.className = 'guide-mirror tabbtn';
+      guideMirror.setAttribute('aria-hidden', 'true');
+      ov.insertBefore(guideMirror, ov.querySelector('.guide-ring'));
+    }
+    guideMirror.innerHTML = el.innerHTML;
+    const r = el.getBoundingClientRect();
+    guideMirror.style.left = r.left + 'px';
+    guideMirror.style.top = r.top + 'px';
+    guideMirror.style.width = r.width + 'px';
+    guideMirror.style.height = r.height + 'px';
   }
 
   function showGuide(step) {
@@ -345,9 +382,12 @@
 
     clearElevatedTarget();
     if (step.tap) {
-      el.classList.add('guide-target-elevated');
+      el.classList.add('guide-target-elevated', 'guide-spotlight-tab');
       elevatedEl = el;
-      if (el.closest('#tabbar')) document.body.classList.add('guide-elevate-tabbar');
+      if (el.closest('#tabbar')) {
+        document.body.classList.add('guide-elevate-tabbar');
+        ensureGuideMirror(el, ov);
+      }
     }
 
     repositionGuide();

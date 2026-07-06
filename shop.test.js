@@ -168,6 +168,28 @@ test('six crate tiers including premium platinum diamond vault', () => {
   assert.equal(sandbox.cratePrice('vault'), 95000);
 });
 
+test('crate drops respect world tier like daily shop', () => {
+  const { sandbox } = loadShop({ br_gear_reset_v4: '1' });
+  assert.equal(typeof sandbox.crateOddsForWorld, 'function');
+  const w2Gold = sandbox.crateOddsForWorld('gold', 1);
+  let w2Peak = 0, w2PeakRar = 'common';
+  for (const r of Object.keys(w2Gold)) {
+    if (w2Gold[r] > w2Peak) { w2Peak = w2Gold[r]; w2PeakRar = r; }
+  }
+  assert.ok(['common', 'cplus', 'cpp', 'uncommon'].includes(w2PeakRar),
+    'world 2 gold crate should peak near common+ tier, got ' + w2PeakRar);
+  assert.equal(w2Gold.rare || 0, 0, 'world 2 crates should not roll rare');
+  assert.equal(w2Gold.legendary || 0, 0, 'world 2 crates should not roll legendary');
+
+  const late = sandbox.crateOddsForWorld('gold', 48);
+  let latePeak = 0, latePeakRar = 'common';
+  for (const r of Object.keys(late)) {
+    if (late[r] > latePeak) { latePeak = late[r]; latePeakRar = r; }
+  }
+  assert.ok(['eternal', 'eternplus', 'omniscient'].includes(latePeakRar),
+    'late-world gold crate should peak near endgame tier');
+});
+
 test('gear tier helpers soften enemies when loadout matches world', () => {
   const slots = ['cape','helmet','chest','gloves','belt','pants','ring','shoes'];
   const commonEquip = {};

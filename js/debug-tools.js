@@ -14,6 +14,20 @@
     else if (typeof renderInventory === 'function') renderInventory();
   }
 
+  function grantAllDebugPets() {
+    if (typeof PETS === 'undefined' || typeof grantPet !== 'function') return;
+    for (const p of PETS) grantPet(p.id);
+    if (typeof updatePetBadge === 'function') updatePetBadge();
+    if (typeof renderPetsTab === 'function') renderPetsTab();
+  }
+
+  function unlockAllFeaturesUI() {
+    if (window.Onboarding && typeof Onboarding.applyTabLocks === 'function') {
+      Onboarding.applyTabLocks();
+    }
+    document.querySelectorAll('.feature-locked').forEach((el) => el.classList.remove('feature-locked'));
+  }
+
   function unlockAllWorlds() {
     if (!isDebugApk() || typeof WORLDS === 'undefined') return;
     const max = WORLDS.length - 1;
@@ -23,9 +37,13 @@
     localStorage.setItem('br_ch_unlocked', String(max));
     selWorld = max;
     grantBestDebugGear();
+    grantAllDebugPets();
+    if (typeof clearWorldEmblemCache === 'function') clearWorldEmblemCache();
     if (window.markDirty) window.markDirty();
     if (typeof refreshWorldSel === 'function') refreshWorldSel();
     if (typeof refreshTopbar === 'function') refreshTopbar();
+    unlockAllFeaturesUI();
+    if (typeof renderShop === 'function') renderShop();
     if (typeof sfx !== 'undefined' && sfx.pick) sfx.pick();
     if (typeof bigText === 'function') bigText('DEBUG: ALL WORLDS + BEST GEAR', '#4ad0c0');
   }

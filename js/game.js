@@ -1149,6 +1149,13 @@ function worldEmblemURL(i) {
   _emblemURL[key] = u;
   return u;
 }
+function clearWorldEmblemCache() {
+  for (const k of Object.keys(_emblemURL)) delete _emblemURL[k];
+  for (const k of Object.keys(_chalEmblemURL)) delete _chalEmblemURL[k];
+  _trainingEmblemURL = null;
+  _bossRushEmblemURL = null;
+}
+window.clearWorldEmblemCache = clearWorldEmblemCache;
 
 function challengerEmblemURL(i) {
   const key = 'chal|' + i + '|' + EMBLEM_CACHE_VER;

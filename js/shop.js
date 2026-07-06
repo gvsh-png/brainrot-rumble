@@ -128,12 +128,12 @@ function gaussOdds(center, spread){
   return odds;
 }
 const CRATES = {
-  wood:     { name:'Wooden Crate',   price:35,     glow:'#9aa3af', odds:gaussOdds(4, 4.5) },
-  silver:   { name:'Silver Crate',   price:220,    glow:'#bcd0e0', odds:gaussOdds(16, 6) },
-  gold:     { name:'Gold Crate',     price:1100,   glow:'#e0a92e', odds:gaussOdds(30, 7) },
-  platinum: { name:'Platinum Crate', price:6500,   glow:'#c8e0ff', odds:gaussOdds(33, 5) },
-  diamond:  { name:'Diamond Crate',  price:28000,  glow:'#7fe7ff', odds:gaussOdds(36, 4) },
-  vault:    { name:'Vault Crate',    price:95000,  glow:'#e8b0ff', odds:gaussOdds(37, 3.5) },
+  wood:     { name:'Wooden Crate',   price:35,     glow:'#9aa3af', spread:2.2, offset:0 },
+  silver:   { name:'Silver Crate',   price:220,    glow:'#bcd0e0', spread:2.8, offset:2 },
+  gold:     { name:'Gold Crate',     price:1100,   glow:'#e0a92e', spread:3.0, offset:1 },
+  platinum: { name:'Platinum Crate', price:6500,   glow:'#c8e0ff', spread:3.2, offset:3 },
+  diamond:  { name:'Diamond Crate',  price:28000,  glow:'#7fe7ff', spread:3.4, offset:5 },
+  vault:    { name:'Vault Crate',    price:95000,  glow:'#e8b0ff', spread:3.6, offset:7 },
 };
 const CRATE_ORDER = ['wood','silver','gold','platinum','diamond','vault'];
 const GEAR_UID_KEY = 'br_gear_uid_seq';
@@ -433,6 +433,21 @@ function compositeCharURL(){
 function refreshMenuChar(){ if(typeof setStageEmblem==='function' && typeof selWorld!=='undefined') setStageEmblem(selWorld); }
 
 function fmtGold(n){ return typeof fmtNum==='function' ? fmtNum(n) : String(Math.round(+n||0)); }
+function crateOddsForWorld(key, worldIdx){
+  const cr=CRATES[key];
+  const w=typeof worldIdx==='number'?worldIdx:(typeof selWorld!=='undefined'?selWorld:0);
+  const base=worldTierIdx(w);
+  const center=Math.max(0, Math.min(RAR_ORDER.length-1, base+(cr.offset||0)));
+  const odds=gaussOdds(center, cr.spread||3);
+  const maxIdx=Math.min(RAR_ORDER.length-1, base+1);
+  for(let i=0;i<RAR_ORDER.length;i++){
+    if(i>maxIdx) odds[RAR_ORDER[i]]=0;
+  }
+  let total=0; for(const r of RAR_ORDER) total+=odds[r]||0;
+  if(total<=0) return gaussOdds(base, cr.spread||3);
+  for(const r of RAR_ORDER) odds[r]=Math.max(0, Math.round((odds[r]||0)/total*100));
+  return odds;
+}
 function cratePrice(key){
   const w = typeof selWorld!=='undefined' ? selWorld : 0;
   return Math.round(CRATES[key].price * Math.pow(1.09, w / 5));
@@ -523,12 +538,17 @@ function renderShop(){
 }
 
 // ============ CASES (animated reveal) ============
-function rollCrateRarity(key){
-  const odds=CRATES[key].odds; let total=0; for(const r of RAR_ORDER) total+=odds[r]||0;
+function rollCrateRarity(key, worldIdx){
+  const odds=crateOddsForWorld(key, worldIdx); let total=0; for(const r of RAR_ORDER) total+=odds[r]||0;
   let x=Math.random()*total; for(const r of RAR_ORDER){ x-=odds[r]||0; if(x<=0) return r; }
   return 'common';
 }
-function rollCrateItem(key){ const r=rollCrateRarity(key); const pool=catalogByRarity(r); return pool[Math.floor(Math.random()*pool.length)]; }
+function rollCrateItem(key, worldIdx){
+  const w=typeof worldIdx==='number'?worldIdx:(typeof selWorld!=='undefined'?selWorld:0);
+  const r=rollCrateRarity(key, w);
+  const pool=catalogByRarity(r);
+  return pool[Math.floor(Math.random()*pool.length)];
+}
 
 function openCrate(key, price){
   const cr=CRATES[key]; const pay=price||cratePrice(key); if(gold<pay) return;
@@ -799,7 +819,9 @@ function openFuseResult(result){
 // crate drop-chance popup (info button on each case)
 function openCrateOdds(key){
   const ov=$('itempop'); if(!ov) return;
-  const cr=CRATES[key], odds=cr.odds;
+  const cr=CRATES[key], odds=crateOddsForWorld(key);
+  const shopWorld=(typeof selWorld!=='undefined'?selWorld:0)+1;
+  const shopRar=primaryShopRarity(typeof selWorld!=='undefined'?selWorld:0);
   let total=0; for(const r of RAR_ORDER) total+=odds[r]||0;
   let rows='';
   for(const r of RAR_ORDER){ const w=odds[r]||0; if(w<=0) continue;
@@ -812,7 +834,7 @@ function openCrateOdds(key){
     '<div class="ipcard">'+
       '<button class="ipx" id="ipclose">✕</button>'+
       '<div class="ipname">'+cr.name+'</div>'+
-      '<div class="ipslot">Drop chances</div>'+
+      '<div class="ipslot">World '+shopWorld+' · '+RAR[shopRar].name+' tier · drop chances</div>'+
       '<div class="oddslist">'+rows+'</div>'+
     '</div>';
   ov.classList.remove('hidden');

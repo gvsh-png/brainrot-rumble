@@ -131,12 +131,24 @@ function buyCharacter(id) {
 }
 
 // ---- Pet Recruit ----
-const PET_WEIGHTS={ common:55, rare:35, epic:9, legendary:1 };
+const PET_WEIGHTS={ common:48, uncommon:12, rare:30, epic:8, legendary:2 };
+const PET_RARITY_ORDER=['common','uncommon','rare','epic','legendary'];
 const PET_PULL_COST=5;
+function petStoryProgress(){
+  if(typeof unlockedMax==='number') return unlockedMax;
+  return +(localStorage.getItem('br_unlocked')||0);
+}
+function petInStorage(id){
+  return JSON.parse(localStorage.getItem('br_owned_pets')||'[]').includes(id);
+}
+function petRecruitPool(rarity){
+  const prog=petStoryProgress();
+  return PETS.filter(p=>p.rarity===rarity&&!petInStorage(p.id)&&(p.worldUnlock==null||p.worldUnlock<=prog));
+}
 function weightedRarityRoll(weights) {
   let total=0; for(const k in weights) total+=weights[k];
   let r=Math.random()*total;
-  for(const k of ['common','rare','epic','legendary']){ r-=(weights[k]||0); if(r<=0) return k; }
+  for(const k of PET_RARITY_ORDER){ r-=(weights[k]||0); if(r<=0) return k; }
   return 'common';
 }
 function dailyFeaturedPet() {
@@ -145,7 +157,7 @@ function dailyFeaturedPet() {
 }
 function rollPetRecruit(){
   const rarity=weightedRarityRoll(PET_WEIGHTS);
-  const pool=PETS.filter(p=>p.rarity===rarity&&!isPetOwned(p.id)&&p.worldUnlock==null);
+  const pool=petRecruitPool(rarity);
   if(!pool.length){
     const anyPool=PETS.filter(p=>p.rarity===rarity);
     const picked=anyPool[Math.floor(Math.random()*anyPool.length)];

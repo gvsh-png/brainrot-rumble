@@ -698,7 +698,25 @@ html.is-native-android, html.is-native-android body {
 #guide-overlay.active { pointer-events:none; }
 #guide-overlay.guide-block-mode { pointer-events:auto; }
 #guide-overlay.guide-passthrough { pointer-events:none; }
+#guide-overlay.guide-tab-target .guide-dim {
+  background:rgba(6,10,18,.42);
+  backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
+}
 #guide-overlay.hidden { display:none; }
+.guide-mirror {
+  position:fixed; z-index:6; display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+  gap:3px; pointer-events:none; box-sizing:border-box;
+  background:linear-gradient(180deg, var(--gold), #d88820); color:#fff;
+  border:var(--border-card); border-bottom:none; border-radius:16px 16px 0 0;
+  box-shadow:0 -6px 24px rgba(255,210,74,.45), 0 0 0 3px rgba(255,210,74,.55);
+  text-shadow:0 1px 2px rgba(0,0,0,.32); font-weight:800;
+  padding:clamp(8px,1.8vmin,14px) 2px clamp(10px,2vmin,16px);
+  font-size:clamp(11px,2vmin,15px);
+}
+.guide-mirror .tabico { width:clamp(28px,5.2vmin,40px); height:clamp(28px,5.2vmin,40px); filter:none; }
+.guide-mirror .tablbl { font-size:clamp(13px,2.4vmin,18px); color:#fff; opacity:1; }
+.guide-mirror .tablockhint, .guide-mirror .tabbadge { display:none; }
+.tabbtn.guide-spotlight-tab { opacity:1 !important; }
 .guide-dim {
   position:absolute; inset:0; background:rgba(6,10,18,.55);
   backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
