@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.92';
+const CURRENT_VERSION = '1.93';
 const CHANGELOG = [
+  { v: '1.93', notes: 'Progressive onboarding: new players start with Battle only — Shop, Characters, Bounties, and Game Modes unlock after World 1; Pets, Equipment, and Pet Recruit unlock after World 2. Premium spotlight guides highlight where to tap; locked tabs show requirements and play unlock animations when features open.' },
   { v: '1.92', notes: 'Battle tab world preview now uses stylized Survivor.io-style diorama icons for every world — hills, biomes, and themed motifs instead of a checkerboard with boss/enemy sprites. Boss Rush, Training, and Challenger modes get their own emblem variants; locked worlds show a greyed card with a ? overlay.' },
   { v: '1.91', notes: 'Boss Rush retention & meta pass: personal best tracking, rush daily bounties/achievements, continue-run support, gem revive tokens & rush bandages in the Gem Boutique, daily shop reroll (3 ◆), achievement toasts, Swarm Rank back on the top bar, and richer game-over debrief with NEW BEST lines.' },
   { v: '1.90', notes: 'Premium feel pass: in-round HUD uses glass pills and dark slate styling (no more brown strokes). Overlays blur smoothly, tabs/buttons spring on press, gold/gems/coins pulse when values change, and big milestone text pops with a soft glow. Loading + world transition screens match the dark menu theme.' },

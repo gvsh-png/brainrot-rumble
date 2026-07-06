@@ -835,6 +835,7 @@ function loadWorld(idx){
 }
 let cut = null;   // cutscene state
 let _clearData = null;
+let _onboardUnlock = null;
 function worldCleared(boss){
   if(typeof clearSuspendedRun === 'function') clearSuspendedRun();
   const isPractice = gameMode==='practice';
@@ -857,6 +858,7 @@ function worldCleared(boss){
           return !hadBefore && c.worldUnlock<=unlockedMax;
         })
       : [];
+    _onboardUnlock = { prev: prevUnlocked, next: unlockedMax };
   }
   _clearData = { worldNum:worldIdx+1, coins:worldCoins, gems:gemsEarned, newChars, isPractice, isW1:!isPractice && worldIdx===0 };
   if(newChars.length && typeof updateCharBadge==='function') updateCharBadge();
@@ -6341,6 +6343,7 @@ function quitToMenu(){
   $('menu').classList.remove('hidden');
   refreshTopbar();
   refreshRunResumeUI();
+  if(typeof Onboarding!=='undefined' && Onboarding.onMenuEnter) Onboarding.onMenuEnter();
   playMusic(muted ? null : 'menu');
 }
 $('pausebtn').addEventListener('click', pauseGame);
@@ -6432,7 +6435,15 @@ $('introskip').addEventListener('click', ()=>{
   }
   function closePop(){ if(pop) pop.classList.add('hidden'); }
   const gmBtn=$('gamemodebtn');
-  if(gmBtn) gmBtn.addEventListener('click', openPop);
+  if(gmBtn) gmBtn.addEventListener('click', ()=>{
+    if(typeof isFeatureUnlocked==='function' && !isFeatureUnlocked('gamemode')){
+      if(typeof bigText==='function') bigText('BEAT WORLD 1','#b0b8c8');
+      if(typeof uiPulse==='function') uiPulse(gmBtn,'tab-deny');
+      if(typeof sfx!=='undefined') sfx.pick();
+      return;
+    }
+    openPop();
+  });
   const closeBtn=$('gmpop-close');
   if(closeBtn) closeBtn.addEventListener('click', closePop);
   if(pop) pop.addEventListener('click', e=>{ if(e.target===pop) closePop(); });
@@ -6598,7 +6609,15 @@ $('retrybtn').addEventListener('click', startGame);
 $('wc-continue').addEventListener('click', ()=>{
   $('world-cleared').classList.add('hidden');
   const wasChal = gameMode==='challenger', wasPractice = gameMode==='practice';
+  const unlockSnap = _onboardUnlock;
+  _onboardUnlock = null;
   gameMode='story';
   quitToMenu();
-  if(wasChal || wasPractice){ refreshWorldSel(); } else { triggerUnlockReveal(); }
+  if(wasChal || wasPractice){ refreshWorldSel(); }
+  else {
+    triggerUnlockReveal();
+    if(unlockSnap && typeof Onboarding!=='undefined' && Onboarding.onWorldClear){
+      Onboarding.onWorldClear(unlockSnap.prev, unlockSnap.next);
+    }
+  }
 });

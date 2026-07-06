@@ -1063,10 +1063,17 @@ function openPetPop(petId){
 
 // ---- tab switching ----
 function showTab(name){
+  if(name!=='battle' && typeof isTabUnlocked==='function' && !isTabUnlocked(name)){
+    if(typeof Onboarding!=='undefined' && Onboarding.onTabBlocked) Onboarding.onTabBlocked(name);
+    return;
+  }
   for(const t of ['battle','shop','inventory','character','pets']){ const p=$('tab-'+t); if(p) p.classList.toggle('hidden', t!==name); }
   document.querySelectorAll('#tabbar .tabbtn').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
-  const menu=$('menu'); if(menu) menu.setAttribute('data-tab', name);   // per-tab background tint
-  if(name==='shop') renderShop();
+  const menu=$('menu'); if(menu) menu.setAttribute('data-tab', name);
+  if(name==='shop'){
+    renderShop();
+    if(typeof Onboarding!=='undefined' && Onboarding.onShopOpened) Onboarding.onShopOpened();
+  }
   if(name==='pets'){ renderPetsTab(); petSeen=new Set(PETS.filter(p=>isPetOwned(p.id)).map(p=>p.id)); savePetSeen(); updatePetBadge(); }
   if(name==='inventory'){ gearSeen=new Set(gearOwned.map(x=>x.uid)); saveSeen(); updateInvBadge(); renderInventory(); renderPetSection(); }   // mark all seen -> clear badge
   if(name==='character'){ renderCharacterTab(); charSeen=new Set(CHARACTERS.filter(c=>charIsUnlocked(c.id)).map(c=>c.id)); saveCharSeen(); updateCharBadge(); }
@@ -1080,7 +1087,10 @@ renderShop();
 renderInventory();
 saveSeen(); updateInvBadge();   // persist the first-run seed + show any pending "new items" badge
 const _initTab = (location.hash||'').slice(1);
-showTab(['battle','shop','inventory','character','pets'].indexOf(_initTab)>=0 ? _initTab : 'battle');
+const _validTabs = ['battle','shop','inventory','character','pets'];
+let _startTab = _validTabs.indexOf(_initTab)>=0 ? _initTab : 'battle';
+if(typeof isTabUnlocked==='function' && !isTabUnlocked(_startTab)) _startTab='battle';
+showTab(_startTab);
 
 // ---- asset prewarm + loading screen ----
 function dismissLoading(){

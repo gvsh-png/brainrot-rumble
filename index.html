@@ -247,6 +247,17 @@
 
 <div id="ach-toast" class="hidden"></div>
 
+<div id="guide-overlay" class="hidden" aria-hidden="true">
+  <div class="guide-dim"></div>
+  <div class="guide-ring"></div>
+  <div class="guide-finger hidden" aria-hidden="true">👆</div>
+  <div class="guide-card">
+    <div class="guide-title"></div>
+    <div class="guide-text"></div>
+    <button type="button" class="guide-next bigbtn green">Got it</button>
+  </div>
+</div>
+
 <div id="world-cleared" class="overlay hidden" style="z-index:20">
   <div class="panel wc-panel">
     <div class="title wc-title" id="wc-title">WORLD 1 CLEARED!</div>
@@ -368,6 +379,7 @@
 <script src="js/pets.js"></script>
 <script src="js/recruit.js"></script>
 <script src="js/engagement.js"></script>
+<script src="js/onboarding.js"></script>
 
 <!-- Game scripts: classic (non-module) so they share globals and run from file:// too.
      Load order matters: core defines shared helpers/state used by the rest. -->

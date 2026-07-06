@@ -157,10 +157,12 @@ function rollPetRecruit(){
   return { pet:picked, duplicate:false };
 }
 function recruitPet() {
+  if(typeof petRecruitUnlocked==='function' && !petRecruitUnlocked()) return null;
   if(!spendGems(PET_PULL_COST)) return null;
   return rollPetRecruit();
 }
 function recruitPetTriple(){
+  if(typeof petRecruitUnlocked==='function' && !petRecruitUnlocked()) return false;
   if(!spendGems(12)) return false;
   const results=[];
   for(let i=0;i<3;i++) results.push(rollPetRecruit());
@@ -353,30 +355,47 @@ function renderGemBoutiqueSection(){
   }
   html+='</div>';
   html+='<div class="secttl">Pet Bundles</div>';
-  html+='<div class="scard r-epic" style="min-height:auto;padding:12px;max-width:360px">'+
-    '<div class="sname">Triple Recruit</div>'+
-    '<div class="sbonus">3 random pets · save 3 ◆ vs singles</div>'+
-    '<div class="sfoot"><button class="sbuy pettriple-buy'+(triplePoor?' poor':'')+'" id="pettriplebtn">'+gem+'12 — 3× RECRUIT</button></div></div>';
+  const recruitLocked=typeof petRecruitUnlocked==='function' && !petRecruitUnlocked();
+  if(recruitLocked){
+    html+='<div class="petrecruit-locked" style="max-width:360px">';
+    html+='<span class="lock-ico">🔒</span>';
+    html+='<span class="lock-txt">Triple Recruit unlocks at World 2</span>';
+    html+='</div>';
+  } else {
+    html+='<div class="scard r-epic" style="min-height:auto;padding:12px;max-width:360px">'+
+      '<div class="sname">Triple Recruit</div>'+
+      '<div class="sbonus">3 random pets · save 3 ◆ vs singles</div>'+
+      '<div class="sfoot"><button class="sbuy pettriple-buy'+(triplePoor?' poor':'')+'" id="pettriplebtn">'+gem+'12 — 3× RECRUIT</button></div></div>';
+  }
   html+='</div>';
   return html;
 }
 
 function renderPetRecruitSection() {
-  const poor=gemBalance<PET_PULL_COST;
   const gem='<span class="gemico-sm">◆</span>';
   const featured=dailyFeaturedPet();
+  const locked=typeof petRecruitUnlocked==='function' && !petRecruitUnlocked();
 
   let html='<div class="shopsec">';
   html+='<div class="banner"><span>PET RECRUIT</span></div>';
-  html+='<div class="petgacha">';
-  html+='<div class="petgacha-port pettile" data-petid="'+featured.id+'"><canvas class="pettile-canvas" width="140" height="140"></canvas></div>';
-  html+='<div class="petgacha-right">';
-  html+='<div class="petgacha-title">GET RANDOM PET</div>';
-  html+='<button class="pullbtn'+(poor?' poor':'')+'" id="petpullbtn">'+gem+PET_PULL_COST+' — RECRUIT PET</button>';
-  html+='</div>';
-  html+='</div>';
+  if(locked){
+    html+='<div class="petrecruit-locked" id="petrecruit-locked">';
+    html+='<span class="lock-ico">🔒</span>';
+    html+='<span class="lock-txt">Beat World 2 to recruit pets</span>';
+    html+='<span class="lock-sub">Clear Story World 2, then spend gems for a random companion.</span>';
+    html+='</div>';
+  } else {
+    const poor=gemBalance<PET_PULL_COST;
+    html+='<div class="petgacha">';
+    html+='<div class="petgacha-port pettile" data-petid="'+featured.id+'"><canvas class="pettile-canvas" width="140" height="140"></canvas></div>';
+    html+='<div class="petgacha-right">';
+    html+='<div class="petgacha-title">GET RANDOM PET</div>';
+    html+='<button class="pullbtn'+(poor?' poor':'')+'" id="petpullbtn">'+gem+PET_PULL_COST+' — RECRUIT PET</button>';
+    html+='</div>';
+    html+='</div>';
+  }
   html+='<div class="invhint" style="margin-top:4px">Manage pets in the Equipment tab</div>';
-  html+='</div>'; // shopsec
+  html+='</div>';
   return html;
 }
 
