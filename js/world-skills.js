@@ -31,7 +31,7 @@
     { wi: 18, id: 'foundryplate', name: 'Foundry Plate', icon: 'turtle', rarity: 'uncommon', cap: 5,
       steps: [{ desc: '-7% damage taken from molten factory hazards.', f: () => { P.armor *= 0.93; } }] },
     { wi: 19, id: 'bioleech', name: 'Bio Leech', icon: 'heart', rarity: 'epic', cap: 4,
-      steps: [{ desc: '+3 HP per kill — the lab specimen feeds on brainrot.', f: () => { P.vamp += 3; } }] },
+      steps: [{ desc: '+3 HP per kill — the lab specimen feeds on brainrot.', f: () => { if(typeof bumpVamp==='function') bumpVamp(3,0.015); else P.vamp += 3; } }] },
     { wi: 20, id: 'quantumreach', name: 'Quantum Reach', icon: 'gem', rarity: 'rare', cap: 4,
       steps: [{ desc: '+18% attack range through the rift.', f: () => { P.range *= 1.18; } }] },
     // W22–W26
@@ -86,7 +86,7 @@
     { wi: 43, id: 'warpmagnet', name: 'Warp Magnet', icon: 'gem', rarity: 'rare', cap: 4,
       steps: [{ desc: '+40% pickup radius through warp tunnels.', f: () => { P.magnet *= 1.4; } }] },
     { wi: 44, id: 'coralleech', name: 'Coral Leech', icon: 'heart', rarity: 'epic', cap: 4,
-      steps: [{ desc: '+4 HP per kill from coral grave symbiosis.', f: () => { P.vamp += 4; } }] },
+      steps: [{ desc: '+4 HP per kill from coral grave symbiosis.', f: () => { if(typeof bumpVamp==='function') bumpVamp(4,0.018); else P.vamp += 4; } }] },
     { wi: 45, id: 'emberspire', name: 'Ember Spire', icon: 'flamingo', rarity: 'uncommon', cap: 5,
       steps: [{ desc: 'ember spire heat scorches close foes.', f: () => { P.burnAura += 7; } }] },
     // W47–W50

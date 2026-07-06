@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.80';
+const CURRENT_VERSION = '1.81';
 const CHANGELOG = [
+  { v: '1.81', notes: 'Boss HP rebalanced: on-tier gear now applies the full enemy-HP reduction to bosses (not 42%), with lower band/wave scaling and a shorter final-phase HP pool — best-in-slot loadouts should melt bosses instead of slog fights. Worlds 11+: gear damage & HP and flat card bonuses (Vitality, Thick Skin, Regen, Vamp, etc.) switch to percentage scaling.' },
   { v: '1.80', notes: 'Swarm enemy XP is now flat in every world — fodder drops the same small blue / medium green orbs as World 1. No more large yellow boss orbs or lucky-block gold orbs from regular swarm kills (those stay boss/lucky-block only).' },
   { v: '1.79', notes: 'Compact number formatting from 1k upward — gold, shop prices, run coins, and big gear stats now show as 1.3k, 14.4k, 1.2M, etc. instead of raw four-digit+ values.' },
   { v: '1.78', notes: 'Hotfix: runs no longer bounce straight back to the menu when you have high-tier gear. Anti-cheat stat caps now scale with your equipped loadout (v1.77 had fixed ceilings that legit Omniscient gear exceeded on frame one).' },

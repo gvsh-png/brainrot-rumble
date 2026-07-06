@@ -285,6 +285,24 @@ function foeIsHazard(d){ return !!d.aoe || (d.cast && (d.cast.kind==='geyser'||d
 function foeIsBurst(d){ return !!d.shoot && (d.shoot.type==='ring' || (d.shoot.n||1)>=3); }
 function foeIsSpecial(d){ return foeIsHazard(d) || foeIsBurst(d); }
 function worldBand(){ return curWorld().band||0; }       // 0-indexed difficulty band (drives macro scaling)
+// W11+ (index 10): flat HP/dmg bonuses from cards become percentage-based.
+function usesPercentStats(){ return worldIdx >= 10; }
+function bumpMaxHp(flat, pct){
+  if(usesPercentStats()) P.maxHp = Math.max(1, Math.round(P.maxHp * (1 + (pct != null ? pct : flat / 420))));
+  else P.maxHp += flat;
+}
+function bumpRegen(flat, pct){
+  if(usesPercentStats()) P.regen += Math.max(0.5, P.maxHp * (pct != null ? pct : 0.002));
+  else P.regen += flat;
+}
+function bumpVamp(flat, pct){
+  if(usesPercentStats()) P.vamp += Math.max(1, Math.round(P.maxHp * (pct != null ? pct : 0.012)));
+  else P.vamp += flat;
+}
+function bumpCritHeal(flat, pct){
+  if(usesPercentStats()) P.critHeal += Math.max(1, Math.round(P.maxHp * (pct != null ? pct : 0.005)));
+  else P.critHeal += flat;
+}
 function worldDmgMul(){
   const b = worldBand(), bandMul = typeof extBandMul==='function' ? extBandMul(0.12, 9) : 1 + b*0.12;
   return (curWorld().dmgMul||1) * bandMul;
@@ -293,8 +311,20 @@ function chalDmgMul(){ return gameMode==='challenger' ? 1.3 + worldBand()*0.08 :
 function worldHpBand(){ return typeof extBandMul==='function' ? extBandMul(0.42, 9) : 1 + worldBand()*0.42; }
 // Anti-cheat ceilings scale with equipped gear so legit endgame loadouts don't get kicked to menu.
 function legitStatCeil(){
-  const flatDmg = typeof equippedFlatDmg==='function' ? equippedFlatDmg() : 0;
-  const flatHp = typeof equippedHp==='function' ? equippedHp() : 0;
+  const pctGear = typeof statUsesPercent==='function' && statUsesPercent(worldIdx);
+  if(pctGear){
+    const dPct = typeof equippedGearDmgPct==='function' ? equippedGearDmgPct(worldIdx) : 0;
+    const hPct = typeof equippedGearHpPct==='function' ? equippedGearHpPct(worldIdx) : 0;
+    const gMul = typeof gearMatchDmgMul==='function' ? gearMatchDmgMul(worldIdx) : 1;
+    return {
+      dmg: Math.max(35000, Math.round(30 * (1 + dPct) * gMul * 12)),
+      maxHp: Math.max(10000, Math.round(110 * (1 + hPct) * 8)),
+      speed: 3000,
+      shots: 36
+    };
+  }
+  const flatDmg = typeof equippedFlatDmg==='function' ? equippedFlatDmg(worldIdx) : 0;
+  const flatHp = typeof equippedHp==='function' ? equippedHp(worldIdx) : 0;
   const gMul = typeof gearWorldDmgMul==='function' ? gearWorldDmgMul(worldIdx) : 1;
   return {
     dmg: Math.max(22000, Math.round((24 + flatDmg * gMul) * 5.5)),
@@ -1077,12 +1107,12 @@ const UPGRADES = [
   { id:'rate',   name:'Adrenaline Rush', icon:'gem',      rarity:'common', cap:5, steps:[{desc:'+18% attack speed.',    f:()=>P.fireRate*=0.82}] },
   { id:'static', name:'Static Charge',  icon:'gem',      rarity:'common', cap:5, minWorld:1, steps:[{desc:'+10% attack speed.',    f:()=>P.fireRate*=0.90}] },
   { id:'speed',  name:'Fleet Footed',    icon:'heart',    rarity:'common', cap:5, steps:[{desc:'+12% movement speed.',  f:()=>P.speed*=1.12}] },
-  { id:'hp',     name:'Vitality Essence',icon:'heart',    rarity:'common', cap:5, steps:[{desc:'+25 max HP, full heal.',f:()=>{P.maxHp+=25;P.hp=P.maxHp;}}] },
+  { id:'hp',     name:'Vitality Essence',icon:'heart',    rarity:'common', cap:5, steps:[{desc:'+25 max HP, full heal.',f:()=>{ bumpMaxHp(25,0.06); P.hp=P.maxHp; }}] },
   { id:'magnet', name:'Magnetic Pulse',  icon:'gem',      rarity:'common', cap:5, steps:[{desc:'+40% item pickup radius.',f:()=>P.magnet*=1.4}] },
   { id:'armor',  name:'Iron Skin',       icon:'turtle',   rarity:'common', cap:5, steps:[{desc:'-7% damage taken.',     f:()=>P.armor*=0.93}] },
-  { id:'regen',  name:'Regeneration',    icon:'heart',    rarity:'common', cap:5, steps:[{desc:'recover +1 HP / second.',f:()=>P.regen+=1}] },
+  { id:'regen',  name:'Regeneration',    icon:'heart',    rarity:'common', cap:5, steps:[{desc:'recover +1 HP / second.',f:()=>bumpRegen(1,0.002)}] },
   { id:'heavy',  name:'Heavy Rounds',    icon:'coin',     rarity:'common', cap:5, steps:[{desc:'+15% bullet size & +8% projectile speed.',f:()=>{P.bulletR*=1.15;P.bulletSpd*=1.08;}}] },
-  { id:'thick',  name:'Thick Skin',      icon:'heart',    rarity:'common', cap:5, steps:[{desc:'+15 max HP.',           f:()=>P.maxHp+=15}] },
+  { id:'thick',  name:'Thick Skin',      icon:'heart',    rarity:'common', cap:5, steps:[{desc:'+15 max HP.',           f:()=>bumpMaxHp(15,0.04)}] },
   { id:'luckycharm', name:'Lucky Charm', icon:'coin',     rarity:'common', cap:5, minWorld:0, steps:[{desc:'+5% crit chance (3x dmg).',f:()=>P.crit=Math.min(0.8,P.crit+0.05)}] },
   { id:'crit',   name:'Critical Strike', icon:'coin',     rarity:'uncommon',cap:5,steps:[{desc:'+10% crit chance (3x dmg).',f:()=>P.crit=Math.min(0.8,P.crit+0.10)}] },
   { id:'dashcd', name:'Quick Reflexes',  icon:'tralalero',rarity:'uncommon',cap:5,steps:[{desc:'dash cooldown -20%.',   f:()=>P.dashMax*=0.8}] },
@@ -1090,7 +1120,7 @@ const UPGRADES = [
   { id:'gold',   name:'Treasure Hunter', icon:'coin',     rarity:'uncommon',cap:5,steps:[{desc:'+20% gold & +12% XP.',  f:()=>{P.goldMul*=1.2;P.xpMul*=1.12;}}] },
   { id:'steady', name:'Steady Hands',    icon:'gem',      rarity:'uncommon',cap:5,steps:[{desc:'-15% bullet spread & +6% damage.',f:()=>{P.spread*=0.85;P.dmg*=1.06;}}] },
   { id:'frenzy', name:'Killing Frenzy',  icon:'tiger',    rarity:'rare',   cap:5, steps:[{desc:'each kill: +0.2% damage & fire rate, up to 100 stacks. Fades when you stop killing.',f:()=>{P.frenzyGain+=1;P.frenzyMax=Math.max(P.frenzyMax,100);}}] },
-  { id:'glass',  name:'Glass Cannon',    icon:'cappuccino',rarity:'epic',  cap:3, steps:[{desc:'+35% damage, but -15 max HP.',f:()=>{P.dmg*=1.35;if(!P.glassSafe){P.maxHp=Math.max(20,P.maxHp-15);P.hp=Math.min(P.hp,P.maxHp);}}}] },
+  { id:'glass',  name:'Glass Cannon',    icon:'cappuccino',rarity:'epic',  cap:3, steps:[{desc:'+35% damage, but -15 max HP.',f:()=>{P.dmg*=1.35;if(!P.glassSafe){ if(usesPercentStats()){ P.maxHp=Math.max(1,Math.round(P.maxHp*0.965)); } else { P.maxHp=Math.max(20,P.maxHp-15); } P.hp=Math.min(P.hp,P.maxHp);}}}] },
 
   // 🔮 abilities — 4 levels, then EVOLVE
   { id:'multi', name:'Splinter Shot', icon:'gembig', rarity:'rare',
@@ -1127,8 +1157,8 @@ const UPGRADES = [
     steps:[{desc:'every 5s, a shockwave hits nearby enemies.',f:()=>{P.nova=true;}},{desc:'shockwave: faster + stronger.',f:()=>{P.novaCdBase=Math.max(3.5,P.novaCdBase-0.6);P.novaPow*=1.35;}},{desc:'shockwave: faster + stronger.',f:()=>{P.novaCdBase=Math.max(3.2,P.novaCdBase-0.6);P.novaPow*=1.35;}},{desc:'shockwave: faster + stronger.',f:()=>{P.novaCdBase=Math.max(3.0,P.novaCdBase-0.6);P.novaPow*=1.35;}}],
     evo:{name:'Nova Cataclysm', icon:'gembig', desc:'EVOLVE — massive fast shockwave that clears nearby bullets.', f:()=>{P.nova=true;P.novaEvo=true;P.novaCdBase=3;P.novaPow*=1.5;}} },
   { id:'vamp', name:'Soul Harvest', icon:'heart', rarity:'epic',
-    steps:[{desc:'heal +2 HP per kill.',f:()=>P.vamp+=2},{desc:'heal +2 HP per kill.',f:()=>P.vamp+=2},{desc:'heal +2 HP per kill.',f:()=>P.vamp+=2},{desc:'heal +2 HP per kill.',f:()=>P.vamp+=2}],
-    evo:{name:'Vampiric Feast', icon:'heart', desc:'EVOLVE — restore a massive chunk of HP per kill.', f:()=>{P.vamp+=6;}} },
+    steps:[{desc:'heal +2 HP per kill.',f:()=>bumpVamp(2,0.012)},{desc:'heal +2 HP per kill.',f:()=>bumpVamp(2,0.012)},{desc:'heal +2 HP per kill.',f:()=>bumpVamp(2,0.012)},{desc:'heal +2 HP per kill.',f:()=>bumpVamp(2,0.012)}],
+    evo:{name:'Vampiric Feast', icon:'heart', desc:'EVOLVE — restore a massive chunk of HP per kill.', f:()=>{bumpVamp(6,0.035);}} },
   { id:'slow', name:'Stasis Field', icon:'gem', rarity:'rare',
     steps:[{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88},{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88},{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88},{desc:'enemy projectiles 12% slower.',f:()=>P.bslow*=0.88}],
     evo:{name:'Glacial Freeze', icon:'gem', desc:'EVOLVE — enemies you hit freeze solid.', f:()=>{P.bslow*=0.7;P.freeze=true;}} },
@@ -1386,7 +1416,7 @@ const UPGRADES = [
   { id:'eventhz', name:'Event Horizon', icon:'octopus', rarity:'legendary', cap:1, req:['blackhole','nova'],
     steps:[{desc:'SYNERGY — black holes detonate in a Nova blast when they collapse.',f:()=>P.holeNova=true}] },
   { id:'bloodcrit', name:'Blood Crit', icon:'heart', rarity:'epic', cap:1, req:['vamp','crit'],
-    steps:[{desc:'SYNERGY — critical hits also heal you for +2 HP.',f:()=>P.critHeal+=2}] },
+    steps:[{desc:'SYNERGY — critical hits also heal you for +2 HP.',f:()=>bumpCritHeal(2,0.005)}] },
   { id:'glassphx', name:'Glass Phoenix', icon:'flamingo', rarity:'legendary', cap:1, req:['glass','phoenix'],
     steps:[{desc:'SYNERGY — Glass Cannon stops costing max HP, and revivals restore full HP.',f:()=>{P.glassSafe=true;P.phoenixHeal=1;}}] },
   { id:'orbstorm', name:'Orbital Storm', icon:'gembig', rarity:'epic', cap:1, req:['orbit','multi'],
@@ -1536,11 +1566,18 @@ function _doStartGame(wi){
   if(typeof clearHooks==='function') clearHooks();
   if(typeof applyCharBase==='function') applyCharBase(P.charId);
   // Gear applies on top; gearDmgMul lets characters reduce gear's dmg contribution
-  if(typeof equippedFlatDmg==='function'){
+  if(typeof statUsesPercent==='function' && statUsesPercent(wi)){
+    const dPct = typeof equippedGearDmgPct==='function' ? equippedGearDmgPct(wi) : 0;
+    const hPct = typeof equippedGearHpPct==='function' ? equippedGearHpPct(wi) : 0;
+    const match = typeof gearMatchDmgMul==='function' ? gearMatchDmgMul(wi) : 1;
+    P.dmg *= (1 + dPct) * match * (P.gearDmgMul||1);
+    P.maxHp = Math.max(1, Math.round(P.maxHp * (1 + hPct)));
+    P.hp = P.maxHp;
+  } else if(typeof equippedFlatDmg==='function'){
     const gearMul = (typeof gearWorldDmgMul==='function' ? gearWorldDmgMul(wi) : 1) * (P.gearDmgMul||1);
-    P.dmg += equippedFlatDmg() * gearMul;
+    P.dmg += equippedFlatDmg(wi) * gearMul;
+    if(typeof equippedHp==='function'){ const h=equippedHp(wi); P.maxHp += h; P.hp = P.maxHp; }
   }
-  if(typeof equippedHp==='function'){ const h=equippedHp(); P.maxHp += h; P.hp = P.maxHp; }
   if(typeof equippedSpeedMult==='function') P.speed *= equippedSpeedMult();
   if(typeof equippedRangeMult==='function') P.range *= equippedRangeMult();
   if(typeof equippedCrit==='function') P.crit = Math.min(0.8, P.crit + equippedCrit());
@@ -1702,9 +1739,11 @@ function spawnBoss(){
     ? curBosses[Math.floor(Math.random()*curBosses.length)]
     : curBosses[bossIdx];
   const chalMul = gameMode==='challenger' ? 3.5 : 1;
-  const gearHp = (typeof gearEnemyHpMul==='function' ? gearEnemyHpMul(worldIdx) : 1);
-  const bossGearHp = 1 - (1-gearHp)*0.42;   // geared runs soften bosses too, but less than fodder
-  const mult = (1 + (wave-5)*0.12) * (curWorld().hpMul||1) * (1 + worldBand()*0.42) * chalMul * bossGearHp;
+  const bossGearHp = (typeof gearBossHpMul==='function' ? gearBossHpMul(worldIdx) : 1);
+  const bandMul = 1 + (worldHpBand() - 1) * 0.32;
+  const waveMul = 1 + Math.max(0, wave - 5) * 0.07;
+  const storyScale = gameMode==='challenger' ? 1 : 0.62;
+  const mult = waveMul * (curWorld().hpMul||1) * bandMul * chalMul * storyScale * bossGearHp;
   const p = arena ? { x:arena.x+arena.w/2, y:arena.y+arena.h*0.28 } : ringPos();
   const bar1 = def.hp*HP_MULT*mult, bar2 = (def.hp2||0)*HP_MULT*mult;
   const baseTotal = bar1+bar2;
@@ -1712,7 +1751,8 @@ function spawnBoss(){
   // def.final also flags a boss as final even when it isn't the literal last list entry (e.g. Tralalero 2.0,
   // which sits mid-list but is the wave-20 fight in its worlds).
   const isFinal = bossIdx === curBosses.length-1 || def.final===true;
-  const p3pool = isFinal ? baseTotal*1.5 : 0;     // phase 3 = 1.5x of phases 1+2 → "more than 1 and 2 combined"
+  const p3Scale = bossGearHp < 0.22 ? 0.45 : bossGearHp < 0.35 ? 0.62 : 0.85;
+  const p3pool = isFinal ? baseTotal * p3Scale : 0;     // geared runs: shorter final phase pool
   const total  = baseTotal + p3pool;
   boss = {
     spr:def.spr, name:def.name, pattern:def.pattern, mk:def.moveKey||def.spr,
@@ -1809,7 +1849,8 @@ function _chaosBossCrash(){
   const others=WORLDS.filter(w=>w.bosses&&w.bosses.length>0&&w!==curWorld());
   if(!others.length) return;
   const def=pick(pick(others).bosses.slice(0,-1)||pick(others).bosses);
-  const hp=def.hp*HP_MULT*(1+(wave-1)*0.10)*(curWorld().hpMul||1)*(1+worldBand()*0.42)*0.38;
+  const bossGearHp = (typeof gearBossHpMul==='function' ? gearBossHpMul(worldIdx) : 1);
+  const hp=def.hp*HP_MULT*(1+(wave-1)*0.08)*(curWorld().hpMul||1)*(1+(worldHpBand()-1)*0.28)*0.32*bossGearHp;
   const p=ringPos();
   boss={
     spr:def.spr,name:'INVADER: '+def.name,pattern:def.pattern,mk:def.moveKey||def.spr,

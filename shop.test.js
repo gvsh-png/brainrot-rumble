@@ -205,6 +205,28 @@ test('gear tier helpers soften enemies when loadout matches world', () => {
   assert.ok(gearedDmg > 2, 'on-tier endgame gear should feel like a big spike');
 });
 
+test('percent gear mode activates from world 11 onward', () => {
+  const { sandbox } = loadShop({ br_gear_reset_v4: '1' });
+  assert.equal(sandbox.statUsesPercent(9), false);
+  assert.equal(sandbox.statUsesPercent(10), true);
+  const flat = sandbox.itemBonus('dmg_common_0', 0);
+  const pct = sandbox.itemBonus('dmg_omniscient_0', 10);
+  assert.ok(flat > 1);
+  assert.ok(pct > 0 && pct < 1);
+  assert.equal(typeof sandbox.gearBossHpMul, 'function');
+  const slots = ['cape','helmet','chest','gloves','belt','pants','ring','shoes'];
+  const omniEquip = {};
+  const ownedOmni = slots.map((cat, i) => ({ uid: 'g_p'+i, itemId: 'dmg_omniscient_0' }));
+  slots.forEach((cat, i) => { omniEquip[cat] = ownedOmni[i].uid; });
+  const geared = loadShop({
+    br_gear_reset_v4: '1',
+    br_items_owned: JSON.stringify(ownedOmni),
+    br_gear_equipped: JSON.stringify(omniEquip),
+  }).sandbox;
+  assert.ok(geared.gearBossHpMul(10) <= geared.gearEnemyHpMul(10));
+  assert.ok(geared.gearBossHpMul(10) < 0.25);
+});
+
 test('catalog includes new stat types and eight gear slots', () => {
   const { sandbox } = loadShop({ br_gear_reset_v4: '1' });
   const a = sandbox.addGearInstance('rate_epic_0');
