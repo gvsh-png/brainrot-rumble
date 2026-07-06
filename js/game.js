@@ -268,6 +268,18 @@ function worldDmgMul(){
 }
 function chalDmgMul(){ return gameMode==='challenger' ? 1.3 + worldBand()*0.08 : 1; }   // challenger: enemies hit harder, ramps with world
 function worldHpBand(){ return typeof extBandMul==='function' ? extBandMul(0.42, 9) : 1 + worldBand()*0.42; }
+// Anti-cheat ceilings scale with equipped gear so legit endgame loadouts don't get kicked to menu.
+function legitStatCeil(){
+  const flatDmg = typeof equippedFlatDmg==='function' ? equippedFlatDmg() : 0;
+  const flatHp = typeof equippedHp==='function' ? equippedHp() : 0;
+  const gMul = typeof gearWorldDmgMul==='function' ? gearWorldDmgMul(worldIdx) : 1;
+  return {
+    dmg: Math.max(22000, Math.round((24 + flatDmg * gMul) * 5.5)),
+    maxHp: Math.max(6000, Math.round((100 + flatHp) * 3.5)),
+    speed: 3000,
+    shots: 36
+  };
+}
 function worldCoinMul(){
   const b = worldBand();
   let mul = typeof extBandMul==='function' ? extBandMul(0.48, 9) : 1 + b * 0.48;
@@ -2322,7 +2334,8 @@ function update(dt){
   if(typeof fireHook==='function') fireHook('petTick', dt);
   // Anti-cheat: per-frame sanity clamp — values beyond legitimate upgrade caps indicate console tampering
   if(state===ST.PLAY){
-    if(P.dmg>18000||P.maxHp>4000||P.speed>2800||P.shots>32){ quitToMenu(); return; }
+    const cap = legitStatCeil();
+    if(P.dmg>cap.dmg||P.maxHp>cap.maxHp||P.speed>cap.speed||P.shots>cap.shots){ quitToMenu(); return; }
     if(P.hp>P.maxHp) P.hp=P.maxHp;
     if(boss && boss.hp > boss.maxHp) boss.hp = boss.maxHp;   // reject console-up of boss HP
   }
