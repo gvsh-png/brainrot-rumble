@@ -1094,71 +1094,105 @@ function worldLabel(i){
   if(gameMode==='challenger') return 'CHALLENGER · WORLD '+(i+1);
   return 'WORLD '+(i+1)+' · '+(i<=unlockedMax ? WORLDS[i].name : '??? LOCKED');
 }
-// per-world preview emblem shown on the Battle stage: world ground tones + its end-boss silhouette
-function drawWorldEmblemBase(g,w,sz){
-  const th=w.theme;
-  g.fillStyle=th.bg || th.tile1; g.fillRect(0,0,sz,sz);
-  g.fillStyle=th.tile1; const T=28;
-  for(let y=0;y<sz;y+=T) for(let x=0;x<sz;x+=T) if(((x/T+y/T)&1)) g.fillRect(x,y,T,T);
-  g.fillStyle=th.tile2;
-  for(let y=0;y<sz;y+=T*2) for(let x=0;x<sz;x+=T*2) g.fillRect(x+T*0.25,y+T*0.25,T*0.5,T*0.5);
-  const foes=w.foes || [];
-  for(let fi=0; fi<Math.min(3, foes.length); fi++){
-    const f=foes[fi], spr=f && SP[f.spr];
-    if(!spr) continue;
-    const pad=spr._nom?spr.width/spr._nom:1, s=sz*0.22*pad;
-    const px=sz*(0.18+fi*0.22), py=sz*0.62;
-    g.drawImage(spr, px-s/2, py-s/2, s, s);
-  }
-  const bdef = w.bosses[w.bosses.length-1];
-  const spr = bdef && SP[bdef.spr];
-  if(spr){ const pad=spr._nom?spr.width/spr._nom:1, s=sz*0.55*pad;
-    g.drawImage(spr, (sz-s)/2, (sz-s)/2-6, s, s); }
-}
-const EMBLEM_CACHE_VER = 'v155';
+// per-world preview emblem: stylized Survivor.io-style diorama (see world-icons.js)
+const EMBLEM_CACHE_VER = 'v2-icon';
 const _emblemURL = {};
-function worldEmblemURL(i){
-  const key=i+'|'+EMBLEM_CACHE_VER;
-  if(_emblemURL[key]) return _emblemURL[key];
-  const w=WORLDS[i], sz=220, c=document.createElement('canvas'); c.width=c.height=sz;
-  drawWorldEmblemBase(c.getContext('2d'), w, sz);
-  const u=c.toDataURL(); _emblemURL[key]=u; return u;
-}
-// Challenger gets the same scene plus a red danger badge, so it reads as a distinct mode at a glance
 const _chalEmblemURL = {};
-function challengerEmblemURL(i){
-  const key=i+'|'+EMBLEM_CACHE_VER;
-  if(_chalEmblemURL[key]) return _chalEmblemURL[key];
-  const w=WORLDS[i], sz=220, c=document.createElement('canvas'); c.width=c.height=sz;
-  const g=c.getContext('2d');
-  drawWorldEmblemBase(g, w, sz);
-  g.save(); g.globalCompositeOperation='multiply'; g.globalAlpha=0.4; g.fillStyle='#ff5a70'; g.fillRect(0,0,sz,sz); g.restore();
-  g.lineWidth=10; g.strokeStyle='#ff5a70'; g.strokeRect(5,5,sz-10,sz-10);
+let _trainingEmblemURL = null;
+let _bossRushEmblemURL = null;
+const EMBLEM_SZ = 360;
+
+function drawChallengerOverlay(g, sz) {
   g.save();
-  g.translate(sz-38,38);
-  g.fillStyle='#ff5a70'; g.beginPath(); g.arc(0,0,28,0,TAU); g.fill();
-  g.lineWidth=4; g.strokeStyle='#2a1c10'; g.stroke();
-  g.fillStyle='#fff'; g.font='bold 32px sans-serif'; g.textAlign='center'; g.textBaseline='middle';
-  g.fillText('⚡',0,2);   // lightning bolt — challenger's danger badge
+  g.globalCompositeOperation = 'multiply';
+  g.globalAlpha = 0.35;
+  g.fillStyle = '#ff5a70';
+  g.fillRect(0, 0, sz, sz);
   g.restore();
-  const u=c.toDataURL(); _chalEmblemURL[key]=u; return u;
+  g.lineWidth = Math.max(6, sz * 0.028);
+  g.strokeStyle = '#ff5a70';
+  g.strokeRect(sz * 0.02, sz * 0.02, sz * 0.96, sz * 0.96);
+  const badgeR = sz * 0.127;
+  g.save();
+  g.translate(sz * 0.83, sz * 0.17);
+  g.fillStyle = '#ff5a70';
+  g.beginPath();
+  g.arc(0, 0, badgeR, 0, TAU);
+  g.fill();
+  g.lineWidth = Math.max(3, sz * 0.011);
+  g.strokeStyle = '#2a1c10';
+  g.stroke();
+  g.fillStyle = '#fff';
+  g.font = 'bold ' + Math.round(badgeR * 1.14) + 'px sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText('⚡', 0, 2);
+  g.restore();
 }
-let _trainingEmblemURL=null;
-function trainingEmblemURL(){
-  if(_trainingEmblemURL) return _trainingEmblemURL;
-  const sz=220, c=document.createElement('canvas'); c.width=c.height=sz;
-  const g=c.getContext('2d'), th=TRAINING_WORLD.theme;
-  g.fillStyle=th.tile2; g.fillRect(0,0,sz,sz);
-  g.fillStyle=th.tile1; const T=28;
-  for(let y=0;y<sz;y+=T) for(let x=0;x<sz;x+=T) if(((x/T+y/T)&1)) g.fillRect(x,y,T,T);
-  _trainingEmblemURL=c.toDataURL(); return _trainingEmblemURL;
+
+function worldEmblemURL(i) {
+  const locked = gameMode === 'story' && i > unlockedMax;
+  const key = i + '|' + (locked ? 'lock' : '') + '|' + EMBLEM_CACHE_VER;
+  if (_emblemURL[key]) return _emblemURL[key];
+  const w = WORLDS[i];
+  const sz = EMBLEM_SZ;
+  const c = document.createElement('canvas');
+  c.width = c.height = sz;
+  drawWorldIcon(c.getContext('2d'), w, i, sz, { locked, showNum: !locked });
+  const u = c.toDataURL();
+  _emblemURL[key] = u;
+  return u;
 }
-function setStageEmblem(i){
-  const img=$('charimg'); if(!img) return;
-  img.src = gameMode==='bossrush' ? worldEmblemURL(0)
-    : gameMode==='practice' ? trainingEmblemURL()
-    : gameMode==='challenger' ? challengerEmblemURL(clamp(i,0,WORLDS.length-1))
-    : worldEmblemURL(clamp(i,0,WORLDS.length-1));
+
+function challengerEmblemURL(i) {
+  const key = 'chal|' + i + '|' + EMBLEM_CACHE_VER;
+  if (_chalEmblemURL[key]) return _chalEmblemURL[key];
+  const w = WORLDS[i];
+  const sz = EMBLEM_SZ;
+  const c = document.createElement('canvas');
+  c.width = c.height = sz;
+  const g = c.getContext('2d');
+  drawWorldIcon(g, w, i, sz, { showNum: true });
+  drawChallengerOverlay(g, sz);
+  const u = c.toDataURL();
+  _chalEmblemURL[key] = u;
+  return u;
+}
+
+function trainingEmblemURL() {
+  const key = 'train|' + EMBLEM_CACHE_VER;
+  if (_trainingEmblemURL) return _trainingEmblemURL;
+  const sz = EMBLEM_SZ;
+  const c = document.createElement('canvas');
+  c.width = c.height = sz;
+  drawWorldIcon(c.getContext('2d'), TRAINING_WORLD, 0, sz, { type: 'training', showNum: false });
+  _trainingEmblemURL = c.toDataURL();
+  return _trainingEmblemURL;
+}
+
+function bossRushEmblemURL() {
+  const key = 'br|' + EMBLEM_CACHE_VER;
+  if (_bossRushEmblemURL) return _bossRushEmblemURL;
+  const sz = EMBLEM_SZ;
+  const c = document.createElement('canvas');
+  c.width = c.height = sz;
+  drawWorldIcon(c.getContext('2d'), WORLDS[0], 0, sz, { type: 'bossrush', showNum: false });
+  _bossRushEmblemURL = c.toDataURL();
+  return _bossRushEmblemURL;
+}
+
+function setStageEmblem(i) {
+  const img = $('charimg');
+  if (!img) return;
+  const stage = $('stage');
+  img.classList.add('world-emblem');
+  if (stage) stage.classList.add('world-icon-stage');
+  const plat = $('charplat');
+  if (plat) plat.style.display = 'none';
+  img.src = gameMode === 'bossrush' ? bossRushEmblemURL()
+    : gameMode === 'practice' ? trainingEmblemURL()
+    : gameMode === 'challenger' ? challengerEmblemURL(clamp(i, 0, WORLDS.length - 1))
+    : worldEmblemURL(clamp(i, 0, WORLDS.length - 1));
 }
 function refreshWorldSel(){
   $('wname').textContent = gameMode==='bossrush' ? 'BOSS RUSH · GRASSLANDS' : worldLabel(selWorld);

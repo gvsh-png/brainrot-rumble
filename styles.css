@@ -320,9 +320,18 @@ html.is-native-android, html.is-native-android body {
 #stage { position:relative; min-height:clamp(110px,22vh,200px); height:100%; margin:0; align-self:stretch;
   display:flex; align-items:center; justify-content:center; border:var(--border-card); border-radius:var(--radius-lg); overflow:hidden;
   background:linear-gradient(180deg, rgba(43,53,80,.55), rgba(26,35,54,.75)); box-shadow:var(--shadow-panel), inset 0 0 0 2px rgba(255,255,255,.06); }
+#stage.world-icon-stage { padding:clamp(6px,1.2vmin,12px); }
 #charplat { position:absolute; bottom:10%; width:clamp(100px,26vmin,220px); height:clamp(22px,5vmin,48px);
   background:radial-gradient(ellipse at center, rgba(0,0,0,0.32), rgba(0,0,0,0) 70%); }
+#stage.world-icon-stage #charplat { display:none; }
 #charimg { width:auto; height:auto; max-height:88%; max-width:88%; object-fit:contain; position:relative; animation:charbob 2.2s ease-in-out infinite; }
+#charimg.world-emblem {
+  width:min(92%,100%); height:min(92%,100%); max-height:94%; max-width:94%;
+  object-fit:contain; border-radius:clamp(12px,2.4vmin,18px);
+  animation:emblemPulse 4.2s ease-in-out infinite;
+  filter:drop-shadow(0 10px 28px rgba(0,0,0,.5));
+}
+@keyframes emblemPulse { 0%,100%{ transform:translateY(0) scale(1); } 50%{ transform:translateY(-3px) scale(1.012); } }
 @keyframes charbob { 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-4%); } }
 #menubot { display:flex; flex-direction:column; align-items:center; gap:clamp(4px,1vmin,8px); width:100%; padding-bottom:0; flex-shrink:0; order:-1; }
 .run-resume { width:100%; max-width:clamp(280px,92vmin,460px); }
