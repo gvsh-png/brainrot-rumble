@@ -1426,8 +1426,8 @@ const UPGRADES = [
     steps:[{desc:'SYNERGY — JACKPOT hits also critically strike.',f:()=>P.showstopper=true}] },
 
   // 🍂 World 6 (AUTUMN WOODS)
-  { id:'leafdrift', name:'Falling Leaves', icon:'gem', rarity:'uncommon', cap:5, minWorld:5,
-    steps:[{desc:'your hits slow enemies like leaves in the wind. (+duration per level)',f:()=>P.leafDrift=(P.leafDrift||0)+1}] },
+  { id:'leafdrift', name:'Autumn Gale', icon:'gem', rarity:'uncommon', cap:5, minWorld:5,
+    steps:[{desc:'hits scatter slowing leaves (+duration per level).',f:()=>P.leafDrift=(P.leafDrift||0)+1}] },
   { id:'harvestmoon', name:'Harvest Moon', icon:'coin', rarity:'rare', cap:4, minWorld:5,
     steps:[{desc:'each kill stacks +8% gold (up to 12), fading when you stop killing.',f:()=>{P.harvestGain=(P.harvestGain||0)+1;P.harvestMax=12;}}] },
   { id:'embertrail', name:'Ember Trail', icon:'gembig', rarity:'epic', minWorld:5,
@@ -1441,8 +1441,8 @@ const UPGRADES = [
          f:()=>{P.emberTrail=(P.emberTrail||0)+2;P.emberAlways=true;P.emberR=(P.emberR||76)+22;P.emberLife=(P.emberLife||1.55)+0.5;}} },
 
   // 🐸 World 7 (SWAMP)
-  { id:'bogmire', name:'Bog Mire', icon:'gem', rarity:'uncommon', cap:5, minWorld:6,
-    steps:[{desc:'nearby enemies sink in mud, moving slower. (+radius per level)',f:()=>{P.bogAura=(P.bogAura||0)+1;P.bogR=(P.bogR||88)+12;}}] },
+  { id:'bogmire', name:'Quagmire', icon:'gem', rarity:'uncommon', cap:5, minWorld:6,
+    steps:[{desc:'mud aura slows & drags nearby foes. (+radius per level)',f:()=>{P.bogAura=(P.bogAura||0)+1;P.bogR=(P.bogR||88)+12;}}] },
   { id:'toxicmire', name:'Toxic Mire', icon:'crocodilo', rarity:'rare', cap:5, minWorld:6,
     steps:[{desc:'your hits poison enemies for damage over time. (+poison per level)',f:()=>P.toxicHit=(P.toxicHit||0)+1}] },
   { id:'swampleech', name:'Swamp Leech', icon:'heart', rarity:'epic', minWorld:6,
@@ -1456,8 +1456,8 @@ const UPGRADES = [
          f:()=>{P.swampleech=(P.swampleech||0)+2;P.swampRegen=2;P.swampStill=0.2;}} },
 
   // ☁️ World 8 (SKYLAND)
-  { id:'tailwind', name:'Tailwind', icon:'gem', rarity:'uncommon', cap:5, minWorld:7,
-    steps:[{desc:'+10% attack speed riding the sky currents.',f:()=>P.fireRate*=0.90}] },
+  { id:'tailwind', name:'Gale Volley', icon:'gem', rarity:'uncommon', cap:5, minWorld:7,
+    steps:[{desc:'+8% attack speed; every 4th volley fires a bonus wind slash.',f:()=>{P.fireRate*=0.92;P.galeVolley=(P.galeVolley||0)+1;}}] },
   { id:'thunderdrop', name:'Thunder Drop', icon:'gembig', rarity:'rare', minWorld:7,
     steps:[
       {desc:'every 5.5s, a bolt strikes your nearest foe.',f:()=>{P.thunder=true;P.thunderCdBase=5.5;P.thunderDmg=1.4;}},
@@ -1467,8 +1467,8 @@ const UPGRADES = [
     ],
     evo:{name:'Storm Caller', icon:'gembig', desc:'EVOLVE — rapid lightning that clears enemy bullets nearby.',
          f:()=>{P.thunder=true;P.thunderEvo=true;P.thunderCdBase=2.8;P.thunderDmg=(P.thunderDmg||1.9)+0.5;P.thunderChain=(P.thunderChain||0)+2;}} },
-  { id:'updraft', name:'Updraft', icon:'gem', rarity:'uncommon', cap:4, minWorld:7,
-    steps:[{desc:'+15% attack range on the open sky.',f:()=>P.range*=1.15}] },
+  { id:'updraft', name:'Cloud Piercer', icon:'gem', rarity:'uncommon', cap:4, minWorld:7,
+    steps:[{desc:'+15% range; shots gently home through open sky.',f:()=>{P.range*=1.15;P.cloudPierce=(P.cloudPierce||0)+1;}}] },
 
   // 💎 World 9 (CRYSTAL CAVES)
   { id:'prismedge', name:'Prism Edge', icon:'coin', rarity:'uncommon', cap:5, minWorld:8,
@@ -1640,6 +1640,8 @@ function resetPlayer(){
     lavaKill:0,
     // World 11: DIRT DEPTHS
     quakeDash:0, buriedGold:0, earthward:0,
+    wsk:{}, wskCd:{}, wskEcho:null, wskHiveTgt:null, wskHiveStacks:0, wskEyeA:0, wskSlagT:0, wskQuakeCol:null,
+    galeVolley:0, galeCount:0, cloudPierce:0,
     // World 1 additions
     seeker:0, laststand:0,
     startDmg:10, turretCount:0, turretDmgBase:0, turretDmgMul:1, turretFireMul:1, turretRangeBase:330, turretRangeBonus:0, turretAdaptive:false,
@@ -2776,7 +2778,12 @@ function update(dt){
         const po = (P.seeker && P.shots>1) ? (i-(P.shots-1)/2)*15 : 0;  // 15px apart so homing shots are visually distinct
         let lkCrit=false;
         if(P.luckyBullets){ const cc=P.crit+(P.overdrive?(P.frenzy||0)*0.001:0)+(P.foeClose?0.09*(P.daredevil||0):0); lkCrit=Math.random()<cc; }
-        bullets.push({x:P.x+Math.cos(perpA)*po,y:P.y+Math.sin(perpA)*po,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:br,pierce:P.pierce,hit:new Set(),dist:P.range,bounce:P.bounce||0,homing:P.seeker||0,lucky:P.luckyBullets||false,luckyCrit:lkCrit});
+        bullets.push({x:P.x+Math.cos(perpA)*po,y:P.y+Math.sin(perpA)*po,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,r:br,pierce:P.pierce,hit:new Set(),dist:P.range,bounce:P.bounce||0,homing:P.seeker||(P.cloudPierce?0.22+P.cloudPierce*0.04:0),lucky:P.luckyBullets||false,luckyCrit:lkCrit});
+      }
+      if(P.galeVolley && (P.galeCount=(P.galeCount||0)+1)%4===0){
+        const ga=Math.atan2(best.y-P.y,best.x-P.x);
+        bullets.push({x:P.x,y:P.y,vx:Math.cos(ga)*spd*1.05,vy:Math.sin(ga)*spd*1.05,r:br,pierce:P.pierce,hit:new Set(),dist:P.range*1.1,dmgMul:0.72,col:'#a8e8ff'});
+        burst(P.x,P.y,'#c8f0ff',5,140);
       }
       if(P.radial){                       // Omni-Barrage: 360 ring IN ADDITION (reduced dmg so it stays fair vs crowds)
         const n = clamp(P.shots*2, 8, 20);
@@ -2860,9 +2867,14 @@ function update(dt){
       const fl = P.fieldPulseEvo ? (P.fpLife||1.5)+0.8 : (P.fpLife||1.5);
       addZone(P.x,P.y,P.fpR,{tele:0.08,life:fl,dps:P.fpDps,slow:!!P.fpSlow,col:P.fpCol||'#bfe6ff',friendly:true});
       burst(P.x,P.y,P.fpCol||'#bfe6ff',P.fieldPulseEvo?20:12,280);
+      if(P.fpVfx==='spore') for(let k=0;k<4;k++) spawnPart(P.x+rand(-20,20),P.y+rand(-20,20),rand(-30,30),rand(-50,-10),0.4,0.4,'#60d030',rand(3,5));
       if(P.fpSlow) forEnemiesNear(P.x,P.y,P.fpR,(e)=>{ if(!e.isBoss&&!e.lead&&dist2(P.x,P.y,e.x,e.y)<P.fpR*P.fpR) e.chillT=Math.max(e.chillT||0,1.0); });
     }
   }
+
+  if(typeof tickWorldSkillFx==='function') tickWorldSkillFx(dt);
+  if(typeof tickWorldSkillEchoes==='function') tickWorldSkillEchoes(dt);
+  if(typeof tickWorldSkillHurt==='function') tickWorldSkillHurt(dt);
 
   // --- Thunder Drop: periodic bolt on nearest foe ---
   if(P.thunder){
@@ -2929,6 +2941,7 @@ function update(dt){
       if(e.iv>0 || e.lead || e.isBoss) return;
       if(dist2(P.x,P.y,e.x,e.y) < br*br) e.chillT = Math.max(e.chillT||0, 0.25 + 0.12*P.bogAura);
     });
+    if(Math.random()<0.14) spawnPart(P.x+rand(-br*0.5,br*0.5),P.y+rand(-br*0.5,br*0.5),rand(-15,15),rand(-25,-5),0.35,0.35,'#6a5030',rand(2,4));
   }
 
   // --- Aura Monster: green damage aura around the player ---
@@ -3419,9 +3432,11 @@ function update(dt){
       if(P.aftershock && Math.random() < 0.12+P.aftershock*0.06){   // Aftershock: kills erupt a quake that damages nearby foes
         const R=70+P.aftershock*10, qd=P.dmg*(2+P.aftershock)*(P.abyssalMul||1);
         forEnemiesNear(e.x,e.y,R,(o)=>{ if(o.iv>0||o.under||o.lead) return; if(dist2(e.x,e.y,o.x,o.y)<R*R){ o.hp-=qd; o.hitT=Math.max(o.hitT,0.08); } });
-        spawnPart(e.x,e.y,0,0,0.3,0.3,'#caa15a',R,1,R*2.5);
+        spawnPart(e.x,e.y,0,0,0.3,0.3,P.wskQuakeCol||'#caa15a',R,1,R*2.5);
+        burst(e.x,e.y,P.wskQuakeCol||'#caa15a',10,280);
         shake=Math.max(shake,4);
       }
+      if(typeof worldSkillOnKill==='function') worldSkillOnKill(e,e.x,e.y);
       if(P.vamp>0){ P.hp=Math.min(P.maxHp,P.hp+P.vamp); }
       if(P.frenzyGain>0) P.frenzy=Math.min(P.frenzyMax, P.frenzy+P.frenzyGain);
       if(P.harvestGain>0) P.harvestStacks=Math.min(P.harvestMax||12, (P.harvestStacks||0)+1);
@@ -3706,6 +3721,7 @@ function damageEnemy(e,dmg,fx,fy,crit){
     if(d<1.2) dmg*=e.front;
   }
   if(P.coldBlood && (e.frz>0 || e.chillT>0)) dmg *= (1 + 0.12*P.coldBlood);   // Cold Blooded: bonus vs chilled/frozen
+  if(typeof worldSkillDmgMul==='function') dmg *= worldSkillDmgMul();
   if(P.laststand && P.hp/P.maxHp < 0.4) dmg *= (1 + 0.14*P.laststand);          // Last Stand: rally while wounded
   if(P.jackpot && Math.random()<P.jackpot){                                   // Lucky Spin: jackpot double-damage
     dmg *= 2;
@@ -3723,9 +3739,9 @@ function damageEnemy(e,dmg,fx,fy,crit){
   if(P.stealthAggro && !e.isBoss) e.aggroT=Math.max(e.aggroT||0,3);   // getting shot wakes the enemy up
   if(P.freeze && !e.isBoss) e.frz=1.2;
   if(P.chillHit && !e.isBoss && e.frz<=0) e.chillT = Math.max(e.chillT||0, 0.8 + 0.25*P.chillHit);   // Permafrost: chill-on-hit
-  if(P.leafDrift && !e.isBoss && e.frz<=0) e.chillT = Math.max(e.chillT||0, 0.7 + 0.22*P.leafDrift);   // Falling Leaves
   if(P.toxicHit && !e.isBoss && !e.poison) e.poison={dur:2.2+P.toxicHit*0.35,dmg:2+P.toxicHit*1.1,tickCd:0.5};   // Toxic Mire
   if(P.burnHit && !e.isBoss && !e.fire) e.fire={dur:2,dmg:3,tickCd:0.5};   // Ember Sage: burn-on-hit
+  if(typeof worldSkillOnHit==='function') worldSkillOnHit(e,dmg,crit);
   sfx.hit();
   const _dvx=(Math.random()-0.5)*120;
   // spread simultaneous hits (piercing/multishot) apart from spawn so they don't stack into illegible overlap
@@ -5174,6 +5190,7 @@ function hurtPlayer(dmg, src){
     return;
   }
   P.hp -= dmg*(P.shieldDR||1)*(P.armor||1)*worldDmgMul(); P.inv = 0.8; P.hitT = 0.25;
+  if(typeof worldSkillOnHurt==='function') worldSkillOnHurt();
   shake = Math.max(shake,10); hitFlash = 1; hitstop=Math.max(hitstop,0.04);
   sfx.hurt(); burst(P.x,P.y,'#e54d4d',12,200);
   if(typeof haptic === 'function') haptic('hurt');
@@ -5765,6 +5782,7 @@ function render(){
       cx.globalAlpha=0.12+0.05*Math.sin(elapsed*8); cx.fillStyle='#ff7a3a';
       cx.beginPath(); cx.arc(P.x,P.y,80,0,TAU); cx.fill(); cx.globalAlpha=1;
     }
+    if(typeof renderWorldSkillAuras==='function') renderWorldSkillAuras(cx,elapsed);
     // Soldier stand-still boost indicator — pulsing red ring
     if(P.soldierBullets && P.soldierStill){
       const pulse=0.5+0.5*Math.sin(elapsed*9);
