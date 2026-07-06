@@ -2,7 +2,7 @@
 // Progressive tutorial: locked tabs, spotlight guides, unlock animations.
 
 (function () {
-  const ONBOARD_VER = '1';
+  const ONBOARD_VER = '2';
   const LS_ANIM = 'br_feat_anim';
   const LS_GUIDE = 'br_guide_done';
 
@@ -38,6 +38,7 @@
   let guideActive = false;
   let guideQueue = [];
   let resizeObs = null;
+  let elevatedEl = null;
 
   function storyProgress() {
     if (typeof unlockedMax === 'number') return unlockedMax;
@@ -69,23 +70,31 @@
     } catch (e) {}
   }
 
-  function migrateVeterans() {
-    if (localStorage.getItem('br_onboard_ver') === ONBOARD_VER) return;
-    const u = storyProgress();
+  function guidesForProgress(u) {
+    const guides = [];
+    if (u >= 1) guides.push('shop_unlock', 'bounties', 'gamemode_intro', 'shop_intro');
+    if (u >= 2) guides.push('pets_unlock', 'equipment_unlock', 'pet_recruit');
+    return guides;
+  }
+
+  function animsForProgress(u) {
     const anim = [];
-    const guides = ['first_play'];
-    if (u >= 1) {
-      anim.push('shop', 'character', 'daily_bounties', 'gamemode');
-      guides.push('shop_unlock', 'visit_shop', 'shop_intro', 'bounties', 'gamemode_intro');
+    if (u >= 1) anim.push('shop', 'character', 'daily_bounties', 'gamemode');
+    if (u >= 2) anim.push('pets', 'inventory', 'pet_recruit');
+    return anim;
+  }
+
+  function migrateVeterans() {
+    const ver = localStorage.getItem('br_onboard_ver');
+    if (ver === ONBOARD_VER) return;
+    if (!ver || ver === '1') {
+      const u = storyProgress();
+      for (const id of animsForProgress(u)) animSeen.add(id);
+      for (const id of guidesForProgress(u)) guideDone.add(id);
+      if (u < 1) guideDone.add('first_play');
+      saveAnim();
+      saveGuide();
     }
-    if (u >= 2) {
-      anim.push('pets', 'inventory', 'pet_recruit');
-      guides.push('pets_unlock', 'equipment_unlock', 'pet_recruit');
-    }
-    for (const id of anim) animSeen.add(id);
-    for (const id of guides) guideDone.add(id);
-    saveAnim();
-    saveGuide();
     localStorage.setItem('br_onboard_ver', ONBOARD_VER);
   }
 
@@ -173,23 +182,9 @@
     if (typeof sfx !== 'undefined' && sfx.evolve) sfx.evolve();
   }
 
-  function playFeatureUnlocks(list) {
+  function unlockFeaturePanels(list) {
     if (!list || !list.length) return;
-    let i = 0;
-    function next() {
-      if (i >= list.length) {
-        applyTabLocks();
-        queueGuidesAfterUnlock(list);
-        return;
-      }
-      const feat = list[i++];
-      animSeen.add(feat);
-      saveAnim();
-      const label = UNLOCK_LABELS[feat] || feat.toUpperCase();
-      if (typeof bigText === 'function') bigText(label, '#9fe0ff');
-      if (TAB_FEATURE[feat] || feat === 'pets' || feat === 'inventory') {
-        setTimeout(() => playTabUnlockAnim(feat), 180);
-      }
+    for (const feat of list) {
       if (feat === 'daily_bounties') {
         const el = typeof $ === 'function' ? $('daily-bounties') : null;
         if (el) {
@@ -206,9 +201,34 @@
           setTimeout(() => el.classList.remove('feature-unlocking'), 900);
         }
       }
-      setTimeout(next, 720);
+    }
+  }
+
+  function playUnlockFanfare(list) {
+    if (!list || !list.length) return;
+    let i = 0;
+    function next() {
+      if (i >= list.length) return;
+      const feat = list[i++];
+      const label = UNLOCK_LABELS[feat] || feat.toUpperCase();
+      if (typeof bigText === 'function') bigText(label, '#9fe0ff');
+      setTimeout(next, 380);
     }
     next();
+  }
+
+  function playFeatureUnlocks(list) {
+    if (!list || !list.length) return;
+    for (const feat of list) {
+      animSeen.add(feat);
+      if (TAB_FEATURE[feat] || feat === 'pets' || feat === 'inventory') playTabUnlockAnim(feat);
+    }
+    saveAnim();
+    unlockFeaturePanels(list);
+    applyTabLocks();
+    queueGuidesAfterUnlock(list);
+    setTimeout(drainGuideQueue, 80);
+    playUnlockFanfare(list);
   }
 
   function queueGuidesAfterUnlock(features) {
@@ -218,19 +238,27 @@
     if (features.includes('pet_recruit')) guideQueue.push('pet_recruit');
     if (features.includes('daily_bounties')) guideQueue.push('bounties');
     if (features.includes('gamemode')) guideQueue.push('gamemode_intro');
-    drainGuideQueue();
   }
 
   function getOverlay() {
     return typeof $ === 'function' ? $('guide-overlay') : document.getElementById('guide-overlay');
   }
 
+  function clearElevatedTarget() {
+    if (elevatedEl) {
+      elevatedEl.classList.remove('guide-target-elevated');
+      elevatedEl = null;
+    }
+    document.body.classList.remove('guide-elevate-tabbar');
+  }
+
   function hideGuide() {
     const ov = getOverlay();
     if (!ov) return;
     ov.classList.add('hidden');
-    ov.classList.remove('active');
+    ov.classList.remove('active', 'guide-passthrough', 'guide-block-mode');
     guideActive = false;
+    clearElevatedTarget();
     if (resizeObs) {
       resizeObs.disconnect();
       resizeObs = null;
@@ -249,21 +277,38 @@
     const finger = ov.querySelector('.guide-finger');
     if (!ring || !card) return;
     const r = el.getBoundingClientRect();
-    const pad = 10;
+    const pad = Math.max(8, Math.min(14, window.innerWidth * 0.02));
     ring.style.left = (r.left - pad) + 'px';
     ring.style.top = (r.top - pad) + 'px';
     ring.style.width = (r.width + pad * 2) + 'px';
     ring.style.height = (r.height + pad * 2) + 'px';
-    const cardW = card.offsetWidth || 280;
-    let cardLeft = Math.max(12, Math.min(window.innerWidth - cardW - 12, r.left + r.width / 2 - cardW / 2));
-    let cardTop = r.bottom + 16;
-    if (cardTop + card.offsetHeight > window.innerHeight - 12) cardTop = r.top - card.offsetHeight - 16;
-    if (cardTop < 12) cardTop = 12;
+    const cardW = Math.min(card.offsetWidth || 300, window.innerWidth - 24);
+    const cardH = card.offsetHeight || 120;
+    const margin = Math.max(10, Math.min(16, window.innerWidth * 0.03));
+    let cardLeft = Math.max(margin, Math.min(window.innerWidth - cardW - margin, r.left + r.width / 2 - cardW / 2));
+    const bottomChrome = r.top > window.innerHeight * 0.52;
+    let cardTop;
+    if (bottomChrome) {
+      cardTop = r.top - cardH - margin;
+      if (cardTop < margin) cardTop = margin;
+    } else {
+      cardTop = r.bottom + margin;
+      if (cardTop + cardH > window.innerHeight - margin) cardTop = r.top - cardH - margin;
+      if (cardTop < margin) cardTop = margin;
+    }
     card.style.left = cardLeft + 'px';
     card.style.top = cardTop + 'px';
+    card.style.width = cardW + 'px';
     if (finger) {
-      finger.style.left = (r.left + r.width / 2 - 14) + 'px';
-      finger.style.top = (r.bottom - 6) + 'px';
+      if (bottomChrome) {
+        finger.style.left = (r.left + r.width / 2 - 14) + 'px';
+        finger.style.top = (r.top - 28) + 'px';
+        finger.style.transform = 'rotate(180deg)';
+      } else {
+        finger.style.left = (r.left + r.width / 2 - 14) + 'px';
+        finger.style.top = (r.bottom - 6) + 'px';
+        finger.style.transform = '';
+      }
     }
     guideActive._target = el;
   }
@@ -283,6 +328,8 @@
     ov.classList.remove('hidden');
     void ov.offsetWidth;
     ov.classList.add('active');
+    ov.classList.toggle('guide-passthrough', !!step.tap);
+    ov.classList.toggle('guide-block-mode', !step.tap);
 
     const title = ov.querySelector('.guide-title');
     const text = ov.querySelector('.guide-text');
@@ -296,6 +343,13 @@
     }
     if (finger) finger.classList.toggle('hidden', !step.tap);
 
+    clearElevatedTarget();
+    if (step.tap) {
+      el.classList.add('guide-target-elevated');
+      elevatedEl = el;
+      if (el.closest('#tabbar')) document.body.classList.add('guide-elevate-tabbar');
+    }
+
     repositionGuide();
     window.addEventListener('resize', repositionGuide);
     window.addEventListener('scroll', repositionGuide, true);
@@ -308,7 +362,7 @@
       markGuide(step.id);
       hideGuide();
       if (step.onDone) step.onDone();
-      setTimeout(drainGuideQueue, 280);
+      setTimeout(drainGuideQueue, 120);
     }
 
     if (btn) {
@@ -319,7 +373,8 @@
     }
 
     if (step.tap) {
-      const onTap = () => {
+      const onTap = (e) => {
+        e.stopPropagation();
         el.removeEventListener('click', onTap, true);
         finish();
       };
@@ -327,9 +382,7 @@
     }
 
     ov.onclick = (e) => {
-      if (e.target === ov || e.target.classList.contains('guide-dim')) {
-        if (!step.tap) finish();
-      }
+      if (!step.tap && (e.target === ov || e.target.classList.contains('guide-dim'))) finish();
     };
 
     return true;
@@ -350,7 +403,7 @@
       sel: '#tabbar .tabbtn[data-tab="shop"]',
       tab: 'battle',
       title: 'Shop unlocked!',
-      text: 'Fresh gear and cases await. Open the Shop before your next run.',
+      text: 'Fresh gear and cases await. Tap Shop to browse before your next run.',
       tap: true,
       req: () => isFeatureUnlocked('shop'),
     },
@@ -429,6 +482,14 @@
     showGuide(def);
   }
 
+  function abandonActiveGuides() {
+    if (!guideActive && !guideQueue.length) return;
+    if (guideActive) markGuide(guideActive.id);
+    for (const id of guideQueue) markGuide(id);
+    guideQueue.length = 0;
+    hideGuide();
+  }
+
   function onTabBlocked(tab) {
     const hint = tabLockHint(tab);
     if (typeof bigText === 'function' && hint) bigText(hint.toUpperCase(), '#b0b8c8');
@@ -439,13 +500,13 @@
 
   function onMenuEnter() {
     applyTabLocks();
-    setTimeout(drainGuideQueue, 400);
+    setTimeout(drainGuideQueue, 120);
   }
 
   function onWorldClear(prevUnlocked, nextUnlocked) {
     const fresh = featuresNewlyUnlocked(prevUnlocked, nextUnlocked);
     if (fresh.length) {
-      setTimeout(() => playFeatureUnlocks(fresh), 600);
+      playFeatureUnlocks(fresh);
     } else {
       onMenuEnter();
     }
@@ -454,11 +515,11 @@
   function onShopOpened() {
     if (!hasGuide('shop_intro') && isFeatureUnlocked('shop')) {
       guideQueue.push('shop_intro');
-      setTimeout(drainGuideQueue, 350);
+      setTimeout(drainGuideQueue, 150);
     }
     if (!hasGuide('pet_recruit') && isFeatureUnlocked('pet_recruit')) {
       guideQueue.push('pet_recruit');
-      setTimeout(drainGuideQueue, 500);
+      setTimeout(drainGuideQueue, 220);
     }
   }
 
@@ -466,7 +527,13 @@
     loadFlags();
     migrateVeterans();
     applyTabLocks();
-    setTimeout(maybeFirstPlayGuide, 800);
+    setTimeout(maybeFirstPlayGuide, 400);
+    window.addEventListener('pagehide', () => {
+      if (guideActive || guideQueue.length) abandonActiveGuides();
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && (guideActive || guideQueue.length)) abandonActiveGuides();
+    });
   }
 
   window.isFeatureUnlocked = isFeatureUnlocked;
@@ -483,6 +550,7 @@
     hasGuide,
     drainGuideQueue,
     tabLockHint,
+    abandonActiveGuides,
   };
 
   if (document.readyState === 'loading') {

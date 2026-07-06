@@ -695,11 +695,22 @@ html.is-native-android, html.is-native-android body {
 
 /* guided tutorial spotlight */
 #guide-overlay { position:fixed; inset:0; z-index:180; pointer-events:none; }
-#guide-overlay.active { pointer-events:auto; }
+#guide-overlay.active { pointer-events:none; }
+#guide-overlay.guide-block-mode { pointer-events:auto; }
+#guide-overlay.guide-passthrough { pointer-events:none; }
 #guide-overlay.hidden { display:none; }
 .guide-dim {
   position:absolute; inset:0; background:rgba(6,10,18,.55);
   backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+  pointer-events:none;
+}
+#guide-overlay.guide-block-mode .guide-dim { pointer-events:auto; }
+body.guide-elevate-tabbar #tabbar {
+  position:relative; z-index:190;
+}
+.guide-target-elevated {
+  position:relative; z-index:191 !important;
+  pointer-events:auto !important;
 }
 .guide-ring {
   position:absolute; border-radius:clamp(12px,2.4vmin,18px);
@@ -950,9 +961,10 @@ html.is-native-android, html.is-native-android body {
 }
 #zoomctl button:active { transform:translateY(2px) scale(.96); box-shadow:0 1px 0 rgba(0,0,0,.25); }
 
-#introskip { position:fixed; z-index:30; right:max(14px,env(safe-area-inset-right)); top:max(14px,env(safe-area-inset-top));
-  font-weight:900; font-size:clamp(13px,2.4vmin,18px); color:#fff; background:rgba(20,14,8,.55);
-  border:3px solid rgba(255,255,255,.6); border-radius:14px; padding:8px 16px; cursor:pointer; }
+#introskip { position:fixed; z-index:200; right:max(14px,env(safe-area-inset-right)); top:max(14px,env(safe-area-inset-top));
+  font-weight:900; font-size:clamp(13px,2.4vmin,18px); color:#fff; background:rgba(20,14,8,.72);
+  border:3px solid rgba(255,255,255,.65); border-radius:14px; padding:clamp(8px,1.8vmin,12px) clamp(14px,3vmin,20px);
+  cursor:pointer; box-shadow:0 8px 24px rgba(0,0,0,.35); letter-spacing:.04em; }
 #introskip:active { transform:translateY(2px); }
 
 /* Loading screen (covers the menu until all sprites are pre-generated) */

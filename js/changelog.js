@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.96';
+const CURRENT_VERSION = '1.97';
 const CHANGELOG = [
+  { v: '1.97', notes: 'Cutscene & onboarding polish: HUD (XP bar, zoom, dash) hides during end cutscenes and intros/outros; SKIP button works on boss-death phase too. Shop unlock guide appears much faster after clearing a world. Spotlight guides no longer block taps on highlighted tabs. Closing the app mid-tutorial skips remaining guides while keeping feature unlocks from story progress.' },
   { v: '1.96', notes: 'Hotfix: SWARM chaos event enemies no longer take 0 damage — spawn used front:0 which the frontal-armor check treated as full immunity from the front (and you are surrounded during swarms).' },
   { v: '1.95', notes: 'Massive world ability expansion: every extended world (W12–W50) now offers 3 themed picks at level-up — a signature primary plus two biome extras (Sign Flare, Oil Slick, Marsh Gas, Low-G Drift, etc.). W6–W11 gain a fourth signature each (Acorn Shot, Will-o-Wisp, Cloud Bank, Gem Glow, Ashfall, Fossil Cache). New registry FX engine handles auras, trails, bolts, blooms, orbits, pulls, dash quakes, kill zones, echo hits, and more with matching particle rings.' },
   { v: '1.94', notes: 'World ability polish pass (W6–W50): renamed and reworked biome skills so each feels distinct — Neon Afterimage snap-shots, Trench Lash tendrils, Capacitor Arc chains, Flare Wave knockback, Stinger Swarm venom stacks, Echo Rounds, Falling Star meteors, and more. Added per-skill VFX (particles, auras, lightning quakes). W6–8 classics renamed: Autumn Gale, Quagmire, Gale Volley, Cloud Piercer.' },

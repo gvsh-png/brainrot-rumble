@@ -564,7 +564,8 @@ const WorldCine = (function () {
     kind = kindIn; wi = worldIndex; done = onDone; t = 0; isChal = !!challenger; cheerPlayed = false;
     state = kindIn === 'outro' || kindIn === 'chal_out' ? ST.OUTRO : ST.INTRO;
     $('menu') && $('menu').classList.add('hidden');
-    $('introskip') && $('introskip').classList.remove('hidden');
+    if (typeof hideGameplayHud === 'function') hideGameplayHud();
+    else $('introskip') && $('introskip').classList.remove('hidden');
     if (typeof playMusic === 'function') {
       const w = worldData(wi);
       playMusic(w && w.theme ? w.theme.music : 'boss0');

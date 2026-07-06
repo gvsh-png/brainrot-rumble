@@ -862,6 +862,7 @@ function worldCleared(boss){
   }
   _clearData = { worldNum:worldIdx+1, coins:worldCoins, gems:gemsEarned, newChars, isPractice, isW1:!isPractice && worldIdx===0 };
   if(newChars.length && typeof updateCharBadge==='function') updateCharBadge();
+  hideGameplayHud();
   state = ST.CUTSCENE;
   cut = { t:0, boss:boss, alpha:1, fade:0, name:curWorld().name };
   boss.cut = true; boss.deathScale = 1;
@@ -898,6 +899,7 @@ function cutsceneUpdate(dt){
   }
 }
 function toMenuFromClear(){
+  $('introskip').classList.add('hidden');
   if(!_clearData){ quitToMenu(); triggerUnlockReveal(); return; }
   const d=_clearData; _clearData=null;
   $('wc-title').textContent = d.isPractice ? 'TRAINING COMPLETE' : d.isChallenger ? 'WORLD '+d.worldNum+' CHALLENGER!' : 'WORLD '+d.worldNum+' CLEARED!';
@@ -934,7 +936,7 @@ function easeOut(t){ return 1-(1-t)*(1-t); }
 function startIntro(onDone){
   introT=0; introDone=onDone; state=ST.INTRO;
   $('menu').classList.add('hidden');
-  $('introskip').classList.remove('hidden');
+  hideGameplayHud();
   playMusic('boss0'); shake=0;
 }
 function finishIntro(){
@@ -1037,8 +1039,10 @@ const OUTRO_FRIENDS = [
 ];
 function startW1Outro(onDone){
   outroT=0; outroDone=onDone; state=ST.OUTRO; shake=0;
+  hideGameplayHud();
 }
 function finishW1Outro(){
+  $('introskip').classList.add('hidden');
   const cb=outroDone; outroDone=null;
   if(cb) cb();
 }
@@ -1747,10 +1751,7 @@ function _doStartGame(wi){
   $('menu').classList.add('hidden');
   $('gameover').classList.add('hidden');
   $('bossbar').classList.add('hidden');
-  $('hud').classList.remove('hidden');
-  $('zoomctl').classList.remove('hidden');
-  $('dashbtn').textContent = P.engineerPlace ? 'Place turret.' : 'DASH';
-  if(IS_TOUCH) $('dashbtn').classList.remove('hidden');   // mobile-only on-screen dash
+  showGameplayHud();
   if(rushIsActive()) startBossRush();
   else if(timerMode()) startChallengerSpawn(); else startWave();
 }
@@ -6349,6 +6350,28 @@ function suspendToMenu(){
   if(typeof saveSuspendedRun === 'function' && canSuspendRun && canSuspendRun()) saveSuspendedRun();
   quitToMenu();
 }
+function hideGameplayHud(){
+  const sk=$('introskip');
+  if(sk) sk.classList.remove('hidden');
+  const hud=$('hud'); if(hud) hud.classList.add('hidden');
+  const zb=$('zoomctl'); if(zb) zb.classList.add('hidden');
+  const db=$('dashbtn'); if(db) db.classList.add('hidden');
+}
+function showGameplayHud(){
+  const sk=$('introskip');
+  if(sk) sk.classList.add('hidden');
+  const hud=$('hud'); if(hud) hud.classList.remove('hidden');
+  const zb=$('zoomctl'); if(zb) zb.classList.remove('hidden');
+  const db=$('dashbtn');
+  if(db){
+    db.textContent = P.engineerPlace ? 'Place turret.' : 'DASH';
+    if(IS_TOUCH) db.classList.remove('hidden');
+    else db.classList.add('hidden');
+  }
+}
+window.hideGameplayHud = hideGameplayHud;
+window.showGameplayHud = showGameplayHud;
+
 function quitToMenu(){
   state=ST.MENU; arena=null; bossPending=0; boss=null;
   bullets=[]; ebullets=[]; petBullets=[]; enemies=[]; gems=[]; texts=[]; zones=[]; holes=[]; luckies=[]; clearParts();
@@ -6359,6 +6382,7 @@ function quitToMenu(){
   $('dashbtn').classList.add('hidden');
   $('zoomctl').classList.add('hidden');
   $('bossbar').classList.add('hidden');
+  $('introskip').classList.add('hidden');
   $('menu').classList.remove('hidden');
   refreshTopbar();
   refreshRunResumeUI();
@@ -6427,6 +6451,18 @@ if(_runAbandon) _runAbandon.addEventListener('click', ()=>{
   if(typeof clearSuspendedRun === 'function') clearSuspendedRun();
 });
 $('introskip').addEventListener('click', ()=>{
+  if(state===ST.CUTSCENE && cut){
+    cut=null;
+    if(typeof WorldCine!=='undefined'){
+      WorldCine.afterClear(_clearData, toMenuFromClear);
+    } else if(_clearData && _clearData.isW1 && !localStorage.getItem('br_seen_w1outro')){
+      localStorage.setItem('br_seen_w1outro','1');
+      startW1Outro(toMenuFromClear);
+    } else {
+      toMenuFromClear();
+    }
+    return;
+  }
   if(typeof WorldCine!=='undefined' && WorldCine.isActive()) WorldCine.skip();
   else if(state===ST.OUTRO) finishW1Outro();
   else finishIntro();

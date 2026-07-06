@@ -214,11 +214,14 @@ function continueSuspendedRun(){
   $('levelup').classList.add('hidden');
   $('pause').classList.add('hidden');
   $('menu').classList.add('hidden');
-  $('hud').classList.remove('hidden');
-  $('zoomctl').classList.remove('hidden');
-  $('dashbtn').textContent = P.engineerPlace ? 'Place turret.' : 'DASH';
-  if(typeof IS_TOUCH !== 'undefined' && IS_TOUCH) $('dashbtn').classList.remove('hidden');
-  else $('dashbtn').classList.add('hidden');
+  if(typeof showGameplayHud==='function') showGameplayHud();
+  else {
+    $('hud').classList.remove('hidden');
+    $('zoomctl').classList.remove('hidden');
+    $('dashbtn').textContent = P.engineerPlace ? 'Place turret.' : 'DASH';
+    if(typeof IS_TOUCH !== 'undefined' && IS_TOUCH) $('dashbtn').classList.remove('hidden');
+    else $('dashbtn').classList.add('hidden');
+  }
 
   const ci = $('coincount');
   if(ci){ const img = ci.querySelector('img'); if(img && !img.getAttribute('src') && typeof SP !== 'undefined') img.src = SP['coin'].toDataURL(); }
