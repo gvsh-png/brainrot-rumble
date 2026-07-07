@@ -343,7 +343,42 @@
     for (let i = 0; i < FIN_ARCH.length; i++) GIMMICK['extfin' + i] = FIN_ARCH[i].gimmick;
   }
 
+  function extFinFinalScript(e) {
+    const mk = e.mk || '';
+    const archIdx = parseInt(mk.slice(6), 10) % FIN_ARCH.length;
+    const hell = FIN_HELL[archIdx % FIN_HELL.length];
+    const col = bossCol(e);
+    const DPS = { name: 'STRIKE NOW!', col: '#7ed957', dur: 8.0, iv: false };
+    const assault = (name, specKey, vulnMul) => ({
+      name,
+      col,
+      dur: 7.5,
+      iv: true,
+      vulnMul: vulnMul != null ? vulnMul : undefined,
+      hold: 'center',
+      enter(ev) { ev.sCd = 0.45; ev.sk = 0; },
+      tick(ev, dt) {
+        ev.sCd -= dt;
+        if (ev.sCd <= 0) {
+          ev.sCd = Math.max(1.1, 1.6 - (ev.loop || 0) * 0.12);
+          ev.sk++;
+          const spec = hell[specKey] || hell.p3 || hell.p2 || hell.p1;
+          if (spec) runFinHell(ev, spec);
+        }
+      },
+    });
+    return [
+      assault('FINAL ASSAULT I', 'p1'),
+      DPS,
+      assault('FINAL ASSAULT II', 'p2', 0.35),
+      DPS,
+      assault('FINAL CATACLYSM', 'p3'),
+      DPS,
+    ];
+  }
+
   window.extBossMoves = extBossMoves;
   window.extExecMove = extExecMove;
   window.extGimmickUpdate = extGimmickUpdate;
+  window.extFinFinalScript = extFinFinalScript;
 })();

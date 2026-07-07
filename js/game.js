@@ -33,7 +33,17 @@ const CHAL_BOSS_TIMES = [300, 600, 900, 1200];  // seconds: 5/10/15/20 min (stor
 // Every challenger world: middle boss cut, run shortened to 15 min — first boss, third boss, final boss.
 const CHAL_BOSS_TIMES_CHAL = [300, 600, 900];   // seconds: 5/10/15 min
 const CHAL_BOSS_MAP_CHAL = [0, 2, 3];           // milestone idx → curBosses index (skips index 1, the middle boss)
+const STORY_MILESTONE_SLOTS = 4;                // waves 5/10/15/20 always map to boss slots 0–3 (slot 3 = finale)
 function chalIsShort(){ return gameMode==='challenger'; }
+function bossMilestoneIdx(){
+  const slots = chalIsShort() ? CHAL_BOSS_TIMES_CHAL.length : STORY_MILESTONE_SLOTS;
+  return ((Math.floor(wave/5)-1) % slots + slots) % slots;
+}
+function bossIsFinal(milestoneIdx, def){
+  if(def && def.final===true) return true;
+  if(chalIsShort()) return milestoneIdx === CHAL_BOSS_TIMES_CHAL.length - 1;
+  return milestoneIdx === STORY_MILESTONE_SLOTS - 1;
+}
 function curChalBossTimes(){ return chalIsShort() ? CHAL_BOSS_TIMES_CHAL : CHAL_BOSS_TIMES; }
 
 // ===== PRACTICE MODE STATE =====
@@ -493,10 +503,10 @@ const FOES_GRASS = [
   { spr:'pinecroc',  name:'Crocodillo Ananasinno', hp:8, sp:66, r:19, xp:3, score:28, range:320, shoot:{type:'aim',n:3,cd:2.8,spd:150,col:'#e0b400'} },
 ];
 const BOSSES_GRASS = [
-  { spr:'tralalero', name:'TRALALERO TRALALA',        hp:150, r:54, pattern:'spiral' },
-  { spr:'crocodilo', name:'BOMBARDIRO CROCODILO',     hp:230, r:56, pattern:'rings'  },
-  { spr:'sahur',     name:'TING TING TING BAHUR',     hp:300, r:58, pattern:'chaos'  },
-  { spr:'vaca',      name:'LA VACA SATURNO',          hp:440, r:58, pattern:'rings'  },
+  { spr:'tralalero', name:'TRALALERO TRALALA',        hp:150, r:54, pattern:'spiral', phased:true },
+  { spr:'crocodilo', name:'BOMBARDIRO CROCODILO',     hp:230, r:56, pattern:'rings',  phased:true },
+  { spr:'sahur',     name:'TING TING TING BAHUR',     hp:300, r:58, pattern:'chaos',  phased:true },
+  { spr:'vaca',      name:'LA VACA SATURNO',          hp:440, r:58, pattern:'rings',  phased:true, final:true },
   { spr:'gorillo',   name:'GORILLO WATERMELLONDRILLO',hp:560, r:62, pattern:'chaos',  phased:true },
   { spr:'trippi',    name:'TRIPPI TROPPI',            hp:680, r:56, pattern:'spiral', phased:true },
 ];
@@ -548,7 +558,7 @@ const BOSSES_DIRT = [
   { spr:'saturnita', name:'LA VACA SATURNO SATURNITA',hp:370, r:58, pattern:'chaos',  phased:true },
   { spr:'tralalero', name:'TRALALERO TRALALA 2.0',    hp:470, r:56, pattern:'spiral', phased:true, moveKey:'tralala2', final:true },
   { spr:'orcalero', name:'ORCALERO ORCALA',           hp:690, r:58, pattern:'rings',  phased:true, moveKey:'croco2' },
-  { spr:'madudung',  name:'MADUDUNGDUNG',             hp:840, r:62, pattern:'chaos',  bars:2, hp2:580, duo:'garamaraman' },
+  { spr:'madudung',  name:'MADUDUNGDUNG',             hp:840, r:62, pattern:'chaos',  bars:2, hp2:580, duo:'garamaraman', phased:true, final:true },
 ];
 // Sky (world 8): wave 15 = Orcalero Orcala, wave 20 (final) = Madudungdung — the two bosses that
 // otherwise never spawn (every other world only reaches the first 4 entries of its boss list).
@@ -571,7 +581,7 @@ const BOSSES_W2 = [   // each uses its own original moveset (keyed on spr in bos
   { spr:'eccocavallo',  name:'ECCO CAVALLO VIRTUOSO',         hp:130, r:54, phased:true },
   { spr:'tigrwater',    name:'TIGRULLINI WATERMELLINI',       hp:200, r:55, phased:true },
   { spr:'avocadorilla', name:'AVOCADORILLA',                  hp:300, r:58, phased:true },
-  { spr:'tracotucotulu',name:'TRACOTUCOTULU DELAPELADUSTUZ',  hp:420, r:60, phased:true },
+  { spr:'tracotucotulu',name:'TRACOTUCOTULU DELAPELADUSTUZ',  hp:420, r:60, phased:true, final:true },
 ];
 // ---- World 3: FORESTA FRUTOSA ----
 const FOES_W3 = [
@@ -612,7 +622,7 @@ const BOSSES_W3 = [
   { spr:'subrosa',       name:'SUBROSA CAMBRIANA',           hp:140, r:52, phased:true },
   { spr:'bobritoboss',   name:'BOBRITTO BANDOLERO',          hp:200, r:54, phased:true },
   { spr:'frullone',      name:'FRULLONE VIBRASSONE',         hp:290, r:57, phased:true },
-  { spr:'cocofantoboss', name:'COCOFANTO MASTODONTE',        hp:420, r:62, phased:true },
+  { spr:'cocofantoboss', name:'COCOFANTO MASTODONTE',        hp:420, r:62, phased:true, final:true },
 ];
 // ============ WORLD 4 — GELATO GLACIER roster (frozen-dessert OG brainrots). band 2: gentle, a few light specials. ============
 const FOES_W4 = [
@@ -642,7 +652,7 @@ const BOSSES_W4 = [   // original frozen-dessert movesets (keyed on spr in bossM
   { spr:'tiramisubmarini', name:'TIRAMISUBMARINI',                 hp:135, r:54, phased:true },
   { spr:'frigocamello',    name:'FRIGO CAMELLO',                   hp:205, r:56, phased:true },
   { spr:'magotiramisu',    name:'IL MAGO TIRAMISÙ',                hp:300, r:56, phased:true },
-  { spr:'icebearlini',     name:'ICE ICE BEARLINI POLARI ORANGINI',hp:430, r:62, phased:true },
+  { spr:'icebearlini',     name:'ICE ICE BEARLINI POLARI ORANGINI',hp:430, r:62, phased:true, final:true },
 ];
 // ============ WORLD 5 — CIRCO BRAINROTTO roster (house-built carnival hybrids). band 3: tankier, first bounce/teleport gimmicks. ============
 const FOES_W5 = [
@@ -674,7 +684,7 @@ const BOSSES_W5 = [   // original carnival movesets; telegraphed melee/zone with
   { spr:'trapezino',     name:'TRAPEZINO VOLANTINO',  hp:150, r:54, phased:true },
   { spr:'giostra',       name:'GIOSTRA VORTICOSA',    hp:215, r:56, phased:true },
   { spr:'mangiafuoco',   name:'MANGIAFUOCO DRAGHINO', hp:310, r:56, phased:true },
-  { spr:'granpagliaccio',name:'IL GRAN PAGLIACCIO',   hp:450, r:62, phased:true },
+  { spr:'granpagliaccio',name:'IL GRAN PAGLIACCIO',   hp:450, r:62, phased:true, final:true },
 ];
 // ============ WORLD 6 — AUTUMN WOODS (band 4): unique autumn roster ============
 const FOES_W6 = [
@@ -707,7 +717,7 @@ const BOSSES_W6 = [
   { spr:'bonecaambalabu', name:'BONECA STREGONICA',          hp:220, r:54, pattern:'chaos',  phased:true },
   { spr:'kikkurimi',      name:'KIKKURIMI SELVATICO',        hp:340, r:56, pattern:'rings',  phased:true },
   { spr:'girafassassina', name:'GIRAFASSASSINA AUTUNNALE',   hp:520, r:60, pattern:'chaos',  phased:true },
-  { spr:'bobritto',       name:'BOBRITTO FOGLIAME',          hp:780, r:58, pattern:'chaos',  phased:true },
+  { spr:'bobritto',       name:'BOBRITTO FOGLIAME',          hp:780, r:58, pattern:'chaos',  phased:true, final:true },
 ];
 // ============ WORLD 8 — SKYLAND (band 6): cloud flyers + swarm wasps ============
 const FOES_W8 = [
@@ -1948,12 +1958,6 @@ const BOSS_ARMOR_BY_KEY = {
   tatasahur:0.11, hotspot:0.12, saturnita:0.13, tralala2:0.14, croco2:0.13, orcalero:0.12,
   flank:0.15, w1shoe:0.10, w1bomb:0.13, w1drum:0.09,
 };
-const BOSS_P3_HIT_CAP_BY_GIMMICK = {
-  w1bomb:0.08, w1drum:0.09, w1shoe:0.10, storm:0.08, spiral:0.10, chaos:0.09,
-  flank:0.11, ext_fin_storm:0.07, ext_fin_hive:0.07, ext_fin_clock:0.08, ext_fin_frost:0.09,
-  ext_fin_ember:0.10, ext_fin_gravity:0.08, ext_fin_quantum:0.09, ext_fin_toxic:0.09,
-  ext_fin_bone:0.08, ext_fin_void:0.08,
-};
 
 function bossMilestoneHpMul(bossIdx){
   if(rushIsActive() || gameMode==='practice') return 1;
@@ -1983,12 +1987,7 @@ function bossBaseDR(def, bossIdx){
 }
 
 function bossP3HitCapPct(e){
-  const gimm = e.gimmick || '';
-  if(BOSS_P3_HIT_CAP_BY_GIMMICK[gimm]) return BOSS_P3_HIT_CAP_BY_GIMMICK[gimm];
-  if(gimm.startsWith('ext_fin')) return 0.08;
-  const mk = e.mk || e.spr || '';
-  if(mk.includes('storm') || mk.includes('bomb')) return 0.08;
-  return Math.min(0.12, Math.max(0.08, e.bossDRBase ?? 0.10));
+  return 0.05;
 }
 
 function bossP3ExtraDR(e){
@@ -2003,6 +2002,7 @@ function applyBossPhase3Armor(e){
   lead._p3Armor = true;
   if(lead.finalPhase){
     lead.bossHitCapPct = bossP3HitCapPct(lead);
+    lead.bossDR = Math.min(0.24, (lead.bossDRBase ?? lead.bossDR ?? 0.11) + bossP3ExtraDR(lead));
   } else {
     const extra = bossP3ExtraDR(lead);
     lead.bossDR = Math.min(0.28, (lead.bossDRBase ?? lead.bossDR ?? 0.11) + extra);
@@ -2011,10 +2011,18 @@ function applyBossPhase3Armor(e){
 
 function applyBossHitArmor(lead, dmg){
   if(!lead || !lead.isBoss) return dmg;
-  if(lead.finalPhase && lead.vph >= 3 && lead.bossHitCapPct > 0){
-    const cap = lead.maxHp * lead.bossHitCapPct;
-    if(dmg > cap) return cap;
+  if(lead.finalPhase && lead.vph >= 3){
+    const barHp = lead.ph3at > 0 ? lead.ph3at : lead.maxHp;
+    const cap = barHp * (lead.bossHitCapPct || 0.05);
+    if(dmg > cap) dmg = cap;
+    if(lead.charging > 0) return 0;
+    if(lead.script && lead.scriptVulnMul != null && lead.scriptVulnMul <= 0) return 0;
+    const dr = lead.bossDR || 0;
+    if(dr > 0) return dmg * (1 - dr);
     return dmg;
+  }
+  if(lead.finalPhase && lead.vph < 3 && lead.mst && lead.mst !== 'recover'){
+    dmg *= 0.84;
   }
   const dr = lead.bossDR || 0;
   if(dr > 0) return dmg * (1 - dr);
@@ -2027,7 +2035,7 @@ function assignBossTuning(boss, def, bossIdx){
 }
 
 function chaosInvaderHp(){
-  const milestoneIdx = ((Math.floor(wave/5)-1) % curBosses.length + curBosses.length) % curBosses.length;
+  const milestoneIdx = bossMilestoneIdx();
   const localDef = curBosses[milestoneIdx] || curBosses[0];
   const bossGearHp = (typeof gearBossHpMul==='function' ? gearBossHpMul(worldIdx) : 1);
   const bandMul = 1 + (worldHpBand() - 1) * 0.32;
@@ -2053,12 +2061,12 @@ function spawnBoss(){
     const rushNum = rushBossIdx + 1;
     $('wavetag').textContent = 'BOSS ' + rushNum + (isMilestone ? ' · FINAL' : '');
   } else {
-    const milestoneIdx = ((Math.floor(wave/5)-1) % curBosses.length + curBosses.length) % curBosses.length;
+    const milestoneIdx = bossMilestoneIdx();
     bossIdx = chalIsShort() ? (CHAL_BOSS_MAP_CHAL[milestoneIdx] ?? milestoneIdx) : milestoneIdx;
     def = gameMode==='practice'
       ? curBosses[Math.floor(Math.random()*curBosses.length)]
       : curBosses[bossIdx];
-    isFinal = bossIdx === curBosses.length-1 || def.final===true;
+    isFinal = bossIsFinal(milestoneIdx, def);
   }
   const p = arena ? { x:arena.x+arena.w/2, y:arena.y+arena.h*0.28 } : ringPos();
   let bar1, bar2, baseTotal, p3pool, total;
@@ -2087,7 +2095,7 @@ function spawnBoss(){
   }
   boss = {
     spr:def.spr, name:def.name, pattern:def.pattern, mk:def.moveKey||def.spr,
-    phased:def.phased, bars:isFinal?1:(def.bars||1), bar1, bar2,
+    phased:def.phased!==false, bars:isFinal?1:(def.bars||1), bar1, bar2,
     finalPhase:isFinal, ph2at:isFinal?(p3pool+baseTotal*0.5):0, ph3at:isFinal?p3pool:0, charging:0,
     gimmick:GIMMICK[def.moveKey||def.spr]||null, gT:1.5, gT2:2.5, gA:0,
     x:p.x, y:p.y, r:def.r,
@@ -2181,7 +2189,7 @@ function _chaosBossCrash(){
   const others=WORLDS.filter(w=>w.bosses&&w.bosses.length>0&&w!==curWorld());
   if(!others.length) return;
   const def=pick(pick(others).bosses.slice(0,-1)||pick(others).bosses);
-  const milestoneIdx = ((Math.floor(wave/5)-1) % curBosses.length + curBosses.length) % curBosses.length;
+  const milestoneIdx = bossMilestoneIdx();
   const localDef = curBosses[milestoneIdx] || curBosses[0];
   const hp = chaosInvaderHp();
   const p=ringPos();
@@ -4903,7 +4911,9 @@ function startFinalCharge(e){
   e.mst='recover'; e.mt=FINAL_CHARGE;
   ebullets=[];
   bigText('FINAL PHASE!','#ff5acd'); shake=Math.max(shake,14); sfx.boss();
-  const scr=e.mk==='madudung' ? madudungFinalScript() : FINAL_SCRIPT[e.mk];
+  const scr=e.mk==='madudung' ? madudungFinalScript()
+    : (FINAL_SCRIPT[e.mk]
+      || (e.mk && e.mk.startsWith('extfin') && typeof extFinFinalScript==='function' ? extFinFinalScript(e) : null));
   if(scr){ e.script=scr; e.si=0; e.sNew=true; e.sT=scr[0].dur; e.loop=0; e.scriptPause=false; }
   expandFinalArena(e);
   if(e.mate){ const m=e.mate; m.charging=FINAL_CHARGE; m.iv=FINAL_CHARGE+0.3;
@@ -5194,11 +5204,15 @@ function updateBoss(e,dt){
       else { e.vph=ph; bigText('PHASE '+ph+'!','#d2a0ff'); shake=Math.max(shake,12); e.iv=0.6; ebullets=[]; sfx.boss(); if(e.mate) e.mate.iv=0.6;
         if(!rushIsActive()) spawnBossLucky(1); }   // final bosses: a lucky block at the start of phase 2
     }
-  } else if(e.bars===2 || e.phased || e.spr==='vaca'){
+  } else if(e.isBoss){
     let ph;
-    if(e.bars===2){ ph = e.hp > e.bar2 + e.bar1*0.5 ? 1 : e.hp > e.bar2 ? 2 : 3; }
-    else { const frac=e.hp/e.maxHp; ph = frac<0.33?3 : frac<0.66?2 : 1; }
-    if(ph>e.vph){ e.vph=ph; bigText(e.bars===2 && ph===3 ? 'FINAL PHASE!' : 'PHASE '+ph+'!','#d2a0ff');
+    if(e.bars===2 && !e.finalPhase){
+      ph = e.hp > e.bar2 + e.bar1*0.5 ? 1 : e.hp > e.bar2 ? 2 : 3;
+    } else {
+      const frac=e.hp/e.maxHp;
+      ph = frac<0.33?3 : frac<0.66?2 : 1;
+    }
+    if(ph>e.vph){ e.vph=ph; bigText(e.bars===2 && ph===3 && !e.finalPhase ? 'FINAL PHASE!' : 'PHASE '+ph+'!','#d2a0ff');
       shake=Math.max(shake,12); e.iv=0.6; ebullets=[]; sfx.boss(); if(e.mate) e.mate.iv=0.6;
       if(ph===3) applyBossPhase3Armor(e); }
   }
@@ -5329,7 +5343,9 @@ function updateBoss(e,dt){
   } else {
   e.mt -= dt;
   if(e.mt<=0 && !(e.stun>0)){
-    if(e.mst==='recover'){ e.mst='wind'; e.mt=BOSS_WIND; e.mv=pickMove(e); e.tellCol=MOVE_COL[e.mv]||'#fff'; sfx.warn(); }
+    if(e.mst==='recover'){ e.mst='wind'; e.mt=BOSS_WIND; e.mv=pickMove(e); e.tellCol=MOVE_COL[e.mv]||'#fff';
+      if(e.finalPhase && e.vph>=3) e.iv=Math.max(e.iv, BOSS_WIND+0.2);
+      sfx.warn(); }
     else if(e.mst==='wind'){ e.mst='fire'; e.mt=execMove(e); }
     else { let rec=(e.spr==='vaca'&&e.vph>=3?0.7:1.1);
       if(w1EarlyBossHell(e)) rec=0.6;

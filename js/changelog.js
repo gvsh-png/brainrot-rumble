@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '2.09';
+const CURRENT_VERSION = '2.10';
 const CHANGELOG = [
+  { v: '2.10', notes: 'Boss phase overhaul: every boss now has 3 phases (PHASE 1/2/3 banners). Wave-20 finals always get the separate magenta phase-3 health bar + charge-up — fixed for World 1 and any roster with extra entries. Milestone bosses (waves 5/10/15) keep a single bar. Final phase-3 armor caps any single hit to 5% of the phase-3 bar, adds damage reduction, invulnerability during attack wind-ups/scripted assaults, and staged finales for extended-world bosses (W12–50).' },
   { v: '2.09', notes: 'Removed redundant settings clutter — cloud-save explainer text and extra Close button. ✕, tap-outside, and back still close settings.' },
   { v: '2.07', notes: 'Combat tutorial fix: card/dash guides no longer clip off-screen (reset positioning styles between steps). Dash tutorial dismisses on tap (touchstart/mousedown, not just click). Level-up guide blurs the background and sits at the bottom; skill cards stay visible above the overlay.' },
   { v: '2.06', notes: 'Playtest fixes: Android back button pauses during combat, Boss Rush revive now asks before spending tokens/gems, cloud save syncs achievements/Swarm Rank/daily bounties/rush stats, Achievements screen in Settings, in-run combat tutorials (move, dash, level-up, lucky blocks, bosses), Practice opens customize directly with validation messages, shop gem errors use toasts instead of alerts, privacy policy page added.' },
