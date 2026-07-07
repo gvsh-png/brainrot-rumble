@@ -20,7 +20,25 @@ let gemBalance = (()=>{
 function saveGems() { localStorage.setItem('br_gems',gemBalance); localStorage.setItem('br_gems_sig',_gemHash(gemBalance)); if(window.markDirty) window.markDirty(); }
 function addGems(n) { gemBalance+=Math.floor(n); saveGems(); refreshGemsUI(); }
 function spendGems(n) { if(gemBalance<n) return false; gemBalance-=n; saveGems(); refreshGemsUI(); return true; }
-function refreshGemsUI() { const t=document.getElementById('gemtxt'); if(t) t.textContent=gemBalance; }
+function refreshGemsUI() {
+  const t=document.getElementById('gemtxt');
+  if(!t) return;
+  const prev=+(t.dataset.prev||t.textContent||0);
+  t.textContent=gemBalance;
+  t.dataset.prev=gemBalance;
+  if(prev!==gemBalance && typeof uiPulse==='function') uiPulse(t.closest('.respill')||t);
+}
+function showRecruitToast(msg, col){
+  let el = document.getElementById('shop-toast');
+  if(!el) return;
+  el.textContent = msg;
+  el.style.borderColor = col || '#e54d4d';
+  el.classList.remove('hidden', 'ach-pop');
+  void el.offsetWidth;
+  el.classList.add('ach-pop');
+  clearTimeout(el._shopT);
+  el._shopT = setTimeout(()=>{ el.classList.add('hidden'); }, 2600);
+}
 
 // ---- Gem icon (cached data-URL) ----
 let _gemIconURL='';
@@ -99,7 +117,7 @@ function getCharDailyShop() {
   const rng=mulberry32(hashStr(String(seed)));
   const shuffled=pool.slice();
   for(let i=shuffled.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]]; }
-  return shuffled.slice(0,3);
+  return shuffled.slice(0,5);
 }
 function getCharWeeklyShop() {
   const seed=weeklyCharSeed();
@@ -116,30 +134,41 @@ let charShopDailyIdx=0;
 function buyCharacter(id) {
   const char=CHARACTERS.find(c=>c.id===id); if(!char) return;
   const price=charGemPrice(char);
-  if(isCharOwned(id)){ alert('Already owned'); return; }
-  if(!spendGems(price)){ alert('Not enough gems!'); return; }
+  if(isCharOwned(id)){ showRecruitToast('Already owned', '#b0b8c8'); return; }
+  if(!spendGems(price)){ showRecruitToast('Not enough gems!', '#e54d4d'); return; }
   grantChar(id);
   if(typeof renderShop==='function') renderShop();
   if(typeof sfx!=='undefined') sfx.evolve();
 }
 
 // ---- Pet Recruit ----
-const PET_WEIGHTS={ common:55, rare:35, epic:9, legendary:1 };
+const PET_WEIGHTS={ common:48, uncommon:12, rare:30, epic:8, legendary:2 };
+const PET_RARITY_ORDER=['common','uncommon','rare','epic','legendary'];
 const PET_PULL_COST=5;
+function petStoryProgress(){
+  if(typeof unlockedMax==='number') return unlockedMax;
+  return +(localStorage.getItem('br_unlocked')||0);
+}
+function petInStorage(id){
+  return JSON.parse(localStorage.getItem('br_owned_pets')||'[]').includes(id);
+}
+function petRecruitPool(rarity){
+  const prog=petStoryProgress();
+  return PETS.filter(p=>p.rarity===rarity&&!petInStorage(p.id)&&(p.worldUnlock==null||p.worldUnlock<=prog));
+}
 function weightedRarityRoll(weights) {
   let total=0; for(const k in weights) total+=weights[k];
   let r=Math.random()*total;
-  for(const k of ['common','rare','epic','legendary']){ r-=(weights[k]||0); if(r<=0) return k; }
+  for(const k of PET_RARITY_ORDER){ r-=(weights[k]||0); if(r<=0) return k; }
   return 'common';
 }
 function dailyFeaturedPet() {
   const rng=mulberry32(hashStr('petbanner'+dailyCharSeed()));
   return PETS[Math.floor(rng()*PETS.length)];
 }
-function recruitPet() {
-  if(!spendGems(PET_PULL_COST)) return null;
+function rollPetRecruit(){
   const rarity=weightedRarityRoll(PET_WEIGHTS);
-  const pool=PETS.filter(p=>p.rarity===rarity&&!isPetOwned(p.id)&&p.worldUnlock==null);
+  const pool=petRecruitPool(rarity);
   if(!pool.length){
     const anyPool=PETS.filter(p=>p.rarity===rarity);
     const picked=anyPool[Math.floor(Math.random()*anyPool.length)];
@@ -149,6 +178,21 @@ function recruitPet() {
   const picked=pool[Math.floor(Math.random()*pool.length)];
   grantPet(picked.id);
   return { pet:picked, duplicate:false };
+}
+function recruitPet() {
+  if(typeof petRecruitUnlocked==='function' && !petRecruitUnlocked()) return null;
+  if(!spendGems(PET_PULL_COST)) return null;
+  return rollPetRecruit();
+}
+function recruitPetTriple(){
+  if(typeof petRecruitUnlocked==='function' && !petRecruitUnlocked()) return false;
+  if(!spendGems(12)) return false;
+  const results=[];
+  for(let i=0;i<3;i++) results.push(rollPetRecruit());
+  if(typeof renderShop==='function') renderShop();
+  if(typeof sfx!=='undefined') sfx.evolve();
+  if(results.length) _showPullResult(results[results.length-1]);
+  return results;
 }
 
 // ---- Shop section renderers ----
@@ -221,22 +265,160 @@ function renderShopCharSection() {
   return html;
 }
 
+// ---- Gem Boutique (extra gem sinks) ----
+const GEM_CRATES = {
+  crystal: { name: 'Crystal Cache', cost: 8,  floor: 'rare',      glow: '#7fe7ff' },
+  crown:   { name: 'Crown Vault',   cost: 20, floor: 'epic',      glow: '#d2a0ff' },
+  mythic:  { name: 'Mythic Seal',   cost: 50, floor: 'legendary', glow: '#ffd24a' },
+};
+const GEM_GOLD_BUNDLES = [
+  { gems: 3,  gold: 900,  label: 'Gold Pouch' },
+  { gems: 10, gold: 3800, label: 'Treasure Chest' },
+  { gems: 25, gold: 12000, label: 'Royal Hoard' },
+];
+const RUSH_GEM_ITEMS = [
+  { id: 'revive', cost: 8, name: 'Rush Revive Token', desc: 'Auto-revive once in Boss Rush (uses token before gems)' },
+  { id: 'bandage', cost: 5, name: 'Rush Bandage', desc: '+40 max HP at the start of your next Boss Rush' },
+];
+
+function buyRushGemItem(id){
+  const item = RUSH_GEM_ITEMS.find(x => x.id === id);
+  if(!item || !spendGems(item.cost)) return false;
+  if(id === 'revive'){
+    const n = Math.max(0, +(localStorage.getItem('br_rush_revive_token')||0));
+    localStorage.setItem('br_rush_revive_token', String(n + 1));
+  } else if(id === 'bandage'){
+    const n = Math.max(0, +(localStorage.getItem('br_rush_bandage')||0));
+    localStorage.setItem('br_rush_bandage', String(n + 1));
+  }
+  if(window.markDirty) window.markDirty();
+  if(typeof sfx!=='undefined') sfx.evolve();
+  if(typeof renderShop==='function') renderShop();
+  return true;
+}
+
+function rollGemCrateItem(floorRar){
+  const start = (typeof RAR_ORDER!=='undefined' ? RAR_ORDER.indexOf(floorRar) : 2);
+  const roll = Math.random();
+  let pick = floorRar;
+  if(roll < 0.62) pick = (typeof RAR_ORDER!=='undefined' ? RAR_ORDER[Math.max(0, start)] : floorRar);
+  else if(roll < 0.88 && typeof RAR_ORDER!=='undefined' && start < RAR_ORDER.length-1) pick = RAR_ORDER[start+1];
+  else if(typeof RAR_ORDER!=='undefined') pick = RAR_ORDER[Math.min(start+2, RAR_ORDER.length-1)];
+  const pool = (typeof catalogByRarity==='function' ? catalogByRarity(pick) : []);
+  if(!pool.length) return null;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
+function openGemCrate(key){
+  const cr = GEM_CRATES[key]; if(!cr) return null;
+  if(!spendGems(cr.cost)){ showRecruitToast('Not enough gems!', '#e54d4d'); return null; }
+  const won = rollGemCrateItem(cr.floor);
+  if(!won){ addGems(cr.cost); return null; }
+  const dup = (typeof hasItemId==='function' && hasItemId(won));
+  if(dup){
+    if(typeof sellValue==='function' && typeof gold!=='undefined'){
+      gold += sellValue(won); if(typeof saveGold==='function') saveGold();
+      if(typeof refreshGoldUI==='function') refreshGoldUI();
+    }
+  } else if(typeof addGearInstance==='function') addGearInstance(won);
+  if(typeof sfx!=='undefined') sfx.evolve();
+  if(typeof bigText==='function') bigText(dup ? 'DUPLICATE — SOLD' : 'NEW GEAR!', dup ? '#e0a92e' : '#9fe0ff');
+  if(typeof renderShop==='function') renderShop();
+  if(typeof renderInventory==='function') renderInventory();
+  return won;
+}
+
+function buyGoldBundle(gems, goldAmt){
+  if(!spendGems(gems)){ showRecruitToast('Not enough gems!', '#e54d4d'); return false; }
+  if(typeof gold!=='undefined'){
+    gold += goldAmt;
+    if(typeof saveGold==='function') saveGold();
+    if(typeof refreshGoldUI==='function') refreshGoldUI();
+  }
+  if(typeof sfx!=='undefined') sfx.coin();
+  if(typeof renderShop==='function') renderShop();
+  return true;
+}
+
+function renderGemBoutiqueSection(){
+  const gem='<span class="gemico-sm">◆</span>';
+  let html='<div class="shopsec">';
+  html+='<div class="banner"><span>GEM BOUTIQUE</span></div>';
+  html+='<div class="shopsub">Spend gems on gear crates, gold, and bulk pet recruits</div>';
+  html+='<div class="secttl">Gem Gear Crates</div><div class="crates">';
+  for(const key of Object.keys(GEM_CRATES)){
+    const cr=GEM_CRATES[key];
+    const poor=gemBalance<cr.cost;
+    html+='<div class="crate c-'+key+'" style="--glow:'+cr.glow+'">'+
+      '<div class="cratebox"><img src="'+gemIconURL()+'" alt=""></div>'+
+      '<div class="cratename">'+cr.name+'</div>'+
+      '<button class="sbuy gemcrate-buy'+(poor?' poor':'')+'" data-gemcrate="'+key+'">'+gem+cr.cost+'</button></div>';
+  }
+  html+='</div>';
+  html+='<div class="secttl">Gold Exchange</div><div class="ggrid">';
+  for(const b of GEM_GOLD_BUNDLES){
+    const poor=gemBalance<b.gems;
+    html+='<div class="scard r-rare" style="min-height:auto;padding:12px">'+
+      '<div class="sname">'+b.label+'</div>'+
+      '<div class="sbonus">+'+b.gold.toLocaleString()+' gold</div>'+
+      '<div class="sfoot"><button class="sbuy gemgold-buy'+(poor?' poor':'')+'" data-gemgold="'+b.gems+'" data-goldamt="'+b.gold+'">'+gem+b.gems+'</button></div></div>';
+  }
+  html+='</div>';
+  const triplePoor=gemBalance<12;
+  html+='<div class="secttl">Boss Rush Supplies</div><div class="ggrid">';
+  for(const item of RUSH_GEM_ITEMS){
+    const owned = item.id==='revive'
+      ? Math.max(0, +(localStorage.getItem('br_rush_revive_token')||0))
+      : Math.max(0, +(localStorage.getItem('br_rush_bandage')||0));
+    const poor=gemBalance<item.cost;
+    html+='<div class="scard r-epic" style="min-height:auto;padding:12px">'+
+      '<div class="sname">'+item.name+'</div>'+
+      '<div class="sbonus">'+item.desc+(owned?(' · owned ×'+owned):'')+'</div>'+
+      '<div class="sfoot"><button class="sbuy rushgem-buy'+(poor?' poor':'')+'" data-rushgem="'+item.id+'">'+gem+item.cost+'</button></div></div>';
+  }
+  html+='</div>';
+  html+='<div class="secttl">Pet Bundles</div>';
+  const recruitLocked=typeof petRecruitUnlocked==='function' && !petRecruitUnlocked();
+  if(recruitLocked){
+    html+='<div class="petrecruit-locked" style="max-width:360px">';
+    html+='<span class="lock-ico">🔒</span>';
+    html+='<span class="lock-txt">Triple Recruit unlocks at World 2</span>';
+    html+='</div>';
+  } else {
+    html+='<div class="scard r-epic" style="min-height:auto;padding:12px;max-width:360px">'+
+      '<div class="sname">Triple Recruit</div>'+
+      '<div class="sbonus">3 random pets · save 3 ◆ vs singles</div>'+
+      '<div class="sfoot"><button class="sbuy pettriple-buy'+(triplePoor?' poor':'')+'" id="pettriplebtn">'+gem+'12 — 3× RECRUIT</button></div></div>';
+  }
+  html+='</div>';
+  return html;
+}
+
 function renderPetRecruitSection() {
-  const poor=gemBalance<PET_PULL_COST;
   const gem='<span class="gemico-sm">◆</span>';
   const featured=dailyFeaturedPet();
+  const locked=typeof petRecruitUnlocked==='function' && !petRecruitUnlocked();
 
   let html='<div class="shopsec">';
   html+='<div class="banner"><span>PET RECRUIT</span></div>';
-  html+='<div class="petgacha">';
-  html+='<div class="petgacha-port pettile" data-petid="'+featured.id+'"><canvas class="pettile-canvas" width="140" height="140"></canvas></div>';
-  html+='<div class="petgacha-right">';
-  html+='<div class="petgacha-title">GET RANDOM PET</div>';
-  html+='<button class="pullbtn'+(poor?' poor':'')+'" id="petpullbtn">'+gem+PET_PULL_COST+' — RECRUIT PET</button>';
-  html+='</div>';
-  html+='</div>';
+  if(locked){
+    html+='<div class="petrecruit-locked" id="petrecruit-locked">';
+    html+='<span class="lock-ico">🔒</span>';
+    html+='<span class="lock-txt">Beat World 2 to recruit pets</span>';
+    html+='<span class="lock-sub">Clear Story World 2, then spend gems for a random companion.</span>';
+    html+='</div>';
+  } else {
+    const poor=gemBalance<PET_PULL_COST;
+    html+='<div class="petgacha">';
+    html+='<div class="petgacha-port pettile" data-petid="'+featured.id+'"><canvas class="pettile-canvas" width="140" height="140"></canvas></div>';
+    html+='<div class="petgacha-right">';
+    html+='<div class="petgacha-title">GET RANDOM PET</div>';
+    html+='<button class="pullbtn'+(poor?' poor':'')+'" id="petpullbtn">'+gem+PET_PULL_COST+' — RECRUIT PET</button>';
+    html+='</div>';
+    html+='</div>';
+  }
   html+='<div class="invhint" style="margin-top:4px">Manage pets in the Equipment tab</div>';
-  html+='</div>'; // shopsec
+  html+='</div>';
   return html;
 }
 
@@ -385,6 +567,18 @@ function initRecruitUI(container) {
       _showPullResult(result);
     });
   }
+
+  container.querySelectorAll('.gemcrate-buy[data-gemcrate]').forEach(btn=>{
+    btn.addEventListener('click',()=>openGemCrate(btn.dataset.gemcrate));
+  });
+  container.querySelectorAll('.gemgold-buy[data-gemgold]').forEach(btn=>{
+    btn.addEventListener('click',()=>buyGoldBundle(+btn.dataset.gemgold, +btn.dataset.goldamt));
+  });
+  container.querySelectorAll('.rushgem-buy[data-rushgem]').forEach(btn=>{
+    btn.addEventListener('click',()=>buyRushGemItem(btn.dataset.rushgem));
+  });
+  const tripleBtn=container.querySelector('.pettriple-buy, #pettriplebtn');
+  if(tripleBtn) tripleBtn.addEventListener('click',()=>recruitPetTriple());
 
   // Wire pet tiles in recruit section
   container.querySelectorAll('.pettile[data-petid]').forEach(tile=>{

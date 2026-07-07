@@ -42,11 +42,12 @@ function loadGame() {
     for (const name of [
       'save', 'restore', 'translate', 'scale', 'rotate', 'beginPath', 'closePath',
       'fill', 'stroke', 'fillRect', 'strokeRect', 'clearRect', 'drawImage',
-      'arc', 'ellipse', 'rect', 'roundRect', 'moveTo', 'lineTo',
+      'arc', 'arcTo', 'ellipse', 'rect', 'roundRect', 'moveTo', 'lineTo',
       'quadraticCurveTo', 'bezierCurveTo', 'setTransform', 'setLineDash',
       'strokeText', 'fillText', 'clip',
     ]) ctx[name] = () => inc(name);
     ctx.createRadialGradient = () => ({ addColorStop() {} });
+    ctx.createLinearGradient = () => ({ addColorStop() {} });
     ctx.measureText = () => ({ width: 10 });
     return ctx;
   }
@@ -54,6 +55,7 @@ function loadGame() {
   const nodes = new Map();
   const document = {
     body: { style: {}, classList: { add() {}, remove() {}, toggle() {} } },
+    querySelector() { return null; },
     createElement(tag) {
       if (tag === 'canvas' || tag === 'img') {
         return Object.assign(makeNode(), {
@@ -127,6 +129,7 @@ function loadGame() {
     'js/core.js',
     'js/audio.js',
     'js/sprites.js',
+    'js/world-icons.js',
     'js/input.js',
     'js/game.js',
   ]) vm.runInContext(fs.readFileSync(file, 'utf8'), sandbox, { filename: file });

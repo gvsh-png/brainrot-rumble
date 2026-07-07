@@ -1,5 +1,5 @@
 'use strict';
-// Android shell hooks — status bar, back button, immersive play. No-op on web.
+// Android shell hooks — immersive fullscreen, back button, wake lock. No-op on web.
 
 (function initNativeShell(){
   if(!window.Capacitor || window.Capacitor.getPlatform() !== 'android') return;
@@ -17,29 +17,43 @@
     if(!SplashScreen || !SplashScreen.hide) return;
     const hide = () => SplashScreen.hide().catch(()=>{});
     if(document.readyState === 'complete') setTimeout(hide, 400);
-    else window.addEventListener('load', ()=> setTimeout(hide, 400), { once:true });
+    else window.addEventListener('load', () => setTimeout(hide, 400), { once:true });
   }
 
-  async function setupStatusBar(){
+  async function setupImmersive(){
     if(!StatusBar) return;
     try {
-      if(StatusBar.setOverlaysWebView) await StatusBar.setOverlaysWebView({ overlay:true });
-      if(StatusBar.setStyle) await StatusBar.setStyle({ style:'DARK' });
-      if(StatusBar.setBackgroundColor) await StatusBar.setBackgroundColor({ color:'#6ba83a' });
+      if(StatusBar.setOverlaysWebView) await StatusBar.setOverlaysWebView({ overlay: true });
+      if(StatusBar.hide) await StatusBar.hide();
+      else if(StatusBar.setBackgroundColor) await StatusBar.setBackgroundColor({ color: '#00000000' });
     } catch(e){}
   }
 
   if(Keyboard && Keyboard.setResizeMode){
-    Keyboard.setResizeMode({ mode:'none' }).catch(()=>{});
+    Keyboard.setResizeMode({ mode: 'none' }).catch(()=>{});
   }
 
-  setupStatusBar();
+  setupImmersive();
   hideSplashSoon();
 
   if(App && App.addListener){
+    App.addListener('appStateChange', ({ isActive }) => {
+      if(isActive) setupImmersive();
+      else if(typeof saveSuspendedRun === 'function' && typeof canSuspendRun === 'function' && canSuspendRun()){
+        saveSuspendedRun();
+      }
+    });
+
+    App.addListener('pause', () => {
+      if(typeof saveSuspendedRun === 'function' && typeof canSuspendRun === 'function' && canSuspendRun()){
+        saveSuspendedRun();
+      }
+    });
+
     App.addListener('backButton', ({ canGoBack })=>{
       const login = document.getElementById('login');
-      const inGame = typeof state !== 'undefined' && state === 'play';
+      const inGame = typeof state !== 'undefined' && typeof ST !== 'undefined' &&
+        (state === ST.PLAY || state === ST.LEVELUP);
       const paused = document.getElementById('pause') && !document.getElementById('pause').classList.contains('hidden');
       const settings = document.getElementById('settingsdrop') && !document.getElementById('settingsdrop').classList.contains('hidden');
 
@@ -66,14 +80,18 @@
     });
   }
 
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'visible') setupImmersive();
+  });
+
   // Keep screen awake during play (Screen Wake Lock API; falls back silently).
   let wakeLock = null;
   async function syncWakeLock(){
-    const playing = typeof state !== 'undefined' && state === 'play';
+    const playing = typeof state !== 'undefined' && typeof ST !== 'undefined' && state === ST.PLAY;
     try {
       if(playing && navigator.wakeLock && !wakeLock){
         wakeLock = await navigator.wakeLock.request('screen');
-        wakeLock.addEventListener('release', ()=>{ wakeLock = null; });
+        wakeLock.addEventListener('release', () => { wakeLock = null; });
       } else if(!playing && wakeLock){
         await wakeLock.release();
         wakeLock = null;
@@ -82,7 +100,4 @@
   }
 
   setInterval(syncWakeLock, 1500);
-  document.addEventListener('visibilitychange', ()=>{
-    if(document.visibilityState === 'visible') syncWakeLock();
-  });
 })();
