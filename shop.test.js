@@ -260,6 +260,15 @@ test('gear dmg/hp stay flat; regen/vamp use % from world 11', () => {
   assert.ok(geared.gearBossHpMul(10) < 0.25);
 });
 
+test('shop tier uses max unlocked world not selected battle world', () => {
+  const { sandbox } = loadShop({ br_gear_reset_v4: '1', br_unlocked: '3' });
+  sandbox.unlockedMax = 12;
+  sandbox.selWorld = 0;
+  assert.equal(sandbox.shopWorldIdx(), 12);
+  assert.equal(sandbox.primaryShopRarity(sandbox.shopWorldIdx()), sandbox.primaryShopRarity(12));
+  assert.notEqual(sandbox.primaryShopRarity(sandbox.shopWorldIdx()), sandbox.primaryShopRarity(0));
+});
+
 test('catalog includes new stat types and eight gear slots', () => {
   const { sandbox } = loadShop({ br_gear_reset_v4: '1' });
   const a = sandbox.addGearInstance('rate_epic_0');

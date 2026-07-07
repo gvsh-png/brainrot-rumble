@@ -312,6 +312,8 @@
 
   load();
 
+  function isActive() { return !!active; }
+
   window.CombatTutorials = {
     onRunStart,
     onDamaged,
@@ -320,6 +322,7 @@
     onBossIncoming,
     resetRun,
     finishStep,
+    isActive,
     has,
     mark,
   };

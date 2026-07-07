@@ -6384,7 +6384,8 @@ function loop(t){
   tPrev = t;
   if(_groundBuild) tickBuildGround(7);
   if(hitstop>0){ hitstop-=dt; dt=0; }
-  if(state===ST.PLAY){
+  const tutPause = typeof CombatTutorials!=='undefined' && CombatTutorials.isActive && CombatTutorials.isActive();
+  if(state===ST.PLAY && !tutPause){
     update(dt*timeScale);
   } else if(state===ST.MENU) menuUpdate(dt);
   else if(state===ST.CUTSCENE) cutsceneUpdate(dt);

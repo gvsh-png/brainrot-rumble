@@ -84,7 +84,11 @@ function itemStat(id){ return id.split('_')[0]; }
 function itemRar(id){  return id.split('_')[1]; }
 function itemVar(id){  return +id.split('_')[2]; }
 function itemCat(id){  return GEAR_CATS[itemVar(id) % GEAR_CATS.length]; }
-function shopWorldIdx(){ return typeof selWorld!=='undefined' ? selWorld : 0; }
+function progressWorldIdx(){
+  if(typeof unlockedMax==='number') return Math.max(0, unlockedMax|0);
+  try{ return Math.max(0, +(localStorage.getItem('br_unlocked')||0)); }catch(e){ return 0; }
+}
+function shopWorldIdx(){ return progressWorldIdx(); }
 // W11+: gear regen/vamp use % of max HP (dmg/hp gear stay flat everywhere).
 function gearStatUsesPercent(stat, wi){
   if(wi == null) wi = (typeof worldIdx === 'number' ? worldIdx : shopWorldIdx());
@@ -367,11 +371,11 @@ function shopRaritiesForWorld(worldIdx){
 }
 function dailyShopCount(worldIdx){ return Math.min(10, 6 + Math.floor(worldTierIdx(worldIdx)/8)); }
 function dailyShopRerollCount(worldIdx){
-  const w = typeof worldIdx==='number' ? worldIdx : (typeof selWorld!=='undefined' ? selWorld : 0);
+  const w = typeof worldIdx==='number' ? worldIdx : shopWorldIdx();
   try{ return Math.max(0, +(localStorage.getItem('br_shop_reroll_'+dayKey()+'_w'+w)||0)); }catch(e){ return 0; }
 }
 function rerollDailyShop(){
-  const w = typeof selWorld!=='undefined' ? selWorld : 0;
+  const w = shopWorldIdx();
   if(typeof spendGems!=='function' || !spendGems(3)) return false;
   const key = 'br_shop_reroll_'+dayKey()+'_w'+w;
   localStorage.setItem(key, String(dailyShopRerollCount(w) + 1));
@@ -380,7 +384,7 @@ function rerollDailyShop(){
   return true;
 }
 function dailyShop(n, worldIdx){
-  const w = typeof worldIdx==='number' ? worldIdx : (typeof selWorld!=='undefined' ? selWorld : 0);
+  const w = typeof worldIdx==='number' ? worldIdx : shopWorldIdx();
   const count = n||dailyShopCount(w);
   const allowed = shopRaritiesForWorld(w);
   const rerolls = dailyShopRerollCount(w);
@@ -438,7 +442,7 @@ function refreshMenuChar(){ if(typeof setStageEmblem==='function' && typeof selW
 function fmtGold(n){ return typeof fmtNum==='function' ? fmtNum(n) : String(Math.round(+n||0)); }
 function crateOddsForWorld(key, worldIdx){
   const cr=CRATES[key];
-  const w=typeof worldIdx==='number'?worldIdx:(typeof selWorld!=='undefined'?selWorld:0);
+  const w=typeof worldIdx==='number'?worldIdx:shopWorldIdx();
   const base=worldTierIdx(w);
   const center=Math.max(0, Math.min(RAR_ORDER.length-1, base+(cr.offset||0)));
   const odds=gaussOdds(center, cr.spread||3);
@@ -452,7 +456,7 @@ function crateOddsForWorld(key, worldIdx){
   return odds;
 }
 function cratePrice(key){
-  const w = typeof selWorld!=='undefined' ? selWorld : 0;
+  const w = shopWorldIdx();
   return Math.round(CRATES[key].price * Math.pow(1.09, w / 5));
 }
 
@@ -505,10 +509,11 @@ function shopCardHTML(id, price){
 function renderShop(){
   const grid=$('shopgrid'); if(!grid) return;
   let html = '';
-  // ---- DAILY SHOP (rotating, discounted, tier matches selected world) ----
-  const shopRar = primaryShopRarity(typeof selWorld!=='undefined' ? selWorld : 0);
-  const shopWorld = (typeof selWorld!=='undefined' ? selWorld : 0) + 1;
-  const shopN = dailyShopCount(typeof selWorld!=='undefined' ? selWorld : 0);
+  // ---- DAILY SHOP (rotating, discounted, tier matches highest unlocked world) ----
+  const shopWi = shopWorldIdx();
+  const shopRar = primaryShopRarity(shopWi);
+  const shopWorld = shopWi + 1;
+  const shopN = dailyShopCount(shopWi);
   html += '<div class="banner"><span>DAILY SHOP</span></div>'+
     '<div class="shopsub">World '+shopWorld+' · '+RAR[shopRar].name+' tier · '+shopN+' items · resets midnight UTC · up to -25%</div>'+
     '<div class="shoprerow"><button class="sbuy shop-reroll'+((typeof gemBalance!=='undefined' && gemBalance<3)?' poor':'')+'" id="dailyshop-reroll" type="button"><span class="gemico-sm">◆</span>3 — REROLL STOCK</button></div>';
@@ -547,7 +552,7 @@ function rollCrateRarity(key, worldIdx){
   return 'common';
 }
 function rollCrateItem(key, worldIdx){
-  const w=typeof worldIdx==='number'?worldIdx:(typeof selWorld!=='undefined'?selWorld:0);
+  const w=typeof worldIdx==='number'?worldIdx:shopWorldIdx();
   const r=rollCrateRarity(key, w);
   const pool=catalogByRarity(r);
   return pool[Math.floor(Math.random()*pool.length)];
@@ -823,8 +828,9 @@ function openFuseResult(result){
 function openCrateOdds(key){
   const ov=$('itempop'); if(!ov) return;
   const cr=CRATES[key], odds=crateOddsForWorld(key);
-  const shopWorld=(typeof selWorld!=='undefined'?selWorld:0)+1;
-  const shopRar=primaryShopRarity(typeof selWorld!=='undefined'?selWorld:0);
+  const shopWi = shopWorldIdx();
+  const shopWorld = shopWi + 1;
+  const shopRar = primaryShopRarity(shopWi);
   let total=0; for(const r of RAR_ORDER) total+=odds[r]||0;
   let rows='';
   for(const r of RAR_ORDER){ const w=odds[r]||0; if(w<=0) continue;

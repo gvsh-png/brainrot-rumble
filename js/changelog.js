@@ -1,8 +1,9 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '2.10';
+const CURRENT_VERSION = '2.11';
 const CHANGELOG = [
+  { v: '2.11', notes: 'Daily shop, cases/crates, and crate-odds popups now scale to your highest unlocked story world — not whichever world is selected on the Battle tab. In-run combat tutorials pause gameplay until you dismiss or complete the step.' },
   { v: '2.10', notes: 'Boss phase overhaul: every boss now has 3 phases (PHASE 1/2/3 banners). Wave-20 finals always get the separate magenta phase-3 health bar + charge-up — fixed for World 1 and any roster with extra entries. Milestone bosses (waves 5/10/15) keep a single bar. Final phase-3 armor caps any single hit to 5% of the phase-3 bar, adds damage reduction, invulnerability during attack wind-ups/scripted assaults, and staged finales for extended-world bosses (W12–50).' },
   { v: '2.09', notes: 'Removed redundant settings clutter — cloud-save explainer text and extra Close button. ✕, tap-outside, and back still close settings.' },
   { v: '2.07', notes: 'Combat tutorial fix: card/dash guides no longer clip off-screen (reset positioning styles between steps). Dash tutorial dismisses on tap (touchstart/mousedown, not just click). Level-up guide blurs the background and sits at the bottom; skill cards stay visible above the overlay.' },
