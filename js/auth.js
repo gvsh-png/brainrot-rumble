@@ -251,8 +251,8 @@ function configureLoginUI(){
   const sub = document.querySelector('.loginsub');
   const note = document.querySelector('.loginnote');
   if(playAvailable()){
-    if(sub) sub.textContent = 'Sign in with Google Play to sync gold, worlds, gear, gems, pets, achievements, and Boss Rush progress across Android devices.';
-    if(note) note.textContent = 'Guest progress stays on this device only. Continue-run saves and audio settings stay local.';
+    if(sub) sub.textContent = 'Sign in with Google Play to save progress across Android devices.';
+    if(note) note.textContent = 'Guest progress stays on this device only.';
     if(playBtn) playBtn.classList.remove('hidden');
   } else {
     if(sub) sub.textContent = 'Play in your browser — progress is saved on this device.';

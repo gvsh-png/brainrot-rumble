@@ -168,8 +168,6 @@ html.is-native-android, html.is-native-android body {
   box-shadow:0 5px 0 #2b6f9c; cursor:pointer; text-align:center; width:100%;
 }
 .sdrop-btn:active { transform:translateY(3px); box-shadow:0 2px 0 #2b6f9c; }
-.sdrop-btn.quit { background:#d9694a; box-shadow:0 5px 0 #a0412c; margin-top:4px; }
-.sdrop-btn.quit:active { box-shadow:0 2px 0 #a0412c; }
 .sdrop-sep { height:2px; background:#e0d4b8; border-radius:2px; }
 .sdrop-row { display:flex; gap:clamp(8px,1.6vmin,12px); }
 .sdrop-toggle {

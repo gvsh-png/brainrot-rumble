@@ -6476,13 +6476,12 @@ function wireGfxUI(){
 wireGfxUI();
 // Settings modal toggle
 (function(){
-  const btn=$('settingsbtn'), drop=$('settingsdrop'), closeBtn=$('sdrop-close'), closeBottom=$('sdrop-close-bottom');
+  const btn=$('settingsbtn'), drop=$('settingsdrop'), closeBtn=$('sdrop-close');
   if(!btn||!drop) return;
   const open=()=>{ if(typeof initDebugTools==='function') initDebugTools(); drop.classList.remove('hidden'); };
   const close=()=>drop.classList.add('hidden');
   btn.addEventListener('click', open);
   if(closeBtn) closeBtn.addEventListener('click', close);
-  if(closeBottom) closeBottom.addEventListener('click', close);
   drop.addEventListener('click', e=>{ if(e.target===drop) close(); });
 })();
 // Update Log modal
