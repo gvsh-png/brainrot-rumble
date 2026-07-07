@@ -113,8 +113,19 @@ html.is-native-android, html.is-native-android body {
 #settingsdrop {
   position:fixed; inset:0; z-index:45;
   display:flex; align-items:center; justify-content:center;
+  padding:max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom));
   background:var(--glass);
   backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+}
+#settingsdrop .sdrop-inner {
+  max-height:min(92dvh, calc(100dvh - 20px));
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  width:clamp(280px,86vw,420px);
+  margin:0 auto;
+  flex-shrink:0;
 }
 .sdrop-inner {
   position:relative;
@@ -130,6 +141,14 @@ html.is-native-android, html.is-native-android body {
   font-size:clamp(20px,4.2vmin,28px); font-weight:900;
   color:var(--accent); -webkit-text-stroke:1px var(--ink); text-align:center;
 }
+.sdrop-topbar {
+  position:sticky; top:0; z-index:3;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--slate);
+  padding:4px 0 10px; margin:-4px 0 2px;
+  border-bottom:2px solid rgba(255,255,255,.06);
+}
+.sdrop-topbar .sdrop-title { flex:1; padding-right:36px; }
 .sdrop-close {
   position:absolute; top:10px; right:12px;
   width:clamp(28px,5vmin,36px); height:clamp(28px,5vmin,36px);
@@ -149,6 +168,8 @@ html.is-native-android, html.is-native-android body {
   box-shadow:0 5px 0 #2b6f9c; cursor:pointer; text-align:center; width:100%;
 }
 .sdrop-btn:active { transform:translateY(3px); box-shadow:0 2px 0 #2b6f9c; }
+.sdrop-btn.quit { background:#d9694a; box-shadow:0 5px 0 #a0412c; margin-top:4px; }
+.sdrop-btn.quit:active { box-shadow:0 2px 0 #a0412c; }
 .sdrop-sep { height:2px; background:#e0d4b8; border-radius:2px; }
 .sdrop-row { display:flex; gap:clamp(8px,1.6vmin,12px); }
 .sdrop-toggle {

@@ -78,13 +78,15 @@
   <!-- Settings modal — fixed overlay, centered on screen -->
   <div id="settingsdrop" class="hidden">
     <div class="sdrop-inner">
-      <div class="sdrop-title">SETTINGS</div>
-      <button class="sdrop-close" id="sdrop-close" type="button" aria-label="Close">✕</button>
+      <div class="sdrop-topbar">
+        <div class="sdrop-title">SETTINGS</div>
+        <button class="sdrop-close" id="sdrop-close" type="button" aria-label="Close">✕</button>
+      </div>
       <div class="sdrop-section">
         <div class="sdrop-head">Account</div>
         <div class="sdrop-name" id="sdrop-username">Guest</div>
         <button id="sdrop-acct" class="sdrop-btn" type="button">Sign In</button>
-        <div class="sdrop-hint" id="sdrop-cloud-hint">Cloud save syncs gold, worlds, gear, gems, pets, achievements, and Boss Rush stats. Continue-run saves stay on this device.</div>
+        <div class="sdrop-hint" id="sdrop-cloud-hint">Cloud save syncs progress across Android devices. Continue-run saves stay on this device.</div>
       </div>
       <div class="sdrop-sep"></div>
       <div class="sdrop-section">
@@ -128,6 +130,7 @@
         <button id="sdrop-achievements" class="sdrop-btn" type="button">Achievements</button>
         <button id="sdrop-changelog" class="sdrop-btn" type="button">Update Log</button>
         <a id="sdrop-privacy" class="sdrop-btn sdrop-link" href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>
+        <button id="sdrop-close-bottom" class="sdrop-btn quit" type="button">Close</button>
       </div>
     </div>
   </div>
