@@ -64,6 +64,7 @@
 <button id="introskip" class="hidden" type="button">SKIP &gt;&gt;</button>
 
 <div id="menu" class="overlay" data-tab="battle">
+  <div id="menusparkles" aria-hidden="true"></div>
   <!-- TOP RESOURCE BAR -->
   <div id="topbar">
     <div id="topbadge"><span id="topLvl">1</span></div>
@@ -143,8 +144,11 @@
       </div>
       <div class="worldsub" id="worldsub">survive the swarm</div>
       <div id="stage">
+        <div class="stage-shine" aria-hidden="true"></div>
         <div id="charplat"></div>
         <img id="charimg" draggable="false" alt="">
+        <canvas id="menuchar" aria-hidden="true"></canvas>
+        <canvas id="menupet" class="hidden" aria-hidden="true"></canvas>
       </div>
       <div id="menubot">
         <button class="gamemodebtn" id="gamemodebtn" type="button"><span class="gmlbl">GAMEMODE</span></button>
@@ -353,6 +357,7 @@
 <script src="js/cutscenes-ext.js"></script>
 <script src="js/world-ext.js"></script>
 <script src="js/debug-tools.js"></script>
+<script src="js/menu-fx.js"></script>
 <script src="js/shop.js"></script>
 <script src="js/play-bridge.js"></script>
 <script src="js/native.js"></script>

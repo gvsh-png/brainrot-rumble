@@ -269,7 +269,10 @@ function compositeCharURL(){
 }
 // The Battle stage now shows the world emblem (see game.js); the player+gear preview lives on the
 // Inventory tab (#eqchar). Keep this as the world-emblem refresher so equipping gear doesn't clobber it.
-function refreshMenuChar(){ if(typeof setStageEmblem==='function' && typeof selWorld!=='undefined') setStageEmblem(selWorld); }
+function refreshMenuChar(){
+  if(typeof setStageEmblem==='function' && typeof selWorld!=='undefined') setStageEmblem(selWorld);
+  if(typeof drawMenuStage==='function') drawMenuStage();
+}
 
 // ---- gold display + coin chip ----
 function refreshGoldUI(){ const t=$('goldtxt'); if(t) t.textContent=gold; }
@@ -868,11 +871,14 @@ function openPetPop(petId){
 function showTab(name){
   for(const t of ['battle','shop','inventory','character','pets']){ const p=$('tab-'+t); if(p) p.classList.toggle('hidden', t!==name); }
   document.querySelectorAll('#tabbar .tabbtn').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
-  const menu=$('menu'); if(menu) menu.setAttribute('data-tab', name);   // per-tab background tint
+  const menu=$('menu'); if(menu) menu.setAttribute('data-tab', name);
+  const panel=$('tab-'+name);
+  if(panel){ panel.classList.remove('tab-enter'); void panel.offsetWidth; panel.classList.add('tab-enter'); }
   if(name==='shop') renderShop();
   if(name==='pets'){ renderPetsTab(); petSeen=new Set(PETS.filter(p=>isPetOwned(p.id)).map(p=>p.id)); savePetSeen(); updatePetBadge(); }
-  if(name==='inventory'){ gearSeen=new Set(gearOwned.map(x=>x.uid)); saveSeen(); updateInvBadge(); renderInventory(); renderPetSection(); }   // mark all seen -> clear badge
+  if(name==='inventory'){ gearSeen=new Set(gearOwned.map(x=>x.uid)); saveSeen(); updateInvBadge(); renderInventory(); renderPetSection(); }
   if(name==='character'){ renderCharacterTab(); charSeen=new Set(CHARACTERS.filter(c=>charIsUnlocked(c.id)).map(c=>c.id)); saveCharSeen(); updateCharBadge(); }
+  if(name==='battle' && typeof drawMenuStage==='function') drawMenuStage();
 }
 document.querySelectorAll('#tabbar .tabbtn').forEach(b=>b.addEventListener('click',()=>{ showTab(b.dataset.tab); if(typeof sfx!=='undefined') sfx.pick(); }));
 const _crclaim=$('crclaim'); if(_crclaim) _crclaim.addEventListener('click', closeCrate);

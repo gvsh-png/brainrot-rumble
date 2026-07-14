@@ -5141,7 +5141,14 @@ function loop(t){
 // menu: gentle drifting enemies around the player anchor for vibes
 function menuUpdate(dt){
   computeCamera();
-  for(const e of enemies){ e.t=(e.t||0)+dt; e.x+=Math.cos(e.t*0.6)*0.5; e.y+=Math.sin(e.t*0.5)*0.5; if(e.hitT>0)e.hitT-=dt; if(e.sq>0)e.sq-=dt*4; }
+  for(const e of enemies){
+    e.t=(e.t||0)+dt;
+    e.x+=Math.cos(e.t*0.6)*0.9;
+    e.y+=Math.sin(e.t*0.5)*0.9;
+    if(e.hitT>0)e.hitT-=dt;
+    if(e.sq>0)e.sq-=dt*4;
+  }
+  if(typeof menuFxUpdate==='function') menuFxUpdate(dt);
 }
 
 // ============ INIT ============
