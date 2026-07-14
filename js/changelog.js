@@ -1,9 +1,10 @@
 'use strict';
 // Versioning: +0.01 per patch/small update/bugfix, +0.1 per big update/rework, +1.0 per major release.
 // Append a new entry (and bump CURRENT_VERSION) every push that changes the game.
-const CURRENT_VERSION = '1.54';
+const CURRENT_VERSION = '1.55';
 const CHANGELOG = [
-  { v: '1.54', notes: 'Loading screen matches the dark menu theme with progress bar and sparkles. Campaign cutscenes rebuilt: every world has unique dialogue and multi-scene intros/outros (establishing → atmosphere → boss/versus → victory) instead of one recycled template.' },
+  { v: '1.55', notes: 'Cutscenes overhauled: em dashes removed from story text, 50 unique per-world particle FX, layout-specific cameras/transitions, prologue and W1 outro use multi-scene system, and Challenger mode gets its own 3-scene intros/outros.' },
+  { v: '1.54', notes: 'Loading screen matches the dark menu theme with progress bar and sparkles. Campaign cutscenes rebuilt: every world has unique dialogue and multi-scene intros/outros (establishing to atmosphere to boss/versus to victory) instead of one recycled template.' },
   { v: '1.53', notes: 'Main menu feels more alive: floating sparkles, pulsing glow, animated idle character on the Battle stage, shine sweeps, staggered tab/card entrances, and subtle motion on buttons, badges, and banners.' },
   { v: '1.52', notes: 'Main menu UI polish: unified dark shell with per-tab accent tints, glass top bar, redesigned tab icons (Shop, Pets, Battle, Character, Equipment, Settings), and refined world selector + stage frame.' },
   { v: '1.51', notes: 'Longer immersive cutscenes (~9–14 sec): zone atmosphere lines, cinematic letterbox, hero/swarm entrance animations, victory reactions, and milestone twists still only every ~5 worlds.' },
