@@ -1024,20 +1024,22 @@ function _sword(g,u,blade){
 }
 makeSprite('ic_dmg', 64, (g,u)=>{ g.rotate(0.5); _sword(g,u,'#d7dde6'); });
 makeSprite('ic_battle', 64, (g,u)=>{
-  g.save(); g.rotate(-0.78); g.translate(0,2*u); _sword(g,u*0.92,'#d7dde6'); g.restore();
-  g.save(); g.rotate( 0.78); g.translate(0,2*u); _sword(g,u*0.92,'#cdd4de'); g.restore();
+  g.save(); g.rotate(-0.72); g.translate(-2*u,3*u); _sword(g,u*0.95,'#eef2f8'); g.restore();
+  g.save(); g.rotate( 0.72); g.translate( 2*u,3*u); _sword(g,u*0.95,'#cdd4de'); g.restore();
+  sh(g,'#ffd24a',0,(g)=>{ g.moveTo(0,-8*u); g.lineTo(4*u,-2*u); g.lineTo(0,4*u); g.lineTo(-4*u,-2*u); g.closePath(); }); // spark
 });
 makeSprite('ic_shop', 64, (g,u)=>{
-  sh(g,'#f0a23a',3.4*u,(g)=>{ g.moveTo(-23*u,-4*u); g.lineTo(23*u,-4*u); g.lineTo(18*u,30*u); g.lineTo(-18*u,30*u); g.closePath(); }); // bag
-  g.strokeStyle=OUT; g.lineWidth=3.2*u; g.beginPath(); g.arc(-9*u,-6*u,9*u,Math.PI,TAU); g.stroke();
-  g.beginPath(); g.arc(9*u,-6*u,9*u,Math.PI,TAU); g.stroke();
-  sh(g,'#fff',0,(g)=>{ g.ellipse(-2*u,12*u,9*u,11*u,0,0,TAU); }); sh(g,'#f0a23a',2*u,(g)=>{ g.moveTo(-2*u,4*u); g.lineTo(-2*u,20*u); });
+  sh(g,'#ffd24a',3.2*u,(g)=>{ g.roundRect(-22*u,-2*u,44*u,34*u,8*u); }); // bag body
+  sh(g,'#e8a020',0,(g)=>{ g.roundRect(-16*u,8*u,32*u,18*u,5*u); });       // front pocket
+  g.strokeStyle=OUT; g.lineWidth=3*u; g.beginPath(); g.arc(-8*u,-4*u,8*u,Math.PI,TAU); g.stroke();
+  g.beginPath(); g.arc(8*u,-4*u,8*u,Math.PI,TAU); g.stroke();             // handles
+  dot(g,-10*u,16*u,4*u,'#fff'); dot(g,10*u,16*u,4*u,'#fff');              // coin studs
 });
 makeSprite('ic_bag', 64, (g,u)=>{
-  sh(g,'#5fae4a',3.6*u,(g)=>{ g.roundRect(-21*u,-14*u,42*u,46*u,11*u); }); // body
-  sh(g,'#4a8f3a',3*u,(g)=>{ g.roundRect(-14*u,4*u,28*u,20*u,6*u); });      // pocket
-  sh(g,OUT,3*u,(g)=>{ g.moveTo(-9*u,-14*u); g.lineTo(-9*u,-22*u); g.lineTo(9*u,-22*u); g.lineTo(9*u,-14*u); }); // top loop
-  dot(g,0,13*u,3.2*u,'#fff');
+  sh(g,'#5aabef',3.4*u,(g)=>{ g.roundRect(-22*u,-12*u,44*u,48*u,10*u); }); // body
+  sh(g,'#3a82c8',0,(g)=>{ g.roundRect(-15*u,6*u,30*u,22*u,6*u); });         // pocket
+  sh(g,OUT,2.8*u,(g)=>{ g.moveTo(-10*u,-12*u); g.lineTo(-10*u,-22*u); g.lineTo(10*u,-22*u); g.lineTo(10*u,-12*u); }); // strap loop
+  sh(g,'#ffd24a',2.4*u,(g)=>{ g.roundRect(-8*u,-4*u,16*u,8*u,3*u); });     // buckle
 });
 makeSprite('ic_skull', 64, (g,u)=>{
   sh(g,'#eef0f2',3.4*u,(g)=>{ g.arc(0,-4*u,21*u,Math.PI,TAU); g.lineTo(13*u,16*u); g.lineTo(-13*u,16*u); g.closePath(); }); // cranium
@@ -1080,15 +1082,28 @@ makeSprite('ic_bolt', 64, (g,u)=>{
   sh(g,'#ffd24a',3.4*u,(g)=>{ g.moveTo(7*u,-30*u); g.lineTo(-17*u,7*u); g.lineTo(-1*u,7*u); g.lineTo(-8*u,30*u); g.lineTo(18*u,-8*u); g.lineTo(2*u,-8*u); g.closePath(); });
 });
 makeSprite('ic_char', 64, (g,u)=>{
-  sh(g,'#5fbf52',3.2*u,(g)=>{ g.roundRect(-15*u,-2*u,30*u,28*u,5*u); }); // body
-  sh(g,'#f0c890',3.4*u,(g)=>{ g.arc(0,-16*u,13*u,0,TAU); });            // head
-  dot(g,-5*u,-18*u,2.8*u,OUT); dot(g,5*u,-18*u,2.8*u,OUT);              // eyes
+  sh(g,'#6bcf5a',3.2*u,(g)=>{ g.roundRect(-16*u,0,32*u,30*u,6*u); }); // torso
+  sh(g,'#f0c890',3.4*u,(g)=>{ g.arc(0,-18*u,14*u,0,TAU); });         // head
+  dot(g,-5*u,-20*u,2.8*u,OUT); dot(g,5*u,-20*u,2.8*u,OUT);         // eyes
+  sh(g,'#ffd24a',2.4*u,(g)=>{ g.moveTo(0,-30*u); g.lineTo(5*u,-22*u); g.lineTo(-5*u,-22*u); g.closePath(); }); // star badge
 });
 makeSprite('ic_pet', 64, (g,u)=>{
-  sh(g,'#e88030',3*u,(g)=>{ g.ellipse(0,10*u,15*u,12*u,0,0,TAU); }); // main pad
-  for(const [tx,ty] of [[-13*u,-4*u],[13*u,-4*u],[-5*u,-16*u],[5*u,-16*u]]){
-    sh(g,'#e88030',2.6*u,(g)=>{ g.arc(tx,ty,6*u,0,TAU); }); // toe pads
+  sh(g,'#ff9a4a',3*u,(g)=>{ g.ellipse(0,12*u,16*u,13*u,0,0,TAU); }); // main pad
+  for(const [tx,ty] of [[-14*u,-2*u],[14*u,-2*u],[-5*u,-18*u],[5*u,-18*u]]){
+    sh(g,'#e87030',2.6*u,(g)=>{ g.arc(tx,ty,6.5*u,0,TAU); });       // toe pads
   }
+  sh(g,'#ffd24a',0,(g)=>{ g.ellipse(0,12*u,7*u,5*u,0,0,TAU); });     // highlight
+});
+makeSprite('ic_settings', 64, (g,u)=>{
+  sh(g,'#c4cde0',3.2*u,(g)=>{ g.arc(0,0,10*u,0,TAU); }); // hub
+  for(let i=0;i<8;i++){
+    const a=i*TAU/8;
+    g.save(); g.rotate(a);
+    sh(g,'#eef2f8',2.8*u,(g)=>{ g.roundRect(-4.5*u,-24*u,9*u,10*u,2.5*u); }); // tooth
+    g.restore();
+  }
+  dot(g,0,0,5*u,'#8a9ab4');
+  dot(g,0,0,2.8*u,'#eef2f8');
 });
 function _spk(g,u){ sh(g,'#fbf3df',3*u,(g)=>{ g.moveTo(-20*u,-9*u); g.lineTo(-7*u,-9*u); g.lineTo(7*u,-22*u); g.lineTo(7*u,22*u); g.lineTo(-7*u,9*u); g.lineTo(-20*u,9*u); g.closePath(); }); }
 makeSprite('ic_snd', 64, (g,u)=>{
