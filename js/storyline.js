@@ -167,6 +167,34 @@
     const atmo = atmosphereFor(wi, world);
     const victory = victoryFor(wi, world);
 
+    const chalIntroBeats = [
+      { t0: 0.3, t1: 3.0, y: 0.18, text: 'CHALLENGER — ' + name, big: true, title: true },
+      { t0: 1.4, t1: 4.6, y: 0.38, text: atmo[0], dim: true },
+      { t0: 3.0, t1: 6.2, y: 0.54, text: pick(CHAL_INTRO, wi) },
+      { t0: 5.0, t1: 8.4, y: 0.72, text: 'Boss at 5, 10, 15, and 20 min!', dim: true },
+    ];
+
+    const chalOutroBeats = [
+      { t0: 0.3, t1: 3.0, y: 0.2, text: 'CHALLENGER WIN!', big: true, title: true },
+      { t0: 1.2, t1: 4.4, y: 0.4, text: pick(CHAL_OUTRO, wi) },
+      { t0: 3.0, t1: 6.0, y: 0.58, text: victory, dim: true },
+      { t0: 5.0, t1: 8.2, y: 0.76, text: 'Story mode still has more zones!', dim: true },
+    ];
+
+    if (typeof buildStoryScenes === 'function') {
+      const sc = buildStoryScenes(wi, world, { name, boss, midBoss, milestone, twist, allyLine, act });
+      return Object.assign({
+        act, milestone,
+        vis: VIS_EFFECTS[wi % VIS_EFFECTS.length],
+        chalIntroBeats, chalOutroBeats,
+        allyChar: ally, allyReveal: !!ally,
+        heroLine: wi === 0 ? 'You vs the whole swarm. Go!' : null,
+        zoneName: name,
+        introDur: sc.introDur,
+        outroDur: sc.outroDur,
+      }, sc);
+    }
+
     let introBeats;
     let outroBeats;
 
@@ -216,20 +244,6 @@
       ];
     }
 
-    const chalIntroBeats = [
-      { t0: 0.3, t1: 3.0, y: 0.18, text: 'CHALLENGER — ' + name, big: true, title: true },
-      { t0: 1.4, t1: 4.6, y: 0.38, text: atmo[0], dim: true },
-      { t0: 3.0, t1: 6.2, y: 0.54, text: pick(CHAL_INTRO, wi) },
-      { t0: 5.0, t1: 8.4, y: 0.72, text: 'Boss at 5, 10, 15, and 20 min!', dim: true },
-    ];
-
-    const chalOutroBeats = [
-      { t0: 0.3, t1: 3.0, y: 0.2, text: 'CHALLENGER WIN!', big: true, title: true },
-      { t0: 1.2, t1: 4.4, y: 0.4, text: pick(CHAL_OUTRO, wi) },
-      { t0: 3.0, t1: 6.0, y: 0.58, text: victory, dim: true },
-      { t0: 5.0, t1: 8.2, y: 0.76, text: 'Story mode still has more zones!', dim: true },
-    ];
-
     return {
       act,
       milestone,
@@ -242,6 +256,8 @@
       allyReveal: !!ally,
       heroLine: wi === 0 ? 'You vs the whole swarm. Go!' : null,
       zoneName: name,
+      introDur: milestone ? 14 : 9.5,
+      outroDur: milestone ? 11 : 8.5,
     };
   }
 

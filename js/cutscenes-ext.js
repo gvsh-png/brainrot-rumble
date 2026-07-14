@@ -3,7 +3,33 @@
 
 const WorldCine = (function () {
   const DUR = { introFull: 14, outroFull: 11, introQuick: 9.5, outroQuick: 8.5, chalIn: 9, chalOut: 8.5 };
-  let t = 0, done = null, kind = null, wi = 0, isChal = false;
+  let t = 0, done = null, kind = null, wi = 0, isChal = false, lastSceneIdx = -1;
+
+  function scenesFor(st) {
+    if (isChal) return kind === 'chal_in' ? [] : [];
+    if (kind === 'intro') return st.introScenes || [];
+    if (kind === 'outro') return st.outroScenes || [];
+    return [];
+  }
+
+  function sceneAt(st) {
+    const scenes = scenesFor(st);
+    if (!scenes.length) return { scene: null, localT: t, idx: 0, scenes };
+    let acc = 0;
+    for (let i = 0; i < scenes.length; i++) {
+      if (t < acc + scenes[i].dur) return { scene: scenes[i], localT: t - acc, idx: i, scenes };
+      acc += scenes[i].dur;
+    }
+    return { scene: scenes[scenes.length - 1], localT: scenes[scenes.length - 1].dur, idx: scenes.length - 1, scenes };
+  }
+
+  function sceneCutFlash(idx, localT) {
+    if (idx <= 0 || localT > 0.22) return;
+    cx.fillStyle = '#fff';
+    cx.globalAlpha = 0.55 * (1 - localT / 0.22);
+    cx.fillRect(0, 0, W, H);
+    cx.globalAlpha = 1;
+  }
 
   function seenKey(k) { return 'br_cine_' + k; }
   function markSeen(k) { try { localStorage.setItem(seenKey(k), '1'); } catch (e) {} }
@@ -183,29 +209,26 @@ const WorldCine = (function () {
     }
   }
 
-  function drawBossSilhouette(w, bob) {
+  function drawBossSilhouette(w, bob, big) {
     if (!w || !w.bosses || !w.bosses.length || typeof SP === 'undefined') return;
     const b = kind === 'intro' || kind === 'chal_in' ? w.bosses[w.bosses.length - 1] : w.bosses[0];
     if (!b || !SP[b.spr]) return;
-    const rise = entranceEase(2.8);
-    const bx = W * 0.5, by = H * (0.52 + (1 - rise) * 0.12) + Math.sin(t * 2.5) * bob;
-    const pulse = 1 + Math.sin(t * 4) * 0.04;
+    const rise = entranceEase(big ? 1.6 : 2.8);
+    const bx = W * 0.5, by = H * (big ? 0.48 : 0.52) + (1 - rise) * H * 0.1 + Math.sin(t * 2.5) * bob;
+    const pulse = 1 + Math.sin(t * 4) * 0.05;
+    const scale = big ? 1.25 : 1;
     cx.globalAlpha = 0.35 * rise;
     cx.fillStyle = w.enemyTint || '#ff5a70';
-    cx.beginPath(); cx.arc(bx, by, 70 * pulse, 0, TAU); cx.fill();
+    cx.beginPath(); cx.arc(bx, by, 70 * pulse * scale, 0, TAU); cx.fill();
     cx.globalAlpha = 1;
     cx.strokeStyle = '#fff';
     cx.lineWidth = 4;
-    cx.beginPath(); cx.arc(bx, by, 58 * pulse, 0, TAU); cx.stroke();
-    drawSprite(b.spr, bx, by, 115 * pulse * rise, 0, 0, 0, false, null);
-    const bossCapEnd = durFor(kind) - 0.5;
-    if (t > 1.4 && t < bossCapEnd) {
-      caption(b.name, 1.4, bossCapEnd, H * 0.32, { dim: true });
-    }
+    cx.beginPath(); cx.arc(bx, by, 58 * pulse * scale, 0, TAU); cx.stroke();
+    drawSprite(b.spr, bx, by, 115 * pulse * rise * scale, 0, 0, 0, false, null);
   }
 
   function start(kindIn, worldIndex, onDone, challenger) {
-    kind = kindIn; wi = worldIndex; done = onDone; t = 0; isChal = !!challenger;
+    kind = kindIn; wi = worldIndex; done = onDone; t = 0; isChal = !!challenger; lastSceneIdx = -1;
     state = kindIn === 'outro' || kindIn === 'chal_out' ? ST.OUTRO : ST.INTRO;
     $('menu') && $('menu').classList.add('hidden');
     $('introskip') && $('introskip').classList.remove('hidden');
@@ -234,6 +257,9 @@ const WorldCine = (function () {
   }
 
   function durFor(k) {
+    const st = storyFor(worldData(wi));
+    if (k === 'intro' && st.introDur) return st.introDur;
+    if (k === 'outro' && st.outroDur) return st.outroDur;
     if (k === 'intro') return isMilestoneWorld() ? DUR.introFull : DUR.introQuick;
     if (k === 'outro') return isMilestoneWorld() ? DUR.outroFull : DUR.outroQuick;
     if (k === 'chal_in') return DUR.chalIn;
@@ -252,23 +278,89 @@ const WorldCine = (function () {
     }
   }
 
+  function renderSceneBeats(scene, sceneStart) {
+    if (!scene || !scene.beats) return;
+    for (const b of scene.beats) {
+      if (b.ally) continue;
+      const t0 = sceneStart + 0.12;
+      const t1 = sceneStart + scene.dur - 0.12;
+      caption(b.text, t0, t1, H * b.y, b);
+    }
+    for (const b of scene.beats) {
+      if (!b.ally) continue;
+      const t0 = sceneStart + 0.12;
+      const t1 = sceneStart + scene.dur - 0.12;
+      if (t >= t0 && t <= t1) caption(b.text, t0, t1, H * 0.9, { big: true });
+    }
+  }
+
+  function renderSceneLayout(layout, w, st, localT, sceneStart, scene) {
+    const bob = Math.sin(t * 2.5) * 4;
+    switch (layout) {
+      case 'establishing':
+        break;
+      case 'atmosphere':
+        drawSwarmArmy(w);
+        break;
+      case 'boss_reveal':
+        drawBossSilhouette(w, 12, true);
+        break;
+      case 'ally_join':
+        drawHero(bob);
+        if (st.allyChar) drawAlly(st, Math.sin(t * 2.8) * 3);
+        drawSwarmArmy(w);
+        break;
+      case 'versus':
+        drawHero(bob);
+        drawSwarmArmy(w);
+        drawBossSilhouette(w, 8, false);
+        break;
+      case 'victory':
+        drawHero(Math.sin(t * 2) * 3);
+        if (kind === 'outro' || kind === 'chal_out') drawSwarmArmy(w);
+        break;
+      case 'relief':
+        drawHero(Math.sin(t * 1.8) * 2);
+        break;
+      case 'tease':
+        drawSwarmArmy(w);
+        break;
+      case 'chase':
+        drawSwarmArmy(w);
+        drawHero(bob);
+        break;
+      default:
+        drawSwarmArmy(w);
+        drawHero(bob);
+    }
+    renderSceneBeats(scene, sceneStart);
+  }
+
   function render() {
     const w = worldData(wi);
     const st = storyFor(w);
+    const { scene, localT, idx, scenes } = sceneAt(st);
+    let sceneStart = 0;
+    for (let i = 0; i < idx; i++) sceneStart += scenes[i].dur;
+
     cx.save();
     backdrop(w);
     camDrift();
     drawVisEffect(st.vis);
 
-    if (kind === 'intro' || kind === 'chal_in') {
+    if (scene && scenes.length && !isChal) {
+      if (idx !== lastSceneIdx) lastSceneIdx = idx;
+      sceneCutFlash(idx, localT);
+      renderSceneLayout(scene.layout, w, st, localT, sceneStart, scene);
+    } else if (kind === 'intro' || kind === 'chal_in') {
       drawSwarmArmy(w);
-      drawBossSilhouette(w, 10);
+      drawBossSilhouette(w, 10, false);
       drawHero(Math.sin(t * 2.5) * 4);
       if (st.allyChar) drawAlly(st, Math.sin(t * 2.8) * 3);
       if (st.heroLine && t > 0.8 && t < 4.5) caption(st.heroLine, 0.8, 4.2, H * 0.9, { dim: true });
       renderBeats(isChal ? st.chalIntroBeats : st.introBeats);
     } else {
-      drawBossSilhouette(w, 6);
+      drawBossSilhouette(w, 6, false);
       drawSwarmArmy(w);
       drawHero(Math.sin(t * 2) * 3);
       if (st.allyChar) drawAlly(st, Math.sin(t * 2) * 2);

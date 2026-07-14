@@ -722,17 +722,31 @@ html.is-native-android body { padding-top:env(safe-area-inset-top); padding-bott
   border:3px solid rgba(255,255,255,.6); border-radius:14px; padding:8px 16px; cursor:pointer; }
 #introskip:active { transform:translateY(2px); }
 
-/* Loading screen (covers the menu until all sprites are pre-generated) */
-#loading { z-index:50; background:#5a3d28; transition:opacity .4s ease; }
+/* Loading screen — matches dark menu shell */
+#loading { z-index:50; background:radial-gradient(140% 95% at 50% -8%, #2f384c 0%, #1c2234 52%, #111726 100%);
+  transition:opacity .45s ease; overflow:hidden; padding:0; }
+#loading::before { content:''; position:absolute; inset:0; pointer-events:none;
+  background-image:radial-gradient(rgba(255,255,255,0.07) 1.6px, transparent 1.8px); background-size:24px 24px; opacity:.55;
+  animation:menuGridDrift 48s linear infinite; }
+#loading::after { content:''; position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(80% 55% at 50% 0%, rgba(255,190,70,.14) 0%, transparent 68%);
+  animation:menuGlowPulse 5.5s ease-in-out infinite; }
 #loading.fade { opacity:0; }
-.loadwrap { display:flex; flex-direction:column; align-items:center; gap:clamp(18px,4vmin,34px); }
-#loading .title { color:#ffd24a; -webkit-text-stroke:2px #3a2316; }
+#loadsparkles { position:absolute; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+.loadwrap { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:clamp(14px,3vmin,26px); }
+.loadtitle { color:#ffd24a; -webkit-text-stroke:2px rgba(20,14,8,.75); font-size:clamp(32px,7.4vmin,64px); font-weight:900;
+  line-height:1.0; letter-spacing:1px; text-shadow:0 4px 18px rgba(255,190,70,.25); animation:loadTitlePulse 2.4s ease-in-out infinite; }
+.loadbar { width:clamp(200px,56vmin,340px); height:clamp(10px,1.8vmin,14px); border-radius:9px; overflow:hidden;
+  background:rgba(0,0,0,.45); border:2px solid rgba(255,255,255,.12); box-shadow:inset 0 2px 4px rgba(0,0,0,.35); }
+.loadbarfill { height:100%; width:8%; background:linear-gradient(90deg,#8be24f,#4caf3a,#ffd24a);
+  background-size:200% 100%; animation:xpShimmer 2s ease-in-out infinite; transition:width .25s ease; }
 .loadspin {
-  width:clamp(46px,9vmin,72px); height:clamp(46px,9vmin,72px); border-radius:50%;
-  border:6px solid rgba(255,255,255,0.18); border-top-color:#ffd24a;
-  animation:loadspin 0.8s linear infinite;
-}
-.loadtxt { font-size:clamp(13px,2.6vmin,20px); font-weight:800; color:#eee4cc; letter-spacing:0.5px; }
+  width:clamp(40px,8vmin,64px); height:clamp(40px,8vmin,64px); border-radius:50%;
+  border:5px solid rgba(255,255,255,0.12); border-top-color:#ffd24a; border-right-color:#6bcf5a;
+  animation:loadspin 0.75s linear infinite; filter:drop-shadow(0 0 8px rgba(255,210,70,.25)); }
+.loadtxt { font-size:clamp(13px,2.6vmin,20px); font-weight:800; color:rgba(238,242,248,.88); letter-spacing:0.5px;
+  text-shadow:0 1px 4px rgba(0,0,0,.45); min-height:1.4em; }
+@keyframes loadTitlePulse { 0%,100%{ filter:brightness(1); transform:scale(1); } 50%{ filter:brightness(1.12); transform:scale(1.02); } }
 @keyframes loadspin { to { transform:rotate(360deg); } }
 
 /* ===== Fluid UI animations ===== */

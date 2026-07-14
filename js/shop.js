@@ -896,9 +896,25 @@ showTab(['battle','shop','inventory','character','pets'].indexOf(_initTab)>=0 ? 
 // and pre-generate each gear tint so nothing is built mid-game, then fade out the loading overlay.
 (function prewarmAssets(){
   const scr=document.createElement('canvas'); scr.width=scr.height=8; const sg=scr.getContext('2d');
-  for(const k in SP){  try{ sg.drawImage(SP[k],0,0,8,8);  }catch(e){} }
-  for(const k in SPW){ try{ sg.drawImage(SPW[k],0,0,8,8); }catch(e){} }
-  if(typeof tintedSprite==='function'){ for(const cat of GEAR_CATS) for(const r of RAR_ORDER){ try{ tintedSprite('gear_'+cat, RAR[r].color); }catch(e){} } }
+  const keys=Object.keys(SP);
+  const total=keys.length+Object.keys(SPW).length+(typeof GEAR_CATS!=='undefined'?GEAR_CATS.length*RAR_ORDER.length:0);
+  let done=0;
+  const bar=$('loadbarfill'), txt=$('loadtxt');
+  const msgs=['summoning sprites…','forging gear tints…','warming the swarm…','almost ready…'];
+  function tick(msg){ done++; if(bar&&bar.style) bar.style.width=Math.min(96,8+Math.round(done/total*88))+'%'; if(txt&&msg) txt.textContent=msg; }
+  for(const k of keys){ try{ sg.drawImage(SP[k],0,0,8,8); tick(); }catch(e){ tick(); } }
+  for(const k of Object.keys(SPW)){ try{ sg.drawImage(SPW[k],0,0,8,8); tick(); }catch(e){ tick(); } }
+  if(typeof tintedSprite==='function'){ for(const cat of GEAR_CATS) for(const r of RAR_ORDER){ try{ tintedSprite('gear_'+cat, RAR[r].color); tick(msgs[1]); }catch(e){ tick(); } } }
+  if(bar&&bar.style) bar.style.width='100%';
+  if(txt) txt.textContent='ready!';
+  const spark=$('loadsparkles');
+  if(spark&&!spark.childElementCount&&typeof document.createElement==='function'){
+    try{ for(let i=0;i<16;i++){ const s=document.createElement('span'); if(!s||!s.style||!s.style.setProperty) break;
+      s.className='msp';
+      s.style.setProperty('--x',(10+Math.random()*80)+'%'); s.style.setProperty('--y',(8+Math.random()*84)+'%');
+      s.style.setProperty('--d',(3+Math.random()*4)+'s'); s.style.setProperty('--delay',(-Math.random()*8)+'s');
+      s.style.setProperty('--sz',(2+Math.random()*3)+'px'); spark.appendChild(s); } }catch(e){}
+  }
   const L=$('loading');
-  if(L) requestAnimationFrame(()=>{ L.classList.add('fade'); setTimeout(()=>L.classList.add('hidden'), 420); });
+  if(L) requestAnimationFrame(()=>{ L.classList.add('fade'); setTimeout(()=>L.classList.add('hidden'), 480); });
 })();
