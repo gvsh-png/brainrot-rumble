@@ -225,8 +225,9 @@ html.is-native-android body { padding-top:env(safe-area-inset-top); padding-bott
 /* BATTLE tab */
 #tab-battle { display:flex; flex-direction:column; align-items:center; }
 #worldsel { display:flex; align-items:center; gap:clamp(8px,2vmin,18px); margin-top:clamp(2px,1vmin,10px);
-  background:rgba(0,0,0,.22); border:2px solid rgba(255,255,255,.1); border-radius:16px;
-  padding:clamp(6px,1.2vmin,10px) clamp(8px,1.6vmin,14px); box-shadow:inset 0 1px 0 rgba(255,255,255,.06); }
+  background:linear-gradient(135deg, color-mix(in srgb, var(--world-sky,#c8e8ff) 42%, rgba(255,255,255,.14)), color-mix(in srgb, var(--world-tile,#ffe8a8) 38%, rgba(255,255,255,.1)));
+  border:2px solid color-mix(in srgb, var(--world-accent,#ffd24a) 55%, rgba(255,255,255,.22)); border-radius:16px;
+  padding:clamp(6px,1.2vmin,10px) clamp(8px,1.6vmin,14px); box-shadow:inset 0 1px 0 rgba(255,255,255,.18), 0 4px 14px color-mix(in srgb, var(--world-accent,#ffd24a) 22%, transparent); }
 #worldsel button { background:rgba(255,255,255,.12); color:#eef2f8; border:2px solid rgba(255,255,255,.18); border-radius:12px; cursor:pointer;
   width:clamp(34px,5.5vmin,46px); height:clamp(34px,5.5vmin,46px); font-weight:900; font-size:clamp(15px,2.6vmin,22px);
   box-shadow:0 3px 0 rgba(0,0,0,.35); transition:background .12s, transform .06s; }
@@ -236,21 +237,23 @@ html.is-native-android body { padding-top:env(safe-area-inset-top); padding-bott
 #wname { font-weight:900; color:#fff; -webkit-text-stroke:1px rgba(20,14,8,.65); text-shadow:0 2px 8px rgba(0,0,0,.45);
   font-size:clamp(19px,4.4vmin,36px); text-align:center; width:clamp(150px,30vmin,300px); line-height:1.05;
   min-height:3.15em; display:flex; align-items:center; justify-content:center; }
-.worldsub { color:rgba(238,242,248,.82); font-weight:800; font-size:clamp(11px,2.2vmin,17px); text-shadow:0 1px 4px rgba(0,0,0,.4); margin-top:3px; white-space:nowrap; }
+.worldsub { color:color-mix(in srgb, var(--world-accent,#ffe878) 78%, #fff); font-weight:800; font-size:clamp(11px,2.2vmin,17px);
+  text-shadow:0 1px 0 rgba(255,255,255,.35), 0 2px 8px color-mix(in srgb, var(--world-accent,#ffd24a) 35%, transparent); margin-top:3px; white-space:nowrap; }
 #worldsel.reveal { animation:wreveal 1.4s ease; }
 @keyframes wreveal { 0%{ transform:scale(0.7); filter:brightness(2); } 40%{ transform:scale(1.12); } 100%{ transform:scale(1); } }
 #stage { position:relative; flex:1 1 auto; min-height:0; align-self:stretch; margin:clamp(6px,1.4vmin,12px) 0;
-  display:flex; align-items:center; justify-content:center; border:3px solid rgba(255,255,255,.14); border-radius:22px; overflow:hidden;
-  background:linear-gradient(180deg, rgba(255,255,255,.1), rgba(0,0,0,.28)); box-shadow:0 6px 0 rgba(0,0,0,.32), inset 0 0 0 1px rgba(255,255,255,.08), inset 0 -20px 40px rgba(0,0,0,.18);
+  display:flex; align-items:center; justify-content:center; border:3px solid color-mix(in srgb, var(--world-accent,#ffd24a) 50%, rgba(255,255,255,.25)); border-radius:22px; overflow:hidden;
+  background:linear-gradient(180deg, color-mix(in srgb, var(--world-sky,#d8f4ff) 72%, rgba(255,255,255,.12)), color-mix(in srgb, var(--world-tile,#ffe8a8) 68%, rgba(255,255,255,.08)));
+  box-shadow:0 6px 0 color-mix(in srgb, var(--world-accent,#ffd24a) 38%, rgba(120,90,40,.35)), inset 0 0 0 1px rgba(255,255,255,.2), inset 0 -16px 36px color-mix(in srgb, var(--world-tile,#ffe8a8) 28%, transparent);
   animation:stageBreathe 4.5s ease-in-out infinite; }
 .stage-shine { position:absolute; inset:0; pointer-events:none; z-index:2;
   background:linear-gradient(105deg, transparent 35%, rgba(255,255,255,.08) 50%, transparent 65%);
   background-size:220% 100%; animation:stageShine 7s ease-in-out infinite; }
 #charplat { position:absolute; bottom:11%; width:clamp(120px,30vmin,260px); height:clamp(28px,6.5vmin,56px); z-index:3;
-  background:radial-gradient(ellipse at center, rgba(0,0,0,0.32), rgba(0,0,0,0) 70%);
+  background:radial-gradient(ellipse at center, color-mix(in srgb, var(--world-accent,#ffd24a) 42%, transparent), transparent 72%);
   animation:platPulse 2.8s ease-in-out infinite; }
-#charimg { width:auto; height:100%; max-width:100%; position:relative; z-index:1; opacity:.72;
-  animation:emblemDrift 6s ease-in-out infinite; filter:saturate(1.08); }
+#charimg { width:auto; height:100%; max-width:100%; position:relative; z-index:1; opacity:1;
+  animation:emblemDrift 6s ease-in-out infinite; filter:saturate(1.12) drop-shadow(0 6px 14px color-mix(in srgb, var(--world-accent,#ffd24a) 28%, transparent)); }
 #menuchar, #menupet { position:absolute; z-index:4; pointer-events:none; image-rendering:auto; }
 #menuchar { left:50%; bottom:6%; transform:translateX(-50%); width:min(58%,220px); height:min(72%,280px); }
 #menupet { right:8%; bottom:10%; width:min(30%,110px); height:min(38%,140px); }

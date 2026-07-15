@@ -41,21 +41,21 @@
     ctx.beginPath();
     ctx.ellipse(0, bob, size * 0.22, size * 0.13, 0, 0, Math.PI * 2);
     ctx.fill(); stroke(ctx, size);
-    ctx.fillStyle = '#3a2d22';
+    ctx.fillStyle = '#8a6048';
     ctx.fillRect(-size * 0.12, bob - size * 0.02, size * 0.24, size * 0.035);
   }
 
   function drawBeetle(ctx, size, t) {
     const bob = Math.sin(t * 3.5) * size * 0.025;
-    ctx.fillStyle = '#2a8a4a';
+    ctx.fillStyle = '#48b868';
     ctx.beginPath();
     ctx.ellipse(0, size * 0.02 + bob, size * 0.26, size * 0.17, 0, 0, Math.PI * 2);
     ctx.fill(); stroke(ctx, size);
-    ctx.fillStyle = '#1a5a30';
+    ctx.fillStyle = '#68d888';
     ctx.beginPath();
     ctx.arc(0, -size * 0.1 + bob, size * 0.11, 0, Math.PI * 2);
     ctx.fill(); stroke(ctx, size);
-    ctx.strokeStyle = '#1a5a30';
+    ctx.strokeStyle = '#389858';
     ctx.lineWidth = Math.max(2, size * 0.04);
     for (const sx of [-1, 1]) {
       ctx.beginPath();

@@ -575,54 +575,61 @@ const BOSSES_W11 = [BOSSES_DIRT[3], BOSSES_DIRT[2], BOSSES_DIRT[4], BOSSES_DIRT[
 // original sprites + unique boss movesets arrive in later content phases. World 10 = the dirt roster
 // unchanged. See docs/specs/2026-06-14-worlds-expansion-design.md.
 const WORLDS = [
-  { id:'grass', name:'GRASSLANDS', band:0, waveTarget:20, endless:false, map:{w:2200,h:2200}, enemyTint:null,
-    theme:{ void:'#4a7828', tile1:'#8ed44e', tile2:'#80c844', tuft:'rgba(50,120,30,0.38)',
-            wall:null, post:null, bg:'#72c038', tint:null, music:'world_grass' },
+  { id:'grass', name:'GRASSLANDS', band:0, waveTarget:20, endless:false, map:{w:2200,h:2200}, mapLayout:'open', enemyTint:null,
+    theme:{ void:'#9ed85a', tile1:'#b8f068', tile2:'#a8e858', tuft:'rgba(80,160,50,0.32)',
+            wall:'#88c848', post:'#98d858', postDark:'#78b838', bg:'#a8e858', sky:'#c8f878',
+            accent:'#ffe878', tint:'#88e040', music:'world_grass' },
     foes:FOES_GRASS, bosses:BOSSES_GRASS },
-  { id:'citrus', name:'CITRUS COAST', band:1, waveTarget:20, endless:false, map:{w:4200,h:1400}, enemyTint:null,
-    theme:{ void:'#c89820', tile1:'#f5e46a', tile2:'#ecd84a', tuft:'rgba(200,155,40,0.32)',
-            wall:null, post:null, bg:'#f2da58', tint:'#f8dc30', music:'world_citrus' },
+  { id:'citrus', name:'CITRUS COAST', band:1, waveTarget:20, endless:false, map:{w:4200,h:1400}, mapLayout:'lanes', enemyTint:null,
+    theme:{ void:'#f0d858', tile1:'#fff0a0', tile2:'#ffe878', tuft:'rgba(220,180,60,0.28)',
+            wall:'#f0c840', post:'#ffe060', postDark:'#e8b830', bg:'#fff0a0', sky:'#fff8c0',
+            accent:'#ff9030', tint:'#f8dc30', music:'world_citrus' },
     foes:FOES_W2, bosses:BOSSES_W2 },
   { id:'forest', name:'FORESTA FRUTOSA', band:1, waveTarget:20, endless:false,
-    map:{w:2000,h:3800}, enemyTint:null,
-    theme:{ void:'#5ec43e', tile1:'#8ef85a', tile2:'#72e848',
-            tuft:'rgba(30,110,20,0.30)', wall:'#8a5a32', post:'#a86e40',
-            bg:'#6edc40', tint:null, music:'world_forest' },
+    map:{w:2000,h:3800}, mapLayout:'clusters', enemyTint:null,
+    theme:{ void:'#8ef85a', tile1:'#a8ff78', tile2:'#98f068',
+            tuft:'rgba(60,140,40,0.28)', wall:'#c89858', post:'#d8a868', postDark:'#b88848',
+            bg:'#98f068', sky:'#c8ff98', accent:'#ff9858', tint:'#78e030', music:'world_forest' },
     foes:FOES_W3, bosses:BOSSES_W3 },
-  { id:'glacier', name:'GELATO GLACIER', band:2, waveTarget:20, endless:false, map:{w:3800,h:3800}, enemyTint:null,
-    theme:{ void:'#6abcb4', tile1:'#e8faf4', tile2:'#d2f0ea', tuft:'rgba(100,190,180,0.32)',
-            wall:'#96d8d0', post:'#daf4ee', postDark:'#5ea8a0', bg:'#d2f0ea', tint:'#d8fff8', music:'world_glacier' },
+  { id:'glacier', name:'GELATO GLACIER', band:2, waveTarget:20, endless:false, map:{w:3800,h:3800}, mapLayout:'islands', enemyTint:null,
+    theme:{ void:'#b8f0ea', tile1:'#f0fffc', tile2:'#e0faf4', tuft:'rgba(140,210,200,0.28)',
+            wall:'#b8ece8', post:'#e8faf8', postDark:'#98dcd8', bg:'#e8faf8', sky:'#f8ffff',
+            accent:'#78d8ff', tint:'#d8fff8', music:'world_glacier' },
     foes:FOES_W4, bosses:BOSSES_W4 },
-  { id:'circo', name:'CIRCO BRAINROTTO', band:3, waveTarget:20, endless:false, map:{w:2800,h:2800}, enemyTint:null,
-    theme:{ void:'#b03020', tile1:'#faeabc', tile2:'#f2d898', tuft:'rgba(180,60,30,0.28)',
-            wall:'#c82e20', post:'#f0c830', postDark:'#9a2418', bg:'#f2d898', tint:'#ffd838', music:'world_circo' },
+  { id:'circo', name:'CIRCO BRAINROTTO', band:3, waveTarget:20, endless:false, map:{w:2800,h:2800}, mapLayout:'ring', enemyTint:null,
+    theme:{ void:'#f0a878', tile1:'#fff0c8', tile2:'#ffe8a8', tuft:'rgba(220,120,60,0.24)',
+            wall:'#e87858', post:'#ffd848', postDark:'#d87838', bg:'#ffe8a8', sky:'#fff8d0',
+            accent:'#ff5050', tint:'#ffd838', music:'world_circo' },
     foes:FOES_W5, bosses:BOSSES_W5 },
-  { id:'autumn', name:'AUTUMN WOODS', band:4, waveTarget:20, endless:false, map:{w:4000,h:4000}, enemyTint:'#f07820',
-    theme:{ void:'#9a4818', tile1:'#ec9438', tile2:'#e08430', tuft:'rgba(140,60,14,0.36)',
-            wall:null, post:null, bg:'#dc8828', tint:'#f07820', music:'world_autumn' },
+  { id:'autumn', name:'AUTUMN WOODS', band:4, waveTarget:20, endless:false, map:{w:4000,h:4000}, mapLayout:'clusters', enemyTint:'#f07820',
+    theme:{ void:'#e89848', tile1:'#f8b058', tile2:'#f0a048', tuft:'rgba(180,90,30,0.28)',
+            wall:'#d87830', post:'#e89040', postDark:'#c86828', bg:'#f0a848', sky:'#ffd898',
+            accent:'#ff6030', tint:'#f07820', music:'world_autumn' },
     foes:FOES_W6, bosses:BOSSES_W6 },
-  { id:'swamp', name:'SWAMP', band:5, waveTarget:20, endless:false, map:{w:4800,h:1200}, enemyTint:'#90e850',
-    theme:{ void:'#6ac848', tile1:'#8ed85a', tile2:'#7ed050', tuft:'rgba(30,100,20,0.28)',
-            wall:'#4a8828', post:'#68a838', postDark:'#3a6818', bg:'#70c840', tint:'#80e040', music:'world_swamp',
-            debris:0.55 },
+  { id:'swamp', name:'SWAMP', band:5, waveTarget:20, endless:false, map:{w:4800,h:1200}, mapLayout:'lanes', enemyTint:'#90e850',
+    theme:{ void:'#88e058', tile1:'#a8f068', tile2:'#98e858', tuft:'rgba(60,140,40,0.24)',
+            wall:'#78c848', post:'#88d858', postDark:'#68a838', bg:'#98e858', sky:'#c8f898',
+            accent:'#58b830', tint:'#80e040', music:'world_swamp', debris:0.55 },
     foes:FOES_SWAMP, bosses:BOSSES_DIRT },
-  { id:'sky', name:'SKYLAND', band:6, waveTarget:20, endless:false, map:{w:3000,h:3000}, enemyTint:'#a8d8ff',
-    theme:{ void:'#78b8e0', tile1:'#c8eeff', tile2:'#b4e4ff', tuft:'rgba(120,190,230,0.32)',
-            wall:null, post:null, bg:'#b8e8ff', tint:'#a8d8ff', music:'world_sky' },
+  { id:'sky', name:'SKYLAND', band:6, waveTarget:20, endless:false, map:{w:3000,h:3000}, mapLayout:'pillars', enemyTint:'#a8d8ff',
+    theme:{ void:'#98d8ff', tile1:'#d8f4ff', tile2:'#c4ecff', tuft:'rgba(140,200,240,0.28)',
+            wall:'#88c8f0', post:'#b8e8ff', postDark:'#78b8e0', bg:'#c8eeff', sky:'#e8f8ff',
+            accent:'#58b8ff', tint:'#a8d8ff', music:'world_sky' },
     foes:FOES_W8, bosses:BOSSES_SKY },
-  { id:'crystal', name:'CRYSTAL CAVES', band:7, waveTarget:20, endless:false, map:{w:1100,h:4400}, enemyTint:'#d070ff',
-    theme:{ void:'#d8c0ff', tile1:'#f0e8ff', tile2:'#e0d0ff', tuft:'rgba(180,140,240,0.28)',
-            wall:'#c8a0f0', post:'#e8d8ff', postDark:'#b090e8', bg:'#e8d8ff', tint:'#c060f0', music:'world_crystal' },
+  { id:'crystal', name:'CRYSTAL CAVES', band:7, waveTarget:20, endless:false, map:{w:1100,h:4400}, mapLayout:'corridor', enemyTint:'#d070ff',
+    theme:{ void:'#e8d8ff', tile1:'#f8f0ff', tile2:'#f0e8ff', tuft:'rgba(200,170,250,0.24)',
+            wall:'#d8b8ff', post:'#f0e0ff', postDark:'#c8a0f0', bg:'#f0e8ff', sky:'#faf8ff',
+            accent:'#b878ff', tint:'#c060f0', music:'world_crystal' },
     foes:FOES_W9, bosses:BOSSES_W9 },
-  { id:'volcano', name:'VOLCANO', band:8, waveTarget:20, endless:false, map:{w:3400,h:3400}, enemyTint:'#ff6030',
-    theme:{ void:'#f0a070', tile1:'#ffb090', tile2:'#ff9878', tuft:'rgba(180,80,40,0.28)',
-            wall:'#e87850', post:'#ffa878', postDark:'#d86840', bg:'#ff9878', tint:'#ff5020', music:'world_volcano',
-            debris:0.65 },
+  { id:'volcano', name:'VOLCANO', band:8, waveTarget:20, endless:false, map:{w:3400,h:3400}, mapLayout:'cross', enemyTint:'#ff6030',
+    theme:{ void:'#ffb898', tile1:'#ffd0b0', tile2:'#ffc0a0', tuft:'rgba(220,120,80,0.24)',
+            wall:'#f89878', post:'#ffb898', postDark:'#e88060', bg:'#ffc8a8', sky:'#ffe0c8',
+            accent:'#ff6840', tint:'#ff5020', music:'world_volcano', debris:0.65 },
     foes:FOES_W10, bosses:BOSSES_W10 },
-  { id:'dirt', name:'DIRT DEPTHS', band:9, waveTarget:20, endless:false, map:{w:1000,h:5000}, enemyTint:'#e8a050',
-    theme:{ void:'#d8a868', tile1:'#f0c880', tile2:'#e8b868', tuft:'rgba(120,80,30,0.28)',
-            wall:'#c89850', post:'#e0b060', postDark:'#b08040', bg:'#e8b868', tint:'#f0a838', music:'world_dirt',
-            debris:0.55, edgeDark:0 },
+  { id:'dirt', name:'DIRT DEPTHS', band:9, waveTarget:20, endless:false, map:{w:1000,h:5000}, mapLayout:'pillars', enemyTint:'#e8a050',
+    theme:{ void:'#e8c888', tile1:'#f8e0a0', tile2:'#f0d088', tuft:'rgba(160,120,50,0.24)',
+            wall:'#d8b068', post:'#e8c080', postDark:'#c89850', bg:'#f0d088', sky:'#fff0c0',
+            accent:'#ff9858', tint:'#f0a838', music:'world_dirt', debris:0.55, edgeDark:0 },
     foes:FOES_W11, bosses:BOSSES_W11 },
 ];
 let worldIdx = 0;
@@ -913,23 +920,106 @@ function worldLabel(i){
   if(gameMode==='challenger') return 'CHALLENGER · WORLD '+(i+1);
   return 'WORLD '+(i+1)+' · '+(i<=unlockedMax ? WORLDS[i].name : '??? LOCKED');
 }
-// per-world preview emblem shown on the Battle stage: world ground tones + its end-boss silhouette
-function drawWorldEmblemBase(g,w,sz){
+// per-world preview emblem: sky band + checker ground + layout hint + boss
+const EMBLEM_VER = 3;
+function applyWorldMenuTheme(w) {
+  if (typeof document === 'undefined' || !document.documentElement) return;
+  const th = w && w.theme ? w.theme : {};
+  const root = document.documentElement;
+  const sky = th.sky || th.bg || th.tile1 || '#d8f4ff';
+  const tile = th.tile1 || th.bg || '#ffe8a8';
+  const accent = th.accent || th.tint || '#ffd24a';
+  root.style.setProperty('--world-sky', sky);
+  root.style.setProperty('--world-tile', tile);
+  root.style.setProperty('--world-accent', accent);
+}
+function worldMenuText(w, i) {
+  if (w && w.menuBlurb) return w.menuBlurb;
+  if (typeof worldMenuBlurbFor === 'function' && w && w.map) {
+    const layout = (typeof WorldMapLayout !== 'undefined') ? WorldMapLayout.pickLayout(w, i) : 'open';
+    return worldMenuBlurbFor(w.map, layout, w.name || ('WORLD ' + (i + 1)));
+  }
+  const layout = w && w.id ? ({ grass:'Open hills', citrus:'Coastal lanes', forest:'Fruit clusters', glacier:'Ice islands',
+    circo:'Circus ring', autumn:'Leaf clusters', swamp:'Swamp lanes', sky:'Cloud pillars', crystal:'Crystal corridor',
+    volcano:'Lava cross', dirt:'Tunnel pillars' })[w.id] : null;
+  if (layout && w && w.map) {
+    const shape = w.map.w > w.map.h * 1.3 ? 'Wide stretch' : w.map.h > w.map.w * 1.3 ? 'Vertical shaft' : 'Balanced field';
+    return layout + ' · ' + shape;
+  }
+  return 'Survive the swarm';
+}
+function drawWorldEmblemBase(g,w,sz, wi){
   const th=w.theme;
-  g.fillStyle=th.tile2; g.fillRect(0,0,sz,sz);
-  g.fillStyle=th.tile1; const T=28;                                   // checker ground
-  for(let y=0;y<sz;y+=T) for(let x=0;x<sz;x+=T) if(((x/T+y/T)&1)) g.fillRect(x,y,T,T);
-  const bdef = w.bosses[w.bosses.length-1];                           // headliner = the world's end-boss
+  const sky = th.sky || th.bg || th.tile1;
+  if (typeof g.createLinearGradient === 'function') {
+    const gsky = g.createLinearGradient(0, 0, 0, sz * 0.42);
+    gsky.addColorStop(0, sky);
+    gsky.addColorStop(1, th.tile2 || th.tile1);
+    g.fillStyle = gsky;
+  } else {
+    g.fillStyle = sky;
+  }
+  g.fillRect(0, 0, sz, sz);
+  g.fillStyle=th.tile2; g.fillRect(0,sz*0.38,sz,sz*0.62);
+  g.fillStyle=th.tile1; const T=28;
+  for(let y=Math.floor(sz*0.38);y<sz;y+=T) for(let x=0;x<sz;x+=T) if(((x/T+y/T)&1)) g.fillRect(x,y,T,T);
+  if (th.accent) {
+    g.globalAlpha = 0.42;
+    g.fillStyle = th.accent;
+    const layout = w.mapLayout || (typeof WorldMapLayout !== 'undefined' ? WorldMapLayout.pickLayout(w, wi || 0) : 'open');
+    if (layout === 'pillars') { g.fillRect(sz*0.18, sz*0.42, sz*0.1, sz*0.38); g.fillRect(sz*0.72, sz*0.42, sz*0.1, sz*0.38); }
+    else if (layout === 'corridor') { g.fillRect(sz*0.08, sz*0.4, sz*0.12, sz*0.52); g.fillRect(sz*0.8, sz*0.4, sz*0.12, sz*0.52); }
+    else if (layout === 'lanes') { g.fillRect(sz*0.08, sz*0.52, sz*0.84, sz*0.08); g.fillRect(sz*0.08, sz*0.68, sz*0.84, sz*0.08); }
+    else if (layout === 'islands') { g.fillRect(sz*0.06, sz*0.44, sz*0.18, sz*0.18); g.fillRect(sz*0.76, sz*0.44, sz*0.18, sz*0.18); g.fillRect(sz*0.06, sz*0.72, sz*0.18, sz*0.18); g.fillRect(sz*0.76, sz*0.72, sz*0.18, sz*0.18); }
+    else if (layout === 'cross') { g.fillRect(sz*0.44, sz*0.4, sz*0.12, sz*0.52); g.fillRect(sz*0.08, sz*0.58, sz*0.84, sz*0.12); }
+    else if (layout === 'ring') { g.strokeStyle = th.accent; g.lineWidth = 4; g.beginPath(); g.arc(sz/2, sz*0.62, sz*0.28, 0, TAU); g.stroke(); }
+    else if (layout === 'clusters') {
+      for (const [fx, fy] of [[0.28,0.46],[0.62,0.42],[0.54,0.68],[0.22,0.72]]) g.fillRect(sz*fx, sz*fy, sz*0.12, sz*0.12);
+    }
+    g.globalAlpha = 1;
+  }
+  if (w.map) {
+    const mw = w.map.w, mh = w.map.h;
+    const ar = mw / Math.max(mh, 1);
+    g.globalAlpha = 0.55;
+    g.fillStyle = th.wall || th.accent || '#fff';
+    const bx = sz * 0.06, by = sz * 0.06, bw = sz * 0.22, bh = sz * 0.14;
+    g.fillRect(bx, by, bw, bh);
+    g.globalAlpha = 1;
+    g.fillStyle = th.tint || th.accent || '#fff';
+    g.font = 'bold ' + Math.round(sz * 0.055) + 'px sans-serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    const shape = ar > 1.35 ? 'WIDE' : ar < 0.72 ? 'TALL' : 'SQ';
+    g.fillText(shape, bx + bw / 2, by + bh / 2);
+  }
+  const bdef = w.bosses[w.bosses.length-1];
   const spr = bdef && SP[bdef.spr];
-  if(spr){ const pad=spr._nom?spr.width/spr._nom:1, s=sz*0.72*pad;
-    g.drawImage(spr, (sz-s)/2, (sz-s)/2+8, s, s); }
+  if(spr){
+    const pad=spr._nom?spr.width/spr._nom:1, s=sz*0.68*pad;
+    const bx=(sz-s)/2, by=sz*0.52;
+    if (w.enemyTint) {
+      g.globalAlpha = 0.25;
+      g.fillStyle = w.enemyTint;
+      g.beginPath(); g.arc(sz/2, by+s*0.35, s*0.55, 0, TAU); g.fill();
+      g.globalAlpha = 1;
+    }
+    g.drawImage(spr, bx, by, s, s);
+  }
+  if (th.accent) {
+    g.fillStyle = th.accent;
+    g.fillRect(0, 0, sz, sz * 0.06);
+  }
+  g.strokeStyle = th.accent || th.tint || 'rgba(255,255,255,0.65)';
+  g.lineWidth = 5;
+  g.strokeRect(3, 3, sz-6, sz-6);
 }
 const _emblemURL = {};
 function worldEmblemURL(i){
-  if(_emblemURL[i]) return _emblemURL[i];
+  const key = EMBLEM_VER + ':' + i;
+  if(_emblemURL[key]) return _emblemURL[key];
   const w=WORLDS[i], sz=220, c=document.createElement('canvas'); c.width=c.height=sz;
-  drawWorldEmblemBase(c.getContext('2d'), w, sz);
-  const u=c.toDataURL(); _emblemURL[i]=u; return u;
+  drawWorldEmblemBase(c.getContext('2d'), w, sz, i);
+  const u=c.toDataURL(); _emblemURL[key]=u; return u;
 }
 // Challenger gets the same scene plus a red danger badge, so it reads as a distinct mode at a glance
 const _chalEmblemURL = {};
@@ -937,7 +1027,7 @@ function challengerEmblemURL(i){
   if(_chalEmblemURL[i]) return _chalEmblemURL[i];
   const w=WORLDS[i], sz=220, c=document.createElement('canvas'); c.width=c.height=sz;
   const g=c.getContext('2d');
-  drawWorldEmblemBase(g, w, sz);
+  drawWorldEmblemBase(g, w, sz, i);
   g.save(); g.globalCompositeOperation='multiply'; g.globalAlpha=0.4; g.fillStyle='#ff5a70'; g.fillRect(0,0,sz,sz); g.restore();
   g.lineWidth=10; g.strokeStyle='#ff5a70'; g.strokeRect(5,5,sz-10,sz-10);
   g.save();
@@ -967,7 +1057,14 @@ function setStageEmblem(i){
 }
 function refreshWorldSel(){
   $('wname').textContent = worldLabel(selWorld);
-  const ws=$('worldsub'); if(ws) ws.textContent = gameMode==='practice' ? 'sandbox · no rewards' : 'survive the swarm';
+  const ws=$('worldsub');
+  const w = WORLDS[selWorld];
+  applyWorldMenuTheme(w);
+  if(ws) {
+    if(gameMode==='practice') ws.textContent = 'sandbox · no rewards';
+    else if(gameMode==='challenger') ws.textContent = '15 min survive · boss timers · ' + worldMenuText(w, selWorld);
+    else ws.textContent = worldMenuText(w, selWorld);
+  }
   $('wprev').disabled = selWorld<=0 || gameMode==='practice';
   $('wnext').disabled = gameMode==='practice' || selWorld>=(gameMode==='challenger' ? chalUnlocked : unlockedMax);
   setStageEmblem(selWorld);
@@ -4371,16 +4468,16 @@ function drawDebris(g,gx0,gy0,gx1,gy1){
       const rnd = ()=>{ n = (n*1664525 + 1013904223) >>> 0; return n/4294967296; };
       if(rnd() > 0.46*D) continue;                 // most tiles stay clear
       const px = gx + rnd()*TILE, py = gy + rnd()*TILE, t = rnd();
-      if(t<0.52){                                   // rock with shadow + highlight
+      if(t<0.52){
         const s = 4 + rnd()*7;
-        g.fillStyle='#5e4d39'; g.beginPath(); g.ellipse(px, py+s*0.45, s*1.25, s*0.62, 0,0,TAU); g.fill();
-        g.fillStyle='#8a7558'; g.beginPath(); g.ellipse(px, py, s*1.12, s*0.84, rnd()*TAU, 0,TAU); g.fill();
-        g.fillStyle='rgba(255,240,210,0.16)'; g.beginPath(); g.ellipse(px-s*0.3, py-s*0.3, s*0.4, s*0.26, 0,0,TAU); g.fill();
-      } else if(t<0.78){                            // pebble cluster
-        g.fillStyle='#6b5a42';
+        g.fillStyle='#b8a080'; g.beginPath(); g.ellipse(px, py+s*0.45, s*1.25, s*0.62, 0,0,TAU); g.fill();
+        g.fillStyle='#d8c8a8'; g.beginPath(); g.ellipse(px, py, s*1.12, s*0.84, rnd()*TAU, 0,TAU); g.fill();
+        g.fillStyle='rgba(255,248,220,0.35)'; g.beginPath(); g.ellipse(px-s*0.3, py-s*0.3, s*0.4, s*0.26, 0,0,TAU); g.fill();
+      } else if(t<0.78){
+        g.fillStyle='#c8b898';
         for(let k=0;k<3;k++){ g.beginPath(); g.arc(px+(rnd()-0.5)*14, py+(rnd()-0.5)*14, 1.6+rnd()*2.1, 0,TAU); g.fill(); }
-      } else if(t<0.92){                            // hairline crack
-        g.strokeStyle='rgba(26,17,9,0.5)'; g.lineWidth=1.6;
+      } else if(t<0.92){
+        g.strokeStyle='rgba(140,110,80,0.45)'; g.lineWidth=1.6;
         let cxp=px, cyp=py, a=rnd()*TAU; g.beginPath(); g.moveTo(cxp,cyp);
         for(let k=0;k<3;k++){ a += (rnd()-0.5)*1.2; cxp+=Math.cos(a)*10; cyp+=Math.sin(a)*10; g.lineTo(cxp,cyp); } g.stroke();
       } else {                                      // bone shard
@@ -4495,9 +4592,9 @@ function drawReadabilityRim(x, y, r) {
   cx.beginPath();
   cx.ellipse(x, y, r * 0.95, r * 1.02, 0, 0, TAU);
   cx.stroke();
-  cx.strokeStyle = '#2a1c10';
+  cx.strokeStyle = '#8a7060';
   cx.lineWidth = Math.max(1.2, r * 0.065);
-  cx.globalAlpha = 0.4;
+  cx.globalAlpha = 0.55;
   cx.stroke();
   cx.restore();
 }

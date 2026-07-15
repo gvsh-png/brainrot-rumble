@@ -397,11 +397,11 @@ makeSprite('chimp', 104, (g,u)=>{
 makeSprite('penguin', 102, (g,u)=>{
   sh(g,'#8a5a32',3.4*u,(g)=>{ g.ellipse(0,8*u,22*u,24*u,0,0,TAU); }); // coconut body
   dot(g,-8*u,6*u,2.4*u,'#5e3b1e'); dot(g,8*u,6*u,2.4*u,'#5e3b1e'); dot(g,0,16*u,2.4*u,'#5e3b1e');
-  sh(g,'#2b2b32',3.2*u,(g)=>{ g.ellipse(0,-16*u,15*u,14*u,0,0,TAU); }); // head
+  sh(g,'#586878',3.2*u,(g)=>{ g.ellipse(0,-16*u,15*u,14*u,0,0,TAU); }); // head
   sh(g,'#f4f4f4',0,(g)=>{ g.ellipse(0,-12*u,10*u,9*u,0,0,TAU); }); // face white
   sh(g,'#f0a23a',0,(g)=>{ g.moveTo(-4*u,-10*u); g.lineTo(4*u,-10*u); g.lineTo(0,-5*u); g.closePath(); }); // beak
   eyes(g,u,0,-15*u,4.5*u,3*u);
-  sh(g,'#2b2b32',2.4*u,(g)=>{ g.ellipse(-22*u,6*u,5*u,12*u,0.3,0,TAU); }); sh(g,'#2b2b32',2.4*u,(g)=>{ g.ellipse(22*u,6*u,5*u,12*u,-0.3,0,TAU); });
+  sh(g,'#586878',2.4*u,(g)=>{ g.ellipse(-22*u,6*u,5*u,12*u,0.3,0,TAU); }); sh(g,'#586878',2.4*u,(g)=>{ g.ellipse(22*u,6*u,5*u,12*u,-0.3,0,TAU); });
 });
 
 // ---- Flamingulli-gulli-gulli: loopy-neck flamingo ----
@@ -411,7 +411,7 @@ makeSprite('flamingo', 108, (g,u)=>{
   g.moveTo(6*u,4*u); g.bezierCurveTo(30*u,-6*u,-6*u,-14*u,12*u,-26*u); g.stroke();
   g.strokeStyle=OUT; g.lineWidth=2*u; g.stroke();
   sh(g,'#f58fb5',2.6*u,(g)=>{ g.ellipse(14*u,-30*u,8*u,7*u,0,0,TAU); }); // head
-  sh(g,'#222',0,(g)=>{ g.moveTo(20*u,-30*u); g.lineTo(30*u,-27*u); g.lineTo(20*u,-25*u); g.closePath(); }); // beak
+  sh(g,'#704830',0,(g)=>{ g.moveTo(20*u,-30*u); g.lineTo(30*u,-27*u); g.lineTo(20*u,-25*u); g.closePath(); }); // beak
   eyes(g,u,15*u,-31*u,3.4*u,2.4*u);
   sh(g,'#e07aa0',2*u,(g)=>{ g.moveTo(-6*u,26*u); g.lineTo(-6*u,38*u); }); sh(g,'#e07aa0',2*u,(g)=>{ g.moveTo(4*u,26*u); g.lineTo(4*u,38*u); });
 });
@@ -425,7 +425,7 @@ makeSprite('cappuccino', 106, (g,u)=>{
   sh(g,'#f3ece0',3.6*u,(g)=>{ g.moveTo(-18*u,-8*u); g.lineTo(18*u,-8*u); g.lineTo(14*u,20*u); g.lineTo(-14*u,20*u); g.closePath(); }); // cup
   sh(g,'#f3ece0',3*u,(g)=>{ g.arc(20*u,4*u,8*u,-1.2,1.2); }); // handle
   sh(g,'#5b3a22',2.6*u,(g)=>{ g.ellipse(0,-9*u,18*u,6*u,0,0,TAU); });
-  sh(g,'#222',0,(g)=>{ g.rect(-14*u,-4*u,28*u,7*u); }); // ninja mask band
+  sh(g,'#704830',0,(g)=>{ g.rect(-14*u,-4*u,28*u,7*u); }); // ninja mask band
   eyes(g,u,0,0,6*u,3.2*u);
 });
 
@@ -461,8 +461,8 @@ makeSprite('beaver', 108, (g,u)=>{
   sh(g,'#3a3a44',0,(g)=>{ g.rect(-16*u,-6*u,32*u,12*u); }); // pinstripe vest
   for(let i=-2;i<=2;i++) sh(g,'#cfcfd8',0.8*u,(g)=>{ g.moveTo(i*6*u,-6*u); g.lineTo(i*6*u,6*u); });
   sh(g,'#9a6b40',3.2*u,(g)=>{ g.ellipse(0,-18*u,15*u,13*u,0,0,TAU); }); // head
-  sh(g,'#2b2b32',0,(g)=>{ g.ellipse(0,-30*u,16*u,5*u,0,0,TAU); }); // fedora brim
-  sh(g,'#2b2b32',0,(g)=>{ g.roundRect(-9*u,-40*u,18*u,12*u,3*u); }); // fedora top
+  sh(g,'#586878',0,(g)=>{ g.ellipse(0,-30*u,16*u,5*u,0,0,TAU); }); // fedora brim
+  sh(g,'#586878',0,(g)=>{ g.roundRect(-9*u,-40*u,18*u,12*u,3*u); }); // fedora top
   eyes(g,u,0,-19*u,5*u,3*u);
   sh(g,'#fff',1*u,(g)=>{ g.rect(-4*u,-10*u,8*u,5*u); }); // buck teeth
 });
@@ -516,7 +516,7 @@ makeSprite('espresso', 110, (g,u)=>{
   sh(g,'#5b3a22',2.4*u,(g)=>{ g.moveTo(-4*u,28*u); g.lineTo(-7*u,40*u); }); sh(g,'#5b3a22',2.4*u,(g)=>{ g.moveTo(4*u,28*u); g.lineTo(7*u,40*u); });
   sh(g,'#d8c2a0',3.4*u,(g)=>{ g.moveTo(-14*u,-22*u); g.lineTo(14*u,-22*u); g.lineTo(11*u,2*u); g.lineTo(-11*u,2*u); g.closePath(); }); // small espresso cup
   sh(g,'#d8c2a0',2.4*u,(g)=>{ g.arc(16*u,-10*u,6*u,-1.2,1.2); });
-  sh(g,'#3a2414',2.4*u,(g)=>{ g.ellipse(0,-22*u,14*u,5*u,0,0,TAU); });
+  sh(g,'#8a5840',2.4*u,(g)=>{ g.ellipse(0,-22*u,14*u,5*u,0,0,TAU); });
   eyes(g,u,0,-10*u,6*u,3.4*u);
 });
 
@@ -711,7 +711,7 @@ makeSprite('zibra', 110, (g,u)=>{      // Zibra Zubra Zibralini: zebra
   sh(g,'#e8e4dc',3.2*u,(g)=>{ g.ellipse(2*u,-16*u,13*u,14*u,0,0,TAU); }); // head
   g.strokeStyle=OUT; g.lineWidth=2.2*u;
   for(let k=-2;k<=2;k++){ g.beginPath(); g.moveTo(k*7*u,-12*u); g.lineTo(k*7*u+2*u,22*u); g.stroke(); } // body stripes
-  sh(g,'#2b2b32',0,(g)=>{ g.ellipse(-4*u,-26*u,4*u,7*u,0,0,TAU); }); sh(g,'#2b2b32',0,(g)=>{ g.ellipse(8*u,-26*u,4*u,7*u,0,0,TAU); }); // ears
+  sh(g,'#586878',0,(g)=>{ g.ellipse(-4*u,-26*u,4*u,7*u,0,0,TAU); }); sh(g,'#586878',0,(g)=>{ g.ellipse(8*u,-26*u,4*u,7*u,0,0,TAU); }); // ears
   eyes(g,u,2*u,-16*u,5*u,3*u);
 });
 // Tier IV
@@ -750,7 +750,7 @@ makeSprite('bicus', 110, (g,u)=>{      // Brri Brri Bicus Dicus Bombicus: roman 
   dot(g,-16*u,16*u,5*u,'#3a3a44'); dot(g,16*u,16*u,5*u,'#3a3a44'); // little bombs
 });
 makeSprite('ambalabu', 110, (g,u)=>{   // Boneca Ambalabu: frog-tire creature
-  sh(g,'#2b2b32',4*u,(g)=>{ g.ellipse(0,16*u,24*u,12*u,0,0,TAU); }); // tire
+  sh(g,'#586878',4*u,(g)=>{ g.ellipse(0,16*u,24*u,12*u,0,0,TAU); }); // tire
   sh(g,'#5a5a66',0,(g)=>{ g.ellipse(0,16*u,12*u,6*u,0,0,TAU); }); // hub
   sh(g,'#5a9e3f',3.4*u,(g)=>{ g.ellipse(0,-10*u,18*u,15*u,0,0,TAU); }); // frog head
   sh(g,'#6fb050',3*u,(g)=>{ g.ellipse(-12*u,-22*u,8*u,8*u,0,0,TAU); }); sh(g,'#6fb050',3*u,(g)=>{ g.ellipse(12*u,-22*u,8*u,8*u,0,0,TAU); }); // eye bulges
@@ -771,7 +771,7 @@ makeSprite('tatasahur', 132, (g,u)=>{  // TING TING TING BAHUR 2.0: burrowing wo
   sh(g,'#b5894e',4*u,(g)=>{ g.roundRect(-18*u,-20*u,36*u,50*u,10*u); }); // wooden body
   sh(g,'#7a5a30',0,(g)=>{ g.ellipse(0,4*u,10*u,16*u,0,0,TAU); }); // wood grain
   sh(g,'#caa96a',3.4*u,(g)=>{ g.ellipse(0,-30*u,16*u,15*u,0,0,TAU); }); // head
-  sh(g,'#2b2b32',0,(g)=>{ g.rect(-16*u,-34*u,32*u,8*u); }); // brow
+  sh(g,'#586878',0,(g)=>{ g.rect(-16*u,-34*u,32*u,8*u); }); // brow
   eyes(g,u,0,-28*u,6*u,3.4*u);
   sh(g,OUT,2.4*u,(g)=>{ g.moveTo(-10*u,-18*u); g.lineTo(0,-22*u); g.lineTo(10*u,-18*u); }); // grimace
 });
@@ -802,7 +802,7 @@ makeSprite('madudung', 138, (g,u)=>{   // MADUDUNGDUNG: rock golem titan
   sh(g,'#3a2e22',0,(g)=>{ g.rect(-12*u,8*u,24*u,5*u); }); // mouth slit
 });
 makeSprite('garamaraman', 138, (g,u)=>{ // GARAMARAMAN: horned magma titan
-  sh(g,'#3a2a26',4.4*u,(g)=>{ g.ellipse(0,6*u,28*u,26*u,0,0,TAU); }); // dark body
+  sh(g,'#c85840',4.4*u,(g)=>{ g.ellipse(0,6*u,28*u,26*u,0,0,TAU); }); // magma body
   sh(g,'#e0503f',0,(g)=>{ g.moveTo(-14*u,-6*u); g.lineTo(0,-2*u); g.lineTo(-8*u,12*u); g.closePath(); }); // magma crack
   sh(g,'#ff9f3a',0,(g)=>{ g.moveTo(6*u,-2*u); g.lineTo(18*u,4*u); g.lineTo(8*u,16*u); g.closePath(); });
   sh(g,'#caa96a',3.4*u,(g)=>{ g.moveTo(-26*u,-18*u); g.lineTo(-40*u,-36*u); g.lineTo(-20*u,-28*u); g.closePath(); }); // horn L
@@ -811,14 +811,14 @@ makeSprite('garamaraman', 138, (g,u)=>{ // GARAMARAMAN: horned magma titan
   sh(g,'#ff7a2a',2.6*u,(g)=>{ g.moveTo(-12*u,12*u); g.lineTo(-6*u,18*u); g.lineTo(0,12*u); g.lineTo(6*u,18*u); g.lineTo(12*u,12*u); }); // fiery grin
 });
 makeSprite('orcalero', 120, (g,u)=>{   // ORCALERO ORCALA: armoured killer-whale brute
-  sh(g,'#1f2a33',3*u,(g)=>{ g.moveTo(-30*u,-2*u); g.lineTo(-46*u,-14*u); g.lineTo(-40*u,2*u); g.lineTo(-46*u,16*u); g.closePath(); }); // tail fluke
-  sh(g,'#1f2a33',3*u,(g)=>{ g.moveTo(-6*u,-18*u); g.lineTo(2*u,-34*u); g.lineTo(12*u,-18*u); g.closePath(); }); // dorsal fin
-  sh(g,'#222d36',3.6*u,(g)=>{ g.ellipse(0,0,34*u,21*u,0,0,TAU); }); // body
+  sh(g,'#4a7898',3*u,(g)=>{ g.moveTo(-30*u,-2*u); g.lineTo(-46*u,-14*u); g.lineTo(-40*u,2*u); g.lineTo(-46*u,16*u); g.closePath(); }); // tail fluke
+  sh(g,'#4a7898',3*u,(g)=>{ g.moveTo(-6*u,-18*u); g.lineTo(2*u,-34*u); g.lineTo(12*u,-18*u); g.closePath(); }); // dorsal fin
+  sh(g,'#5a98b8',3.6*u,(g)=>{ g.ellipse(0,0,34*u,21*u,0,0,TAU); }); // body
   sh(g,'#eef4f7',0,(g)=>{ g.ellipse(2*u,9*u,26*u,9*u,0,0,Math.PI); }); // white belly
   sh(g,'#eef4f7',0,(g)=>{ g.ellipse(-18*u,4*u,8*u,6*u,0,0,TAU); }); // flank patch
-  sh(g,'#1f2a33',2.4*u,(g)=>{ g.moveTo(6*u,12*u); g.lineTo(2*u,26*u); g.lineTo(16*u,16*u); g.closePath(); }); // pectoral fin
+  sh(g,'#4a7898',2.4*u,(g)=>{ g.moveTo(6*u,12*u); g.lineTo(2*u,26*u); g.lineTo(16*u,16*u); g.closePath(); }); // pectoral fin
   sh(g,'#eef4f7',0,(g)=>{ g.ellipse(20*u,-8*u,7*u,5*u,0.2,0,TAU); }); // eye patch
-  sh(g,'#222d36',2.6*u,(g)=>{ g.moveTo(30*u,-2*u); g.lineTo(40*u,2*u); }); // snout tip
+  sh(g,'#5a98b8',2.6*u,(g)=>{ g.moveTo(30*u,-2*u); g.lineTo(40*u,2*u); }); // snout tip
   g.strokeStyle=OUT; g.lineWidth=2*u; g.beginPath(); g.moveTo(22*u,6*u); g.lineTo(38*u,6*u); g.stroke(); // mouth line
   for(let i=0;i<4;i++){ sh(g,'#fff',0,(g)=>{ g.moveTo(24*u+i*4*u,6*u); g.lineTo(26*u+i*4*u,10*u); g.lineTo(28*u+i*4*u,6*u); g.closePath(); }); } // teeth
   eyes(g,u,20*u,-8*u,4.5*u,2.8*u);
@@ -847,9 +847,9 @@ makeSprite('pipikiwi', 92, (g,u)=>{
 });
 // Tukanno Bananno — toucan with a banana beak
 makeSprite('tukanno', 100, (g,u)=>{
-  sh(g,'#2b2b32',3.2*u,(g)=>{ g.ellipse(-4*u,6*u,18*u,16*u,0,0,TAU); });
+  sh(g,'#586878',3.2*u,(g)=>{ g.ellipse(-4*u,6*u,18*u,16*u,0,0,TAU); });
   sh(g,'#f4f4f4',0,(g)=>{ g.ellipse(-2*u,2*u,11*u,9*u,0,0,TAU); });
-  sh(g,'#2b2b32',3*u,(g)=>{ g.ellipse(2*u,-14*u,13*u,12*u,0,0,TAU); });
+  sh(g,'#586878',3*u,(g)=>{ g.ellipse(2*u,-14*u,13*u,12*u,0,0,TAU); });
   sh(g,'#f5c542',2.6*u,(g)=>{ g.moveTo(11*u,-19*u); g.quadraticCurveTo(40*u,-16*u,33*u,-3*u); g.quadraticCurveTo(22*u,-6*u,11*u,-10*u); g.closePath(); });
   g.strokeStyle=OUT; g.lineWidth=1.5*u; g.beginPath(); g.moveTo(13*u,-12*u); g.lineTo(32*u,-9*u); g.stroke();
   eyes(g,u,4*u,-16*u,5*u,3*u);
@@ -916,7 +916,7 @@ makeSprite('eccocavallo', 120, (g,u)=>{
   sh(g,'#7a5a3a',0,(g)=>{ g.moveTo(-6*u,-32*u); g.lineTo(-9*u,-42*u); g.lineTo(-2*u,-34*u); g.closePath(); }); sh(g,'#7a5a3a',0,(g)=>{ g.moveTo(6*u,-32*u); g.lineTo(9*u,-42*u); g.lineTo(2*u,-34*u); g.closePath(); });
   sh(g,'#5a3f28',0,(g)=>{ g.ellipse(0,-15*u,7*u,5*u,0,0,TAU); });
   eyes(g,u,0,-24*u,5*u,3*u);
-  sh(g,'#2b2b32',2.6*u,(g)=>{ g.roundRect(-16*u,30*u,12*u,9*u,3*u); }); sh(g,'#2b2b32',2.6*u,(g)=>{ g.roundRect(4*u,30*u,12*u,9*u,3*u); });
+  sh(g,'#586878',2.6*u,(g)=>{ g.roundRect(-16*u,30*u,12*u,9*u,3*u); }); sh(g,'#586878',2.6*u,(g)=>{ g.roundRect(4*u,30*u,12*u,9*u,3*u); });
 });
 // Tigrullini Watermellini — tiger head on a watermelon torso
 makeSprite('tigrwater', 120, (g,u)=>{
@@ -1455,8 +1455,8 @@ makeSprite('americanopenguino', 120, (g,u)=>{
   sh(g,'#34404f',2.5*u,(p)=>{ p.ellipse(-19*u,8*u,5*u,13*u,0.3,0,TAU); }); // left flipper
   sh(g,'#34404f',2.5*u,(p)=>{ p.ellipse(21*u,2*u,5*u,12*u,-0.7,0,TAU); }); // right flipper raised
   sh(g,'#f5a623',2*u,(p)=>{ p.moveTo(-4*u,-8*u); p.lineTo(4*u,-8*u); p.lineTo(0,-2*u); p.closePath(); }); // beak
-  sh(g,'#1a1a1a',1.5*u,(p)=>{ p.roundRect(-12*u,-18*u,24*u,7*u,2*u); }); // shades
-  g.strokeStyle='#1a1a1a'; g.lineWidth=1.5*u; g.beginPath(); g.moveTo(0,-15*u); g.lineTo(0,-15*u); g.stroke();
+  sh(g,'#504858',1.5*u,(p)=>{ p.roundRect(-12*u,-18*u,24*u,7*u,2*u); }); // shades
+  g.strokeStyle='#504858'; g.lineWidth=1.5*u; g.beginPath(); g.moveTo(0,-15*u); g.lineTo(0,-15*u); g.stroke();
   sh(g,'#d7c4a6',2*u,(p)=>{ p.roundRect(20*u,-6*u,12*u,14*u,2*u); }); // coffee cup
   sh(g,'#5a3a22',0,(p)=>{ p.ellipse(26*u,-4*u,5*u,2*u,0,0,TAU); }); // coffee
   sh(g,'#f5a623',2*u,(p)=>{ p.ellipse(-7*u,32*u,6*u,3*u,0,0,TAU); p.ellipse(7*u,32*u,6*u,3*u,0,0,TAU); }); // feet
@@ -1529,10 +1529,10 @@ makeSprite('tiramisubmarini', 256, (g,u)=>{
   sh(g,'#5b3a22',5*u,(p)=>{ p.roundRect(-46*u,-14*u,90*u,46*u,20*u); }); // sub-train hull
   sh(g,'#7a5234',0,(p)=>{ p.roundRect(-40*u,-8*u,78*u,16*u,8*u); }); // cocoa sheen
   for(const px of [-30,-12,8,28]){ dot(g,px*u,6*u,7*u,'#bfe6ff'); g.strokeStyle=OUT; g.lineWidth=2.5*u; g.beginPath(); g.arc(px*u,6*u,7*u,0,TAU); g.stroke(); } // portholes
-  sh(g,'#3a2414',3*u,(p)=>{ p.moveTo(44*u,-9*u); p.lineTo(50*u,2*u); p.lineTo(44*u,13*u); p.closePath(); }); // nose
+  sh(g,'#8a5840',3*u,(p)=>{ p.moveTo(44*u,-9*u); p.lineTo(50*u,2*u); p.lineTo(44*u,13*u); p.closePath(); }); // nose
   sh(g,'#9e9e9e',2.5*u,(p)=>{ p.roundRect(-46*u,-4*u,9*u,12*u,3*u); }); // rear jet
   sh(g,'#caa46a',4*u,(p)=>{ p.roundRect(-16*u,-40*u,34*u,30*u,6*u); }); // mug conning tower
-  sh(g,'#3a2414',0,(p)=>{ p.ellipse(1*u,-37*u,14*u,5*u,0,0,TAU); }); // coffee top
+  sh(g,'#8a5840',0,(p)=>{ p.ellipse(1*u,-37*u,14*u,5*u,0,0,TAU); }); // coffee top
   sh(g,'#caa46a',3*u,(p)=>{ p.arc(22*u,-26*u,9*u,-1.2,1.2); }); // mug handle
   g.strokeStyle='#f4f4f4'; g.lineWidth=3*u; g.beginPath(); g.moveTo(-4*u,-44*u); g.lineTo(4*u,-48*u); g.stroke(); // straw
   eyes(g,u,16*u,0,11*u,6*u);
@@ -1712,8 +1712,8 @@ makeSprite('maestrofoccino', 120, (g,u)=>{
   g.strokeStyle=OUT; g.lineWidth=1.2*u; for(const s of [-1,1]){ g.beginPath(); g.moveTo(s*3*u,-3*u); g.lineTo(s*14*u,-5*u); g.moveTo(s*3*u,-1*u); g.lineTo(s*14*u,1*u); g.stroke(); } // whiskers
   eyes(g,u,0,-15*u,5*u,3.4*u);
   // ringmaster top hat + bowtie
-  sh(g,'#2a2f36',2.5*u,(p)=>{ p.ellipse(0,-22*u,15*u,4*u,0,0,TAU); }); sh(g,'#e8463c',2.5*u,(p)=>{ p.rect(-9*u,-38*u,18*u,16*u); });
-  sh(g,'#2a2f36',0,(p)=>{ p.rect(-9*u,-26*u,18*u,4*u); }); // hat band
+  sh(g,'#688898',2.5*u,(p)=>{ p.ellipse(0,-22*u,15*u,4*u,0,0,TAU); }); sh(g,'#e8463c',2.5*u,(p)=>{ p.rect(-9*u,-38*u,18*u,16*u); });
+  sh(g,'#688898',0,(p)=>{ p.rect(-9*u,-26*u,18*u,4*u); }); // hat band
   sh(g,'#ffd24a',2*u,(p)=>{ p.moveTo(0,4*u); p.lineTo(-7*u,0); p.lineTo(-7*u,8*u); p.closePath(); p.moveTo(0,4*u); p.lineTo(7*u,0); p.lineTo(7*u,8*u); p.closePath(); }); // bowtie
 });
 
@@ -1763,7 +1763,7 @@ makeSprite('mangiafuoco', 256, (g,u)=>{
   sh(g,'#caa46a',4*u,(p)=>{ p.ellipse(-34*u,18*u,12*u,16*u,0.3,0,TAU); p.ellipse(34*u,18*u,12*u,16*u,-0.3,0,TAU); }); // arms
   sh(g,'#e0a878',4.5*u,(p)=>{ p.ellipse(0,-14*u,22*u,20*u,0,0,TAU); }); // head
   // big black beard
-  sh(g,'#2a2420',3*u,(p)=>{ p.moveTo(-20*u,-12*u); p.quadraticCurveTo(-16*u,18*u,0,16*u); p.quadraticCurveTo(16*u,18*u,20*u,-12*u); p.quadraticCurveTo(0,-2*u,-20*u,-12*u); p.closePath(); });
+  sh(g,'#786858',3*u,(p)=>{ p.moveTo(-20*u,-12*u); p.quadraticCurveTo(-16*u,18*u,0,16*u); p.quadraticCurveTo(16*u,18*u,20*u,-12*u); p.quadraticCurveTo(0,-2*u,-20*u,-12*u); p.closePath(); });
   eyes(g,u,0,-22*u,8*u,4.5*u);
   g.strokeStyle=OUT; g.lineWidth=3*u; g.beginPath(); g.moveTo(-18*u,-30*u); g.lineTo(-6*u,-26*u); g.moveTo(6*u,-26*u); g.lineTo(18*u,-30*u); g.stroke(); // brows
   // flame plume from mouth (upward, within bounds)
@@ -1786,8 +1786,8 @@ makeSprite('granpagliaccio', 256, (g,u)=>{
   eyes(g,u,0,-22*u,12*u,6*u);
   g.strokeStyle='#e8463c'; g.lineWidth=3.5*u; g.beginPath(); g.arc(0,-8*u,13*u,0.12,Math.PI-0.12); g.stroke(); // grand grin
   // top hat
-  sh(g,'#2a2f36',4*u,(p)=>{ p.ellipse(0,-40*u,26*u,6*u,0,0,TAU); }); sh(g,'#e8463c',4*u,(p)=>{ p.rect(-16*u,-47*u,32*u,9*u); });
-  sh(g,'#2a2f36',0,(p)=>{ p.rect(-16*u,-40*u,32*u,4*u); }); // hat band
+  sh(g,'#688898',4*u,(p)=>{ p.ellipse(0,-40*u,26*u,6*u,0,0,TAU); }); sh(g,'#e8463c',4*u,(p)=>{ p.rect(-16*u,-47*u,32*u,9*u); });
+  sh(g,'#688898',0,(p)=>{ p.rect(-16*u,-40*u,32*u,4*u); }); // hat band
 });
 
 // ============ AUTO-RIG: apply animated legs to baked sprites ============
@@ -1854,7 +1854,7 @@ function autoRig(name, cfg) {
     garamaraman:['#3a2a26',24, 13, 9, 5],
     // ── World 3 ──
     pipikiwi:  ['#5a7a5a', 18, 10, 4, 4],
-    tukanno:   ['#2b2b32', 18, 10, 4, 4],
+    tukanno:   ['#586878', 18, 10, 4, 4],
     raccooni:  ['#6a5a4a', 20, 11, 5, 4],
     avoguffo:  ['#5f9e4a', 20, 10, 6, 4],
     svinino:   ['#f58fb5', 18,  9, 6, 4],
