@@ -3,10 +3,10 @@
 
 (function () {
   const ACTS = [
-    { start: 0, end: 10, title: 'PART 1 — SWARM ATTACK!', tag: 'Brainrot monsters invade your home!' },
-    { start: 11, end: 24, title: 'PART 2 — NEW ZONES', tag: 'The swarm spreads to wild new places.' },
-    { start: 25, end: 39, title: 'PART 3 — DEEP HIVE', tag: 'Tougher bands. Weirder bosses.' },
-    { start: 40, end: 49, title: 'PART 4 — FINAL FIGHT', tag: 'Stop the hive mind for good!' },
+    { start: 0, end: 10, title: 'PART 1: SWARM ATTACK!', tag: 'Brainrot monsters invade your home!' },
+    { start: 11, end: 24, title: 'PART 2: NEW ZONES', tag: 'The swarm spreads to wild new places.' },
+    { start: 25, end: 39, title: 'PART 3: DEEP HIVE', tag: 'Tougher bands. Weirder bosses.' },
+    { start: 40, end: 49, title: 'PART 4: FINAL FIGHT', tag: 'Stop the hive mind for good!' },
   ];
 
   // Full story scene (twist + ally) every ~5 worlds — not every single one.
@@ -16,7 +16,7 @@
     'The swarm is here. Time to fight!',
     'New zone, new monsters. Let\'s go!',
     'Clear the waves and beat the boss!',
-    'Stay sharp — they come in big groups!',
+    'Stay sharp. They come in big groups!',
     'You can do this. Keep moving!',
   ];
 
@@ -30,7 +30,7 @@
 
   const CHAL_INTRO = [
     'CHALLENGER! Survive 15 minutes.',
-    'No wave breaks — just you and the swarm.',
+    'No wave breaks. Just you and the swarm.',
     'Bosses show up on a timer. Good luck!',
   ];
 
@@ -59,7 +59,7 @@
     citrus: ['The tide washes bug goo away.'],
     forest: ['Fruit trees stand tall once more.'],
     glacier: ['Ice sparkles clean and bright.'],
-    circo: ['The tents fold up — show\'s over!'],
+    circo: ['The tents fold up. Show is over!'],
     autumn: ['A warm breeze blows the bugs away.'],
     swamp: ['Frogs croak like they own the place again.'],
     sky: ['Clouds part and the sun returns.'],
@@ -74,12 +74,12 @@
     4: 'Surprise! The circus boss tricks you with a fake-out attack!',
     9: 'The dirt boss was just the warm-up. The REAL hive is ahead!',
     14: 'The swarm built a maze to trap you. Don\'t get cornered!',
-    19: 'Twist! Friendly bugs were brainwashed — free them by winning!',
+    19: 'Twist! Friendly bugs were brainwashed. Free them by winning!',
     24: 'A whole new biome… and the swarm already moved in.',
     29: 'The hive sends a double boss. Beat both waves!',
     34: 'Time feels weird here. Waves come faster!',
     39: 'The swarm almost stole the map. Take it back!',
-    44: 'Whoa — the hive copied your best move!',
+    44: 'Whoa! The hive copied your best move!',
     49: 'This is it. Beat the hive mind and save everyone!',
   };
 
@@ -88,7 +88,7 @@
     3: 'Il Cecchino joins! Snipes from far away.',
     8: 'Il Professore arrives! Extra XP help.',
     10: 'Il Campione joins! Boss slayer mode.',
-    7: 'Swarm Scout radios in — knows the hive routes.',
+    7: 'Swarm Scout radios in. Knows the hive routes.',
     9: 'Hive Knight shields the team!',
     11: 'Rot Weaver threads power into your shots.',
     14: 'Void Runner slips past swarm blocks.',
@@ -133,7 +133,7 @@
     const id = world && world.id ? world.id : '';
     if (ZONE_VICTORY[id]) return ZONE_VICTORY[id][0];
     const nm = world && world.name ? world.name : ('Zone ' + (wi + 1));
-    return nm + ' is safe again — for now.';
+    return nm + ' is safe again, for now.';
   }
 
   function allyForWorld(wi) {
@@ -166,6 +166,36 @@
     const allyLine = MILESTONE_ALLY_LINES[wi] || (ally ? ally.name + ' joins the team!' : null);
     const atmo = atmosphereFor(wi, world);
     const victory = victoryFor(wi, world);
+
+    if (typeof buildStoryScenes === 'function') {
+      const sc = buildStoryScenes(wi, world, { name, boss, midBoss, milestone, twist, allyLine, act });
+      return Object.assign({
+        act, milestone,
+        vis: sc.cineFx || VIS_EFFECTS[wi % VIS_EFFECTS.length],
+        cineFx: sc.cineFx || VIS_EFFECTS[wi % VIS_EFFECTS.length],
+        allyChar: ally, allyReveal: !!ally,
+        heroLine: wi === 0 ? 'You vs the whole swarm. Go!' : null,
+        zoneName: name,
+        introDur: sc.introDur,
+        outroDur: sc.outroDur,
+        chalIntroDur: sc.chalIntroDur,
+        chalOutroDur: sc.chalOutroDur,
+      }, sc);
+    }
+
+    const chalIntroBeats = [
+      { t0: 0.3, t1: 3.0, y: 0.18, text: 'CHALLENGER: ' + name, big: true, title: true },
+      { t0: 1.4, t1: 4.6, y: 0.38, text: atmo[0], dim: true },
+      { t0: 3.0, t1: 6.2, y: 0.54, text: pick(CHAL_INTRO, wi) },
+      { t0: 5.0, t1: 8.4, y: 0.72, text: 'Boss at 5, 10, 15, and 20 min!', dim: true },
+    ];
+
+    const chalOutroBeats = [
+      { t0: 0.3, t1: 3.0, y: 0.2, text: 'CHALLENGER WIN!', big: true, title: true },
+      { t0: 1.2, t1: 4.4, y: 0.4, text: pick(CHAL_OUTRO, wi) },
+      { t0: 3.0, t1: 6.0, y: 0.58, text: victory, dim: true },
+      { t0: 5.0, t1: 8.2, y: 0.76, text: 'Story mode still has more zones!', dim: true },
+    ];
 
     let introBeats;
     let outroBeats;
@@ -200,7 +230,7 @@
 
     if (milestone) {
       outroBeats = [
-        { t0: 0.2, t1: 3.0, y: 0.16, text: name + ' — SAVED!', big: true, title: true },
+        { t0: 0.2, t1: 3.0, y: 0.16, text: name + ' SAVED!', big: true, title: true },
         { t0: 1.2, t1: 4.4, y: 0.32, text: boss + ' is defeated!' },
         { t0: 2.6, t1: 6.0, y: 0.46, text: victory },
         { t0: 4.2, t1: 7.6, y: 0.58, text: wi < 49 ? 'But the swarm is already heading to the next zone…' : 'The hive mind is the last fight!' },
@@ -208,27 +238,13 @@
       ];
     } else {
       outroBeats = [
-        { t0: 0.2, t1: 2.8, y: 0.18, text: name + ' — cleared!', big: true, title: true },
+        { t0: 0.2, t1: 2.8, y: 0.18, text: name + ' cleared!', big: true, title: true },
         { t0: 1.0, t1: 4.0, y: 0.34, text: boss + ' goes down!' },
         { t0: 2.4, t1: 5.6, y: 0.48, text: victory, dim: true },
         { t0: 4.0, t1: 7.0, y: 0.62, text: pick(QUICK_WINS, wi) },
         { t0: 5.8, t1: 8.6, y: 0.78, text: wi < 49 ? 'World ' + (wi + 2) + ' is waiting…' : 'Final zone next!', dim: true },
       ];
     }
-
-    const chalIntroBeats = [
-      { t0: 0.3, t1: 3.0, y: 0.18, text: 'CHALLENGER — ' + name, big: true, title: true },
-      { t0: 1.4, t1: 4.6, y: 0.38, text: atmo[0], dim: true },
-      { t0: 3.0, t1: 6.2, y: 0.54, text: pick(CHAL_INTRO, wi) },
-      { t0: 5.0, t1: 8.4, y: 0.72, text: 'Boss at 5, 10, 15, and 20 min!', dim: true },
-    ];
-
-    const chalOutroBeats = [
-      { t0: 0.3, t1: 3.0, y: 0.2, text: 'CHALLENGER WIN!', big: true, title: true },
-      { t0: 1.2, t1: 4.4, y: 0.4, text: pick(CHAL_OUTRO, wi) },
-      { t0: 3.0, t1: 6.0, y: 0.58, text: victory, dim: true },
-      { t0: 5.0, t1: 8.2, y: 0.76, text: 'Story mode still has more zones!', dim: true },
-    ];
 
     return {
       act,
@@ -242,6 +258,8 @@
       allyReveal: !!ally,
       heroLine: wi === 0 ? 'You vs the whole swarm. Go!' : null,
       zoneName: name,
+      introDur: milestone ? 14 : 9.5,
+      outroDur: milestone ? 11 : 8.5,
     };
   }
 

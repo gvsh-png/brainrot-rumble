@@ -17,10 +17,12 @@
 <canvas id="game"></canvas>
 
 <div id="loading" class="overlay">
+  <div id="loadsparkles" aria-hidden="true"></div>
   <div class="loadwrap">
-    <div class="title">BRAINROT<br>SWARM</div>
+    <div class="loadtitle">BRAINROT<br>SWARM</div>
+    <div class="loadbar"><div class="loadbarfill" id="loadbarfill"></div></div>
     <div class="loadspin"></div>
-    <div class="loadtxt">loading the swarm…</div>
+    <div class="loadtxt" id="loadtxt">summoning sprites…</div>
   </div>
 </div>
 
@@ -64,12 +66,13 @@
 <button id="introskip" class="hidden" type="button">SKIP &gt;&gt;</button>
 
 <div id="menu" class="overlay" data-tab="battle">
+  <div id="menusparkles" aria-hidden="true"></div>
   <!-- TOP RESOURCE BAR -->
   <div id="topbar">
     <div id="topbadge"><span id="topLvl">1</span></div>
     <div id="topxp"><div id="topxpfill"></div></div>
     <div class="respill"><img id="goldicon" draggable="false" alt=""><span id="goldtxt">0</span><span class="pill-sep">|</span><span class="gemico-el">◆</span><span id="gemtxt">0</span><b class="resplus">+</b></div>
-    <button id="settingsbtn" class="iconbtn" type="button" aria-label="Settings">☰</button>
+    <button id="settingsbtn" class="iconbtn" type="button" aria-label="Settings"><img data-ic="ic_settings" alt=""></button>
   </div>
 
   <!-- Settings modal — fixed overlay, centered on screen -->
@@ -143,8 +146,11 @@
       </div>
       <div class="worldsub" id="worldsub">survive the swarm</div>
       <div id="stage">
+        <div class="stage-shine" aria-hidden="true"></div>
         <div id="charplat"></div>
         <img id="charimg" draggable="false" alt="">
+        <canvas id="menuchar" aria-hidden="true"></canvas>
+        <canvas id="menupet" class="hidden" aria-hidden="true"></canvas>
       </div>
       <div id="menubot">
         <button class="gamemodebtn" id="gamemodebtn" type="button"><span class="gmlbl">GAMEMODE</span></button>
@@ -350,10 +356,13 @@
 <script src="js/input.js"></script>
 <script src="js/game.js"></script>
 <script src="js/boss-ext.js"></script>
+<script src="js/story-scripts.js"></script>
 <script src="js/storyline.js"></script>
+<script src="js/cutscene-fx.js"></script>
 <script src="js/cutscenes-ext.js"></script>
 <script src="js/world-ext.js"></script>
 <script src="js/debug-tools.js"></script>
+<script src="js/menu-fx.js"></script>
 <script src="js/shop.js"></script>
 <script src="js/play-bridge.js"></script>
 <script src="js/native.js"></script>
